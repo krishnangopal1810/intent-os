@@ -206,6 +206,9 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# IntentOS local harness runtime state
+.harness/runtime/
+
 # PyPI configuration file
 .pypirc
 
