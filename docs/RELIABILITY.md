@@ -16,7 +16,8 @@ observability instructions as the product grows.
 
 - `make harness-check` validates harness structure.
 - `make verify` runs harness checks and detected product checks.
-- `.github/workflows/verify.yml` runs `make verify` in CI.
+- `.github/workflows/verify.yml` runs `make harness-check` in CI until product
+  implementation adds a green product verification path.
 - `make dev`, `make app-status`, `make validate-ui`, and `make observe`
   provide local runtime legibility once product code exists.
 
