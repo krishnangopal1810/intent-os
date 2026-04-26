@@ -1,4 +1,4 @@
-.PHONY: app-status app-stop cleanup-check dev diagnose harness-check harness-lint harness-status observe observe-live validate-ui verify verify-harness new-plan
+.PHONY: app-status app-stop check-ui-screenshot cleanup-check dev diagnose harness-check harness-lint harness-status observe observe-live update-ui-screenshot validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -17,6 +17,12 @@ cleanup-check:
 
 validate-ui:
 	@scripts/harness/validate-ui.sh
+
+update-ui-screenshot:
+	@scripts/product/update-ui-screenshot.sh
+
+check-ui-screenshot:
+	@scripts/product/check-ui-screenshot.sh
 
 observe:
 	@scripts/harness/observe.sh

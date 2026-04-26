@@ -10,15 +10,15 @@ Use this document to keep quality visible to future Codex runs.
 | Architecture | Yellow | Local-first Python CLI stack, MVP boundaries, and future capture adapter boundaries are documented and linted. |
 | Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, and labeled fixture evaluation. |
 | Security | Yellow | Local-only defaults, live-capture privacy rules, and manual macOS permission handling are documented; browser permission UX is pending. |
-| Reliability | Yellow | CLI verification, UI validation, and artifact runtime exist; richer observability is pending. |
-| UX | Yellow | A local UI shell exists for current reports; richer interaction design is pending. |
+| Reliability | Yellow | CLI verification, UI validation, screenshot evidence, and artifact runtime exist; richer observability is pending. |
+| UX | Yellow | A local UI shell exists for current reports with checked-in screenshot evidence; richer interaction design is pending. |
 
 ## Known Gaps
 
 - Architecture lints cover the current Python layer map but need expansion as
   new layers appear.
-- Browser screenshot automation is not implemented; the current UI validator is
-  dependency-free and checks the shell plus JSON artifacts.
+- Browser screenshot evidence is checked in and guarded by a source manifest;
+  richer DOM automation is still pending.
 - Continuous browser/app session capture is not implemented; manual macOS
   app/window capture with browser tab enrichment exists as the first
   metadata-only sensor.

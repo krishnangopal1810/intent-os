@@ -13,6 +13,10 @@ slices.
 - `make app-stop`: stop the local app process started by the harness.
 - `make validate-ui`: validate the local UI shell against deterministic runtime
   artifacts.
+- `make update-ui-screenshot`: regenerate the checked-in UI screenshot evidence
+  from a local browser.
+- `make check-ui-screenshot`: verify that checked-in UI screenshot evidence is
+  present and matches the current UI source manifest.
 - `make observe`: print local runtime signals that Codex can inspect.
 - `make diagnose`: print app state, structured runtime events, validation
   evidence, and recent logs.
@@ -81,10 +85,13 @@ IntentOS currently provides `scripts/product/dev.sh`,
 - Fail on blank screens, missing JSON artifacts, or missing core UI text.
 - Record validation notes in the active execution plan when relevant.
 
-The current validator is dependency-free and fetches the page plus JSON
-artifacts through a temporary local server. It writes `ui-validation.txt`,
-`ui-validation.json`, and `ui-snapshot.html`. Add screenshot and DOM automation
-when the repo introduces a browser automation dependency.
+The current validator fetches the page plus JSON artifacts through a temporary
+local server. It writes `ui-validation.txt`, `ui-validation.json`, and
+`ui-snapshot.html`, then checks the committed screenshot evidence under
+`docs/assets/screenshots/`. Run `make update-ui-screenshot` after UI source,
+fixture, or report-output changes. CI does not need Chrome to validate the
+committed screenshot; the screenshot metadata records a source hash and
+`make verify` fails when the image is stale.
 
 ## Observability Contract
 
