@@ -63,6 +63,8 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 - Run `make harness-lint` after changing product layers, fixtures, plans, or
   quality docs.
 - Run `make verify` before considering implementation complete.
+- Run `make update-ui-screenshot` after UI source, fixture, or report-output
+  changes that affect rendered UI evidence.
 - If verification cannot run, record the blocker in the active plan and final
   handoff.
 - UI behavior requires browser validation evidence once a UI exists.

@@ -26,6 +26,7 @@ from intentos.capture.privacy import (
     redact_metadata,
     should_exclude,
 )
+from intentos.capture.session import capture_session_observations, merge_adjacent_events
 from intentos.capture_replay import replay_capture
 
 
@@ -50,6 +51,11 @@ def main() -> int:
         default="data/capture/privacy_policy.json",
         help="Local privacy policy JSON.",
     )
+    normalize.add_argument(
+        "--merge-adjacent",
+        action="store_true",
+        help="Merge adjacent equivalent rows after privacy filtering.",
+    )
 
     capture_macos = subparsers.add_parser(
         "capture-macos",
@@ -63,6 +69,29 @@ def main() -> int:
         help="Sample duration for the current frontmost app/window.",
     )
     capture_macos.add_argument(
+        "--privacy-policy",
+        default="data/capture/privacy_policy.json",
+        help="Local privacy policy JSON.",
+    )
+
+    capture_session = subparsers.add_parser(
+        "capture-session",
+        help="Capture a short metadata-only macOS app/window/browser session.",
+    )
+    capture_session.add_argument("--output", required=True, help="Output JSONL path.")
+    capture_session.add_argument(
+        "--duration-seconds",
+        type=int,
+        default=30,
+        help="Total bounded session duration.",
+    )
+    capture_session.add_argument(
+        "--interval-seconds",
+        type=int,
+        default=5,
+        help="Seconds between repeated metadata samples.",
+    )
+    capture_session.add_argument(
         "--privacy-policy",
         default="data/capture/privacy_policy.json",
         help="Local privacy policy JSON.",
@@ -86,6 +115,7 @@ def main() -> int:
             Path(args.output),
             Path(args.privacy_policy),
             Path(args.browser_tabs) if args.browser_tabs else None,
+            merge_adjacent=args.merge_adjacent,
         )
         print(f"capture-cli: wrote {count} ActivityEvent row(s) to {args.output}")
         return 0
@@ -106,6 +136,31 @@ def main() -> int:
         print(f"capture-cli: wrote {count} ActivityEvent row(s) to {args.output}")
         return 0
 
+    if args.command == "capture-session":
+        try:
+            observations = capture_session_observations(
+                duration_seconds=args.duration_seconds,
+                interval_seconds=args.interval_seconds,
+                browser_provider=active_tab_or_none,
+            )
+        except MacOSCaptureError as exc:
+            raise SystemExit(str(exc)) from exc
+        events = normalized_events_from_observation_items(
+            observations,
+            Path(args.privacy_policy),
+        )
+        merged_events = merge_adjacent_events(events)
+        count = write_events_jsonl(merged_events, Path(args.output))
+        excluded_count = len(observations) - len(events)
+        merged_count = len(events) - len(merged_events)
+        print(
+            "capture-cli: session "
+            f"samples={len(observations)} excluded={excluded_count} "
+            f"merged={merged_count} wrote={count} ActivityEvent row(s) "
+            f"to {args.output}"
+        )
+        return 0
+
     result = replay_capture(Path(args.input), allow_empty=args.allow_empty)
     if args.json:
         print(json.dumps(result, indent=2))
@@ -119,12 +174,19 @@ def normalize_observations(
     output_path: Path,
     privacy_policy_path: Path,
     browser_tabs_path: Path | None = None,
+    merge_adjacent: bool = False,
 ) -> int:
     browser_by_app = load_browser_tabs(browser_tabs_path)
     raw = json.loads(input_path.read_text(encoding="utf-8"))
     if not isinstance(raw, list):
         raise ValueError("capture observations must be a JSON array")
-    return normalize_observation_items(raw, output_path, privacy_policy_path, browser_by_app)
+    return normalize_observation_items(
+        raw,
+        output_path,
+        privacy_policy_path,
+        browser_by_app,
+        merge_adjacent=merge_adjacent,
+    )
 
 
 def normalize_observation_items(
@@ -132,7 +194,23 @@ def normalize_observation_items(
     output_path: Path,
     privacy_policy_path: Path,
     browser_by_app: dict[str, object] | None = None,
+    merge_adjacent: bool = False,
 ) -> int:
+    events = normalized_events_from_observation_items(
+        raw,
+        privacy_policy_path,
+        browser_by_app,
+    )
+    if merge_adjacent:
+        events = merge_adjacent_events(events)
+    return write_events_jsonl(events, output_path)
+
+
+def normalized_events_from_observation_items(
+    raw: list[object],
+    privacy_policy_path: Path,
+    browser_by_app: dict[str, object] | None = None,
+):
     policy = load_privacy_policy(privacy_policy_path)
     browser_by_app = browser_by_app or {}
     events = []
@@ -179,7 +257,7 @@ def normalize_observation_items(
                 metadata=redacted,
             )
         )
-    return write_events_jsonl(events, output_path)
+    return events
 
 
 def capture_live_observation_and_browser(duration_seconds: int):
@@ -203,6 +281,14 @@ def browser_snapshot_for_app(app_name: str, bundle_id: str | None) -> dict[str, 
     if not browser:
         return {}
     return {app_name.lower(): browser}
+
+
+def active_tab_or_none(app_name: str, bundle_id: str | None):
+    try:
+        return active_browser_tab(app_name, bundle_id)
+    except BrowserCaptureError as exc:
+        print(f"capture-cli: browser metadata unavailable: {exc}")
+        return None
 
 
 def load_browser_tabs(path: Path | None):

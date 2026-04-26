@@ -9,6 +9,7 @@ LOG_DIR="$RUNTIME_DIR/logs"
 ARTIFACT_DIR="$RUNTIME_DIR/artifacts"
 APP_ENV="$RUNTIME_DIR/app.env"
 PID_FILE="$RUNTIME_DIR/app.pid"
+DATA_MODE="${INTENTOS_DEV_DATA_MODE:-fixture}"
 
 mkdir -p "$LOG_DIR"
 
@@ -67,15 +68,37 @@ fi
 if [ -x scripts/product/dev.sh ]; then
   export INTENTOS_RUNTIME_DIR="$RUNTIME_DIR"
   rm -f "$PID_FILE"
-  scripts/harness/runtime-log.py harness dev_start mode=artifact_build
+  scripts/harness/runtime-log.py harness dev_start mode=artifact_build data_mode="$DATA_MODE"
   scripts/product/dev.sh > "$LOG_DIR/app.log" 2>&1
 
   if [ -x scripts/product/start-ui.sh ]; then
     port="$(choose_port)"
     url="http://127.0.0.1:$port/site/index.html"
-    INTENTOS_RUNTIME_DIR="$RUNTIME_DIR" INTENTOS_APP_PORT="$port" \
-      nohup scripts/product/start-ui.sh >> "$LOG_DIR/app.log" 2>&1 &
-    pid="$!"
+    pid="$(
+      python3 - "$RUNTIME_DIR" "$port" "$LOG_DIR/app.log" <<'PY'
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+runtime_dir = sys.argv[1]
+port = sys.argv[2]
+log_path = Path(sys.argv[3])
+log = log_path.open("ab", buffering=0)
+env = os.environ.copy()
+env["INTENTOS_RUNTIME_DIR"] = runtime_dir
+env["INTENTOS_APP_PORT"] = port
+process = subprocess.Popen(
+    ["scripts/product/start-ui.sh"],
+    stdout=log,
+    stderr=subprocess.STDOUT,
+    stdin=subprocess.DEVNULL,
+    env=env,
+    start_new_session=True,
+)
+print(process.pid)
+PY
+    )"
     echo "$pid" > "$PID_FILE"
     if ! wait_for_url "$url" "$pid"; then
       scripts/harness/runtime-log.py harness ui_start_failed mode=ui pid="$pid" port="$port"
@@ -89,6 +112,7 @@ if [ -x scripts/product/dev.sh ]; then
     {
       echo "INTENTOS_APP_STATUS=running"
       echo "INTENTOS_APP_MODE=ui"
+      echo "INTENTOS_APP_DATA_MODE=$DATA_MODE"
       echo "INTENTOS_APP_PID=$pid"
       echo "INTENTOS_APP_PORT=$port"
       echo "INTENTOS_APP_URL=$url"
@@ -105,6 +129,7 @@ if [ -x scripts/product/dev.sh ]; then
     {
       echo "INTENTOS_APP_STATUS=completed"
       echo "INTENTOS_APP_MODE=cli"
+      echo "INTENTOS_APP_DATA_MODE=$DATA_MODE"
       echo "INTENTOS_APP_LOG=$LOG_DIR/app.log"
       echo "INTENTOS_ARTIFACT_DIR=$ARTIFACT_DIR"
       echo "INTENTOS_APP_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

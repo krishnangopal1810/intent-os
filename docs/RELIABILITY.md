@@ -8,9 +8,11 @@ artifacts.
 - The app should be runnable from a fresh checkout with documented commands.
 - Startup failures should be visible in logs.
 - Tests should cover core product workflows.
-- UI workflows should be verifiable through `make validate-ui`; browser
-  screenshot automation should be added once a browser automation dependency is
-  introduced.
+- UI workflows should be verifiable through `make validate-ui`; when Chrome or
+  Chromium exists locally, validation should include a headless browser render
+  check for blank pages and, when the browser can dump the rendered DOM probe,
+  basic layout failures. Checked-in screenshot evidence should be refreshed
+  with `make update-ui-screenshot` whenever rendered UI behavior changes.
 - Long-running tasks should expose progress and recoverable errors.
 - Live capture adapters should have fixture or fake-based tests so CI does not
   require macOS permissions.
@@ -24,12 +26,18 @@ artifacts.
   file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
-- `make dev`, `make app-status`, `make validate-ui`, `make observe`, and
+- `make dev`, `make dev-live`, `make app-status`, `make validate-ui`,
+  `make observe`, and
   `make diagnose` provide local runtime legibility for the current UI-backed
   product.
 - `make observe-live` provides manual local sensor diagnostics for the macOS
   frontmost app/window adapter.
-- `make validate-ui` validates the local UI shell and JSON artifact loading.
+- `make observe-session` provides manual bounded session diagnostics for the
+  repeated metadata sampler and timeline merge path.
+- `make validate-ui` validates the local UI shell, JSON artifact loading, and
+  optional local browser render diagnostics.
+- `make check-ui-screenshot` verifies that checked-in screenshot evidence is
+  present and fresh for the current UI/report inputs.
 
 ## Product Commands
 
@@ -38,9 +46,13 @@ artifacts.
 - `python3 -m intentos.activity_cli data/activity/multi_app_events.json`
 - `python3 -m intentos.activity_cli data/activity/multi_app_events.json --json`
 - `python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl`
+- `python3 -m intentos.capture_cli normalize-observations data/capture/fake_session_observations.json --merge-adjacent --output .harness/runtime/artifacts/session-capture-events.jsonl`
 - `python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl`
 - `python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl`
+- `python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl`
 - `make observe-live`
+- `make observe-session`
+- `make dev-live`
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
@@ -51,15 +63,31 @@ artifacts.
 
 ## Runtime Notes
 
-`make dev` runs the sample analysis, writes text and JSON reports under
-`.harness/runtime/artifacts/`, serves the local UI shell, records its URL and
-process in `.harness/runtime/app.env`, and writes runtime logs. `make observe`
-shows structured events plus the app log. `make diagnose` prints app state,
+`make dev` is fixture-only. It clears live capture artifacts, runs the sample
+analysis, writes deterministic text and JSON reports under
+`.harness/runtime/artifacts/`, serves the local UI shell, records its URL,
+process, and `INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`,
+and writes runtime logs. It does not capture current macOS activity and does not
+read historical activity.
+
+`make dev-live` is the explicit real macOS UI path. It runs a fresh bounded
+`make observe-session`, preserves the live replay artifact, starts the UI, and
+records `INTENTOS_APP_DATA_MODE=live_session`. The UI then reflects only the
+activity captured during that live command window. `make observe` shows
+structured events plus the app log. `make diagnose` prints app state,
 structured events, UI validation evidence, and app logs in one place.
+
+`make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 `make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 one live local metadata event, and replays it through the classifier. If privacy
 rules exclude every row, it still writes a valid empty replay summary so the UI
 and diagnostics remain inspectable.
+
+`make observe-session` writes `.harness/runtime/logs/live-session-capture.log`,
+captures repeated live metadata samples for a bounded duration, applies privacy
+exclusions, merges adjacent equivalent activity, and replays the resulting
+timeline. It records structured runtime events for session start/completion,
+duration, interval, output path, and replay artifact.
 
 Future persistent runtime code should emit structured, line-oriented logs with
 stable fields for `component`, `event`, `mode`, `artifact_path`, `duration_ms`,
@@ -78,9 +106,20 @@ Current artifacts:
 - `live-capture-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
+- `session-capture-events.jsonl`
+- `session-capture-summary.txt`
+- `session-capture-summary.json`
+- `live-session-capture-events.jsonl`
+- `live-session-capture-summary.txt`
+- `live-session-capture-summary.json`
 - `ui-validation.txt`
 - `ui-validation.json`
 - `ui-snapshot.html`
+- `ui-render.png`
+- `ui-render-validation.json`
+- `ui-render-validation.txt`
+- `docs/assets/screenshots/intent-os-ui.png`
+- `docs/assets/screenshots/intent-os-ui.json`
 
 ## Future Live Capture Reliability
 
@@ -92,10 +131,12 @@ The current fake-sensor capture implementation provides:
 - no dependency on Screen Recording, ScreenCaptureKit, Vision OCR, or model
   downloads in `make verify`
 
-The first live sensor implementation should add:
+The bounded live session implementation now provides:
 
-- clear failures when Accessibility permission or browser automation permission
-  is missing
+- richer runtime diagnostics for sample count, merge count, privacy exclusions,
+  and replay output
+- manual permission guidance when Accessibility or browser Automation is
+  missing
 
 The current manual macOS adapter already reports Accessibility permission help
 when System Events denies frontmost app/window metadata. Browser active-tab
@@ -104,5 +145,6 @@ access, but still lets the app/window capture path proceed.
 
 Adapter tests must remain deterministic. The macOS adapter is covered by
 `data/capture/macos_frontmost_snapshot.json`; browser tab enrichment is covered
-by `data/capture/browser_active_tab_snapshot.json`. Future real adapters need
+by `data/capture/browser_active_tab_snapshot.json`; session behavior is covered
+by `data/capture/fake_session_observations.json`. Future real adapters need
 equivalent fixtures.

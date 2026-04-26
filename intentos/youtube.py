@@ -245,6 +245,8 @@ def percentage(part: int, total: int) -> float:
 
 
 def format_duration(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s"
     minutes = round(seconds / 60)
     hours = minutes // 60
     remaining_minutes = minutes % 60

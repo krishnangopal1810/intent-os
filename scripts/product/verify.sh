@@ -38,5 +38,12 @@ echo "+ $python_bin -m intentos.capture_cli normalize-observations data/capture/
 echo "+ $python_bin -m intentos.capture_cli replay $capture_jsonl"
 "$python_bin" -m intentos.capture_cli replay "$capture_jsonl"
 
+session_jsonl=".harness/runtime/artifacts/session-capture-events.jsonl"
+echo "+ $python_bin -m intentos.capture_cli normalize-observations data/capture/fake_session_observations.json --merge-adjacent --output $session_jsonl"
+"$python_bin" -m intentos.capture_cli normalize-observations data/capture/fake_session_observations.json --merge-adjacent --output "$session_jsonl"
+
+echo "+ $python_bin -m intentos.capture_cli replay $session_jsonl"
+"$python_bin" -m intentos.capture_cli replay "$session_jsonl"
+
 echo "+ scripts/product/validate-ui.sh"
 scripts/product/validate-ui.sh

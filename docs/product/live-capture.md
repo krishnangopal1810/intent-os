@@ -87,15 +87,21 @@ transcripts, screenshots, or conversations.
   because browser URLs can encode precise location coordinates.
 - The user must be able to pause capture.
 
-## First Live Slice
+## Shipped Live Slices
 
-Build the first live slice in this order:
+The first live slice shipped as a one-shot manual capture path:
 
 1. Active app/window sampler using macOS frontmost app/window metadata.
-2. Browser active-tab metadata for one browser.
+2. Browser active-tab metadata for supported browsers.
 3. JSONL writer for local `ActivityEvent` records.
 4. Replay command that classifies captured JSONL with the existing classifier.
 5. Fixture tests for sampler output normalization and redaction.
+
+The session timeline slice is built on top of the one-shot path. It samples
+metadata repeatedly during a bounded manual session, merges adjacent equivalent
+activity, replays the session JSONL, and shows the timeline in the UI. The CI
+path uses `data/capture/fake_session_observations.json` so parser, privacy,
+merge, replay, and UI behavior remain deterministic.
 
 ScreenCaptureKit and Vision OCR are deferred until metadata-only capture shows
 clear gaps. On-device model inference is a second-pass classifier, not a
@@ -132,9 +138,39 @@ make observe-live
 `make observe-live` captures one live metadata sample, prints the latest
 `ActivityEvent`, replays it through the classifier, and writes
 `.harness/runtime/artifacts/live-capture-summary.json` plus
-`.harness/runtime/logs/live-capture.log`. The UI prefers the live summary when
-it exists and falls back to fixture replay otherwise. If privacy exclusions drop
-every row, the live summary is still written with an empty report.
+`.harness/runtime/logs/live-capture.log`. `make dev` clears this live artifact
+because it is fixture-only; use `make dev-live` or preserve live artifacts
+explicitly when the UI should display live capture output. If privacy
+exclusions drop every row, the live summary is still written with an empty
+report.
+
+## Current Session Timeline
+
+IntentOS also provides a manual bounded session command:
+
+```sh
+python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl
+```
+
+Or use the harness wrapper:
+
+```sh
+make observe-session
+```
+
+The session path repeatedly samples the same metadata sources, enriches each
+browser sample when possible, applies the privacy policy, drops excluded rows,
+merges adjacent equivalent `ActivityEvent` rows, and replays the resulting
+timeline through the existing classifier. It writes
+`.harness/runtime/artifacts/live-session-capture-summary.json` and
+`.harness/runtime/logs/live-session-capture.log`. It does not capture
+keystrokes, screenshots, OCR text, clipboard contents, page bodies, or
+transcripts.
+
+Use `make dev-live` when the UI should show a fresh live session. It runs this
+bounded session command first, preserves the live replay artifact, and then
+starts the UI. The resulting UI reflects only the activity captured during that
+command window, not historical macOS usage.
 
 ## Harness Requirements
 
@@ -151,4 +187,5 @@ fixtures or fakes in CI, with manual capture smoke checks documented separately.
 The current real-adapter fixtures are
 `data/capture/macos_frontmost_snapshot.json` and
 `data/capture/browser_active_tab_snapshot.json`; future real adapters must add
-equivalent fixtures before they are considered harness-ready.
+equivalent fixtures before they are considered harness-ready. The session
+timeline fixture is `data/capture/fake_session_observations.json`.

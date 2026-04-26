@@ -37,6 +37,8 @@ A change is ready only when:
 - Acceptance criteria are satisfied.
 - `make verify` passes, or the blocker is explicitly documented.
 - Runtime/UI validation evidence exists for UI behavior once a UI exists.
+- Checked-in UI screenshot evidence is refreshed when rendered UI behavior
+  changes.
 - Product assumptions are recorded in docs.
 - Known residual risks are captured in the active plan or quality scorecard.
 

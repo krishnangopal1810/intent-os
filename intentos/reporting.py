@@ -55,10 +55,13 @@ def activity_report(events: Iterable[ActivityEvent]) -> dict[str, Any]:
                 "source_app": item.event.source_app,
                 "surface": item.event.surface,
                 "title": item.event.title,
+                "started_at": item.event.started_at,
                 "duration_seconds": item.event.duration_seconds,
+                "url": item.event.url,
                 "label": item.classification.label.value,
                 "confidence": item.classification.confidence,
                 "reason": item.classification.reason,
+                "metadata": item.event.metadata or {},
             }
             for item in classified
         ],

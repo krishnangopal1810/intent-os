@@ -20,12 +20,15 @@ product verification without dependency installation.
 - Runtime: CLI plus local static UI shell
 - Dependencies: Python standard library only
 - Input: local JSON fixtures for YouTube and generic activity events
-- Output: CLI narratives, JSON reports, and local UI shell
+- Output: CLI narratives, JSON reports, local UI shell, and checked-in UI
+  screenshot evidence
 
 Live capture work emits raw observations into the generic `ActivityEvent`
 boundary. The current real adapter captures frontmost macOS app/window metadata
 manually and enriches active browser tab metadata when local Automation
-permission allows it.
+permission allows it. Sessionization is handled above the adapter layer by
+repeatedly sampling metadata, applying privacy policy, and merging adjacent
+equivalent `ActivityEvent` rows.
 
 ## Current Layers
 
@@ -46,6 +49,8 @@ The current local-first slice keeps these concerns separate:
 - `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
 - `intentos/capture/macos.py`: manual macOS frontmost app/window metadata
   adapter using local System Events through `osascript`.
+- `intentos/capture/session.py`: bounded live-session sampling helpers and
+  adjacent `ActivityEvent` merge behavior.
 - `intentos/capture_cli.py`: fake-sensor normalization and replay CLI.
 - `intentos/capture_replay.py`: JSONL replay through the existing behavior
   report.
@@ -57,6 +62,8 @@ The current local-first slice keeps these concerns separate:
 - `data/activity/evaluation_set.json`: labeled multi-app evaluation set.
 - `data/capture/fake_macos_observations.json`: deterministic fake app/window
   capture observations.
+- `data/capture/fake_session_observations.json`: deterministic repeated
+  session observations for merge, privacy, replay, and UI validation.
 - `data/capture/fake_browser_tabs.json`: deterministic browser tab metadata.
 - `data/capture/browser_active_tab_snapshot.json`: deterministic live browser
   active-tab fixture.
@@ -78,7 +85,14 @@ The current local-first slice keeps these concerns separate:
 - `scripts/product/dev.sh`: local artifact server for inspecting CLI output.
 - `scripts/product/start-ui.sh`: local static UI server for generated runtime
   artifacts.
-- `scripts/product/validate-ui.sh`: dependency-free UI smoke validator.
+- `scripts/product/validate-ui.sh`: UI smoke validator for local artifacts and
+  optional headless browser render evidence.
+- `scripts/product/render-ui-check.py`: rendered screenshot and DOM-probe
+  checker used when Chrome or Chromium is available.
+- `scripts/product/update-ui-screenshot.sh`: local browser screenshot
+  generator for checked-in visual evidence.
+- `scripts/product/check-ui-screenshot.sh`: screenshot manifest freshness gate
+  used by UI validation and `make verify`.
 - `web/`: static local UI shell that reads generated JSON artifacts.
 
 ## Dependency Rules
@@ -118,8 +132,9 @@ pipeline.
   for labels, confidence, uncertainty, and aggregation before a local model is
   introduced.
 - The first interface is now a local static UI shell backed by generated JSON
-  artifacts. Browser screenshot automation is deferred until a browser
-  automation dependency is introduced.
+  artifacts. Checked-in screenshot evidence is guarded by a source manifest;
+  richer DOM automation is deferred until the UI becomes interactive enough to
+  justify it.
 - The classifier preserves uncertainty with an `unknown` label when metadata is
   sparse or cue scores are too close.
 - Generic activity classification is now the preferred product path. YouTube is
@@ -147,7 +162,8 @@ As modules grow, promote these expectations from docs into lints:
 
 ## Next Architecture Work
 
-- Sessionize repeated live app/browser metadata samples into a short timeline.
+- Add real user import paths on top of the `ActivityEvent` boundary before
+  adding heavier sensors.
 - Expand lint rules to enforce source adapter -> event -> classifier -> report
   direction when those modules exist.
 - Add cleanup/audit checks for stale plans, stale docs, fixture drift, and

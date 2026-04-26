@@ -16,9 +16,13 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - Deterministic local fixtures and labeled evaluation sets.
 - CLI reports and JSON reports.
 - Local UI shell served from generated runtime artifacts.
+- Checked-in UI screenshot evidence guarded by a source manifest.
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture with best-effort
   browser tab URL/title enrichment.
+- Short live capture session timeline support that repeatedly samples
+  metadata, merges adjacent equivalent activity, and renders a timeline in the
+  UI.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
   CI running `make verify`.
 - Live-capture and on-device inference specs for the next macOS slices.
@@ -26,9 +30,11 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 The first real live sensor is intentionally narrow: it samples the current
 frontmost macOS app/window through local System Events metadata, enriches active
 browser URL/title when Automation permission allows it, and writes
-`ActivityEvent` JSONL. Screenshot capture, OCR, local model inference, and
-browser screenshot validation remain future extensions after the metadata path
-is reliable.
+`ActivityEvent` JSONL. The current session slice samples that metadata
+repeatedly over a bounded manual run, merges adjacent equivalent activity, and
+shows the timeline in the local UI. ScreenCaptureKit, OCR, local model
+inference, and richer DOM automation remain future extensions after the
+metadata path is reliable.
 
 ## Start Here
 
@@ -57,12 +63,14 @@ make harness-status
 make cleanup-check
 make verify
 make dev
+make dev-live
 make app-status
 make diagnose
 make validate-ui
 make update-ui-screenshot
 make observe
 make observe-live
+make observe-session
 ```
 
 Run the current product:
@@ -71,6 +79,8 @@ Run the current product:
 python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl
 python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl
 python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl
+python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl
+python3 -m intentos.capture_cli normalize-observations data/capture/fake_session_observations.json --merge-adjacent --output .harness/runtime/artifacts/session-capture-events.jsonl
 python3 -m intentos.activity_cli data/activity/multi_app_events.json
 python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85
 python3 -m intentos.cli data/youtube/sample_watch_history.json
@@ -84,9 +94,25 @@ Automation permissions for the Codex host app or terminal. CI uses deterministic
 fixtures instead of live macOS state. If privacy rules exclude every live row,
 the command still writes a valid empty replay summary for the UI.
 
-`make dev` serves the UI URL recorded in `.harness/runtime/app.env`. The UI
-prefers `live-capture-summary.json` when `make observe-live` has produced it,
-and falls back to fixture replay otherwise.
+`make observe-session` runs the bounded live session diagnostic. It writes
+`live-session-capture-events.jsonl`, replays it into
+`live-session-capture-summary.json`, and records `.harness/runtime/logs/live-session-capture.log`.
+The session command stays outside CI because it depends on live macOS state;
+`make verify` covers equivalent behavior through
+`data/capture/fake_session_observations.json`.
+
+`make dev` is fixture-only. It clears live capture artifacts, rebuilds
+deterministic fixture summaries, serves the UI URL recorded in
+`.harness/runtime/app.env`, and records `INTENTOS_APP_DATA_MODE=fixture`.
+It does not capture current macOS activity and it does not backfill historical
+activity.
+
+`make dev-live` is the explicit real macOS flow. It runs `make observe-session`
+first, preserves the fresh `live-session-capture-summary.json`, then starts the
+UI with `INTENTOS_APP_DATA_MODE=live_session`. It only captures activity during
+that bounded command window and may require Accessibility or browser Automation
+permissions.
+
 `make update-ui-screenshot` refreshes the checked-in UI screenshot at
 `docs/assets/screenshots/intent-os-ui.png`. `make verify` checks that screenshot
 manifest so UI source changes cannot leave stale visual evidence behind.
@@ -102,11 +128,14 @@ scripts/harness/new-plan.sh first-product-slice
 Then fill in the generated plan under `docs/plans/active/` and prompt Codex to
 implement that plan end to end.
 
-`make verify` is the main merge gate. It runs harness checks, structural linting,
-unit tests, YouTube fixture evaluation, multi-app fixture evaluation, and CLI
-smoke checks.
+`make verify` is the main merge gate. It runs harness checks, structural
+linting, repository audit, unit tests, YouTube fixture evaluation, multi-app
+fixture evaluation, capture replay and session replay checks, UI validation
+with optional headless browser render diagnostics, and screenshot freshness
+checks.
 
 ## Next Work
 
-See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). The recommended next slice is
-sessionizing repeated live capture into a short timeline.
+See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). Recommended next work now moves
+toward real user import paths and richer behavior narratives on top of the
+session timeline.

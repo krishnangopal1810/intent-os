@@ -24,6 +24,7 @@ EXPECTED_LAYERS = {
     "intentos/capture/jsonl.py",
     "intentos/capture/macos.py",
     "intentos/capture/privacy.py",
+    "intentos/capture/session.py",
     "intentos/capture_cli.py",
     "intentos/capture_replay.py",
     "intentos/youtube.py",
@@ -36,6 +37,7 @@ EXPECTED_LAYERS = {
     "tests/test_capture_macos.py",
     "tests/test_capture_privacy.py",
     "tests/test_capture_replay.py",
+    "tests/test_capture_session.py",
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
@@ -58,6 +60,12 @@ ALLOWED_IMPORTS = {
     "intentos/capture/jsonl.py": {"intentos.activity"},
     "intentos/capture/macos.py": {"intentos.capture.core"},
     "intentos/capture/privacy.py": set(),
+    "intentos/capture/session.py": {
+        "intentos.activity",
+        "intentos.capture.browser",
+        "intentos.capture.core",
+        "intentos.capture.macos",
+    },
     "intentos/capture_replay.py": {"intentos.capture.jsonl", "intentos.reporting"},
     "intentos/capture_cli.py": {
         "intentos.capture.browser",
@@ -65,6 +73,7 @@ ALLOWED_IMPORTS = {
         "intentos.capture.jsonl",
         "intentos.capture.macos",
         "intentos.capture.privacy",
+        "intentos.capture.session",
         "intentos.capture_replay",
     },
     "tests/test_activity_classification.py": {
@@ -86,6 +95,15 @@ ALLOWED_IMPORTS = {
     "tests/test_capture_macos.py": {"intentos.capture.macos"},
     "tests/test_capture_privacy.py": {"intentos.capture.privacy"},
     "tests/test_capture_replay.py": {
+        "intentos.capture_cli",
+        "intentos.capture_replay",
+    },
+    "tests/test_capture_session.py": {
+        "intentos.capture.browser",
+        "intentos.capture.core",
+        "intentos.capture.jsonl",
+        "intentos.capture.macos",
+        "intentos.capture.session",
         "intentos.capture_cli",
         "intentos.capture_replay",
     },
@@ -315,15 +333,43 @@ def check_capture_adapter_fixtures(failures: list[str]) -> None:
 def check_live_observation_harness(failures: list[str]) -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     script = ROOT / "scripts/harness/observe-live.sh"
+    session_script = ROOT / "scripts/harness/observe-session.sh"
+    dev_live_script = ROOT / "scripts/harness/dev-live.sh"
     if "observe-live:" not in makefile:
         failures.append("Makefile must expose make observe-live for manual sensor diagnostics")
+    if "observe-session:" not in makefile:
+        failures.append("Makefile must expose make observe-session for session diagnostics")
+    if "dev-live:" not in makefile:
+        failures.append("Makefile must expose make dev-live for live session UI diagnostics")
     if not script.is_file():
         failures.append("missing scripts/harness/observe-live.sh")
-        return
-    text = script.read_text(encoding="utf-8")
-    for phrase in ["capture-macos", "live-capture-events.jsonl", "live-capture.log"]:
-        if phrase not in text:
-            failures.append(f"scripts/harness/observe-live.sh must mention {phrase}")
+    else:
+        text = script.read_text(encoding="utf-8")
+        for phrase in ["capture-macos", "live-capture-events.jsonl", "live-capture.log"]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/observe-live.sh must mention {phrase}")
+    if not session_script.is_file():
+        failures.append("missing scripts/harness/observe-session.sh")
+    else:
+        text = session_script.read_text(encoding="utf-8")
+        for phrase in [
+            "capture-session",
+            "live-session-capture-events.jsonl",
+            "live-session-capture.log",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/observe-session.sh must mention {phrase}")
+    if not dev_live_script.is_file():
+        failures.append("missing scripts/harness/dev-live.sh")
+    else:
+        text = dev_live_script.read_text(encoding="utf-8")
+        for phrase in [
+            "observe-session.sh",
+            "INTENTOS_PRESERVE_LIVE_ARTIFACTS=1",
+            "INTENTOS_DEV_DATA_MODE=\"live_session\"",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/dev-live.sh must mention {phrase}")
 
 
 def check_ui_harness(failures: list[str]) -> None:
@@ -333,6 +379,7 @@ def check_ui_harness(failures: list[str]) -> None:
         "web/app.js",
         "scripts/product/start-ui.sh",
         "scripts/product/validate-ui.sh",
+        "scripts/product/render-ui-check.py",
         "scripts/product/update-ui-screenshot.sh",
         "scripts/product/check-ui-screenshot.sh",
         "scripts/product/ui-screenshot-manifest.py",
@@ -352,9 +399,13 @@ def check_ui_harness(failures: list[str]) -> None:
             "ui-validation.txt",
             "ui-validation.json",
             "ui-snapshot.html",
+            "ui-render-validation.txt",
+            "render-ui-check.py",
             "check-ui-screenshot.sh",
             "activity-summary.json",
             "capture-summary.json",
+            "session-capture-summary.json",
+            "live-session-capture-summary.json",
             "live-capture-summary.json",
         ]:
             if phrase not in text:
