@@ -22,3 +22,9 @@ echo "+ $python_bin -m intentos.cli data/youtube/sample_watch_history.json"
 
 echo "+ $python_bin -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90"
 "$python_bin" -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90
+
+echo "+ $python_bin -m intentos.activity_cli data/activity/multi_app_events.json"
+"$python_bin" -m intentos.activity_cli data/activity/multi_app_events.json
+
+echo "+ $python_bin -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85"
+"$python_bin" -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85

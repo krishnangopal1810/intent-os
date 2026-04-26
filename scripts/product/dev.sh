@@ -20,8 +20,12 @@ fi
 
 "$python_bin" -m intentos.cli data/youtube/sample_watch_history.json > "$artifact_dir/youtube-summary.txt"
 "$python_bin" -m intentos.cli data/youtube/sample_watch_history.json --json > "$artifact_dir/youtube-summary.json"
+"$python_bin" -m intentos.activity_cli data/activity/multi_app_events.json > "$artifact_dir/activity-summary.txt"
+"$python_bin" -m intentos.activity_cli data/activity/multi_app_events.json --json > "$artifact_dir/activity-summary.json"
 
 echo "product-dev: wrote $artifact_dir/youtube-summary.txt"
 echo "product-dev: wrote $artifact_dir/youtube-summary.json"
+echo "product-dev: wrote $artifact_dir/activity-summary.txt"
+echo "product-dev: wrote $artifact_dir/activity-summary.json"
 echo "product-dev: latest summary"
-cat "$artifact_dir/youtube-summary.txt"
+cat "$artifact_dir/activity-summary.txt"

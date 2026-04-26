@@ -61,13 +61,16 @@ capture. The sample should support:
 
 ## Verification
 
-The current implementation includes:
+The YouTube implementation includes:
 
 - Unit tests for classification rules and aggregation.
 - A fixture-based evaluation over sample YouTube activity.
 - A labeled evaluation set with learning, entertainment, and unknown examples.
 - CLI output through `python3 -m intentos.cli`.
 - `scripts/product/verify.sh`, which is called by `make verify`.
+
+Generic multi-app behavior classification now lives alongside this slice and is
+documented in [domains/multi-app-activity.md](domains/multi-app-activity.md).
 
 ## Product Risks
 

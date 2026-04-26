@@ -1,8 +1,9 @@
 # Architecture
 
-IntentOS currently ships a local-first Python CLI MVP for YouTube activity
-classification. The implementation uses only the Python standard library so a
-fresh checkout can run product verification without dependency installation.
+IntentOS currently ships a local-first Python CLI MVP for generic multi-app
+activity classification, plus the original YouTube-specific slice. The
+implementation uses only the Python standard library so a fresh checkout can run
+product verification without dependency installation.
 
 ## Architecture Principles
 
@@ -18,19 +19,28 @@ fresh checkout can run product verification without dependency installation.
 - Language: Python 3
 - Runtime: CLI-first local process
 - Dependencies: Python standard library only
-- Input: local JSON watch-history fixture
-- Output: CLI narrative and JSON report
+- Input: local JSON fixtures for YouTube and generic activity events
+- Output: CLI narratives and JSON reports
 
 ## Current Layers
 
-The first slice keeps these concerns separate:
+The current local-first slice keeps these concerns separate:
 
+- `intentos/activity.py`: generic `ActivityEvent` domain type and boundary
+  validation.
+- `intentos/classifier.py`: generic behavior taxonomy classifier.
+- `intentos/reporting.py`: generic aggregate behavior reporting.
+- `intentos/activity_cli.py`: multi-app activity CLI.
+- `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
 - `intentos/youtube.py`: domain types, boundary validation, classification,
-  aggregation, and report generation.
-- `intentos/cli.py`: command line interface.
-- `intentos/evaluate.py`: fixture-based classifier evaluation.
+  aggregation, and report generation for the YouTube-specific slice.
+- `intentos/cli.py`: YouTube command line interface.
+- `intentos/evaluate.py`: YouTube fixture-based classifier evaluation.
+- `data/activity/multi_app_events.json`: generic multi-app sample events.
+- `data/activity/evaluation_set.json`: labeled multi-app evaluation set.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
+- `tests/test_activity_classification.py`: multi-app behavior tests.
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
@@ -54,6 +64,8 @@ The first slice keeps these concerns separate:
   out of scope until a UI exists.
 - The classifier preserves uncertainty with an `unknown` label when metadata is
   sparse or cue scores are too close.
+- Generic activity classification is now the preferred product path. YouTube is
+  still supported as a concrete domain-specific path and fixture.
 
 ## Mechanical Enforcement
 

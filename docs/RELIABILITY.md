@@ -26,10 +26,13 @@ artifacts.
 
 - `python3 -m intentos.cli data/youtube/sample_watch_history.json`
 - `python3 -m intentos.cli data/youtube/sample_watch_history.json --json`
+- `python3 -m intentos.activity_cli data/activity/multi_app_events.json`
+- `python3 -m intentos.activity_cli data/activity/multi_app_events.json --json`
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
 - `python3 -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90`
+- `python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85`
 
 ## Runtime Notes
 

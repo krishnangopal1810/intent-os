@@ -27,8 +27,8 @@ Expected artifacts after product code exists:
   path, artifact path, and runtime mode.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
-  The current CLI slice writes `youtube-summary.txt` and
-  `youtube-summary.json`.
+  The current CLI slice writes YouTube and multi-app activity text/JSON
+  summaries.
 
 ## Product Runtime Contract
 
