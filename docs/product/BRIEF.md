@@ -12,10 +12,12 @@ deterministic fixtures into behavior labels and reports aggregate time insights.
 The preferred product path is now generic `ActivityEvent` classification. The
 YouTube MVP remains as a concrete domain slice and regression fixture.
 
-The next planned product step is a metadata-only macOS live activity capture
-prototype. It should collect active app, focused window, and one browser's
-active tab metadata into local `ActivityEvent` JSONL before adding screenshots,
-OCR, or model-backed classification.
+The current live product slice captures metadata-only macOS app/window samples,
+enriches supported browser active-tab metadata when local Automation permission
+allows it, and replays the result into the UI. It now supports both one-shot
+manual capture and a bounded live session timeline that repeatedly samples this
+metadata, merges adjacent equivalent activity, and renders a timeline without
+adding screenshots, OCR, or model-backed classification.
 
 ## Product Definition
 
@@ -69,6 +71,27 @@ digital activity into semantic insights about attention, intent, and behavior.
 
 ## Implemented Slices
 
+### Metadata-Only Live Capture
+
+The current live capture slice supports manual local smoke loops:
+
+- frontmost macOS app/window metadata through local System Events
+- best-effort browser active tab URL/title/domain enrichment
+- local privacy exclusions and redaction before JSONL persistence
+- adjacent equivalent session sample merging
+- replay through the generic `ActivityEvent` classifier
+- UI preference for session timeline replay artifacts
+
+Run:
+
+```sh
+make observe-live
+make observe-session
+```
+
+This command is intentionally manual and outside CI because it depends on local
+macOS Accessibility and browser Automation permissions.
+
 ### Generic Multi-App Activity
 
 The current generic classifier handles local fixture events from surfaces such
@@ -118,13 +141,14 @@ The detailed MVP spec is
 - [on-device-inference.md](on-device-inference.md) defines the rules-first
   inference ladder and where Apple Foundation Models, Core ML, or MLX may fit
   after deterministic fixture evaluation shows a need.
-- The first live slice must not use keylogging, raw screenshot retention, cloud
-  inference, or always-on background capture.
+- Live capture must not use keylogging, raw screenshot retention, cloud
+  inference, or always-on background capture in the current local slices.
 
 ## Current Verification
 
-- `make verify` runs harness checks, structural linting, unit tests, CLI smoke
-  checks, YouTube evaluation, and multi-app `ActivityEvent` evaluation.
+- `make verify` runs harness checks, structural linting, repository audit, unit
+  tests, CLI smoke checks, YouTube evaluation, multi-app `ActivityEvent`
+  evaluation, capture replay, UI validation, and screenshot freshness checks.
 - The multi-app evaluation set keeps generic behavior classification from
   regressing while future adapters are added.
 - The YouTube evaluation set preserves the first domain-specific slice as a
@@ -143,13 +167,13 @@ The detailed MVP spec is
 
 ## Non-Goals
 
-- Full-device activity capture in the current local slices.
+- Continuous full-device activity capture in the current local slices.
 - Browser extension distribution in the current local slices.
 - Cloud-hosted inference or cloud storage of personal activity.
 - Automatic blocking, scheduling, or workflow execution in the current local
   slices.
 - Generic productivity dashboards that only restate app usage.
-- Live capture is not implemented yet.
+- Always-on live capture is not implemented.
 - Screenshot capture and OCR are not part of the first live capture slice.
 
 ## Constraints
@@ -192,8 +216,8 @@ understands intent, optimizes time, and executes actions on behalf of the user.
 
 ## Open Questions
 
-- What is the first real user-data import path: manual JSON/CSV, Google
-  Takeout, browser history, macOS window tracking, or ChatGPT export?
+- Which manual CSV/JSON fields should be required for the first real user-data
+  import path?
 - How should labeled evaluation fixtures be expanded with real personal
   examples?
 - What local model should eventually replace or augment deterministic rules?

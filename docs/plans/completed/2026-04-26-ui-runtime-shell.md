@@ -23,7 +23,6 @@ loop before future UI slices are built.
 
 ## Non-Goals
 
-- Add browser screenshot automation.
 - Add user accounts, persistence, settings, or live capture controls.
 - Replace the CLI reports.
 
@@ -51,6 +50,8 @@ loop before future UI slices are built.
 - 2026-04-26: Added `web/` UI shell, `scripts/product/start-ui.sh`,
   `scripts/product/validate-ui.sh`, `make dev` UI serving, and `make verify`
   UI validation.
+- 2026-04-26: Extended the UI harness with checked-in screenshot evidence and
+  optional local headless browser render validation.
 
 ## Implementation Notes
 

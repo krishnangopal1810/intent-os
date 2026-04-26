@@ -61,19 +61,28 @@ make verify
 
 When product code exists, verification must include runtime legibility:
 
-- `make dev` starts the app for the current worktree.
+- `make dev` starts the app for the current worktree in fixture-only mode.
+- `make dev-live` captures a fresh bounded macOS session and starts the UI with
+  that live session artifact preferred.
 - `make app-status` confirms the app URL, process, and logs.
 - `make validate-ui` validates the local UI shell and product artifacts.
+- `make update-ui-screenshot` refreshes checked-in visual evidence whenever UI
+  source, fixture inputs, or report output changes.
+- `make check-ui-screenshot` verifies screenshot evidence freshness.
 - `make observe` exposes local logs and runtime signals.
 - `make diagnose` prints app state, structured runtime events, UI validation
   evidence, and recent logs.
 - `make observe-live` manually exercises live local sensors when the task
   changes macOS capture behavior. Do not put this in CI; use fixtures for
-  deterministic verification. The UI will prefer live replay artifacts produced
-  by this command when they exist.
+  deterministic verification.
+- `make observe-session` manually exercises the bounded live timeline loop when
+  the task changes repeated capture or session merge behavior. Keep it outside
+  CI and cover session behavior with deterministic fixtures.
 
 Capture screenshots, logs, or notes in the active plan when visual or runtime
-behavior matters.
+behavior matters. For UI changes, update
+`docs/assets/screenshots/intent-os-ui.png` before handoff unless the change is
+purely non-visual.
 
 ## 6. Handoff
 

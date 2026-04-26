@@ -57,6 +57,8 @@ def check_stale_docs(failures: list[str]) -> None:
         "Live capture and UI are not implemented yet": "manual macOS frontmost capture now exists",
         "Live multi-app capture is not implemented": "manual macOS frontmost capture now exists",
         "No product UI has been specified yet": "the local UI shell now exists",
+        "browser screenshot automation are not implemented": "checked-in screenshot evidence now exists",
+        "browser screenshot validation remain future extensions": "checked-in screenshot evidence now exists",
     }
 
     doc_paths = sorted((ROOT / "docs").rglob("*.md")) + [ROOT / "README.md"]
@@ -67,8 +69,16 @@ def check_stale_docs(failures: list[str]) -> None:
                 failures.append(f"{rel(path)} contains stale phrase {phrase!r}; {reason}")
 
     required_doc_phrases = {
-        "README.md": ["make observe-live", "Manual metadata-only macOS"],
-        "docs/APP_RUNTIME.md": ["make validate-ui", "make observe-live", "structured", "local app shell"],
+        "README.md": ["make dev-live", "make observe-live", "make observe-session", "Manual metadata-only macOS"],
+        "docs/APP_RUNTIME.md": [
+            "make validate-ui",
+            "make dev-live",
+            "make observe-live",
+            "make observe-session",
+            "make update-ui-screenshot",
+            "structured",
+            "local app shell",
+        ],
         "docs/HARNESS_AUDIT.md": [
             "local app shell",
             "deterministic capture fixtures",
@@ -81,7 +91,14 @@ def check_stale_docs(failures: list[str]) -> None:
             "fixture drift",
             "quality scorecard gaps",
         ],
-        "docs/RELIABILITY.md": ["make observe-live", "structured", "ui-validation.json"],
+        "docs/RELIABILITY.md": [
+            "make dev-live",
+            "make observe-live",
+            "make observe-session",
+            "make check-ui-screenshot",
+            "structured",
+            "ui-validation.json",
+        ],
         "docs/DESIGN.md": ["IntentOS UI shell", "daily behavior review"],
     }
     for relative_path, phrases in required_doc_phrases.items():
@@ -167,6 +184,11 @@ def check_ui_shell(failures: list[str]) -> None:
         "web/app.js",
         "scripts/product/start-ui.sh",
         "scripts/product/validate-ui.sh",
+        "scripts/product/render-ui-check.py",
+        "scripts/product/update-ui-screenshot.sh",
+        "scripts/product/check-ui-screenshot.sh",
+        "docs/assets/screenshots/intent-os-ui.png",
+        "docs/assets/screenshots/intent-os-ui.json",
         "scripts/harness/runtime-log.py",
         "scripts/harness/diagnose.sh",
     ]
@@ -187,6 +209,8 @@ def check_ui_shell(failures: list[str]) -> None:
         for phrase in [
             "activity-summary.json",
             "capture-summary.json",
+            "session-capture-summary.json",
+            "live-session-capture-summary.json",
             "live-capture-summary.json",
             "youtube-summary.json",
         ]:

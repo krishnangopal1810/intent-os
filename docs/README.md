@@ -13,14 +13,17 @@ IntentOS has a local-first Python CLI foundation:
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture with best-effort
   browser active-tab enrichment.
+- Bounded live session timeline capture that repeatedly samples metadata,
+  merges adjacent equivalent activity, and renders the timeline in the UI.
 - Local UI shell for inspecting current behavior summaries.
+- Checked-in UI screenshot evidence guarded by a source manifest.
 - Labeled fixture evaluation for both paths.
 - Harness linting and cleanup checks.
 - CI running `make verify`.
 - Specs for metadata-first macOS live capture and local on-device inference.
 
-Continuous session capture, screenshot fallback, OCR, local model inference, and
-browser screenshot automation are not implemented yet.
+Always-on session capture, screenshot fallback, OCR, local model inference, and
+richer DOM automation are not implemented yet.
 
 ## Product
 
@@ -92,17 +95,31 @@ Run:
 
 ```sh
 make dev
+make dev-live
 make app-status
 make diagnose
 make observe
 make observe-live
+make observe-session
 make validate-ui
+make update-ui-screenshot
 ```
 
 The current CLI runtime writes inspectable text and JSON artifacts under
 `.harness/runtime/artifacts/`, and `make dev` serves the local UI shell from
-`.harness/runtime/site/`.
+`.harness/runtime/site/` in fixture-only mode.
 `make diagnose` prints app state, structured runtime events, validation
 evidence, and recent logs.
 `make observe-live` is a manual local-only sensor diagnostic and is not part of
 CI because it depends on macOS permissions and current user state.
+`make observe-session` is the bounded manual live timeline diagnostic and is
+also outside CI; deterministic session fixtures cover merge, privacy, replay,
+and UI timeline behavior.
+`make dev-live` is the explicit real macOS UI flow: it runs a fresh bounded
+`make observe-session`, preserves the live replay artifact, and then starts the
+UI with live session data preferred. It only reflects activity captured during
+that command window.
+`make validate-ui` also runs local headless browser render diagnostics when
+Chrome or Chromium exists.
+`make update-ui-screenshot` regenerates checked-in UI evidence when UI source,
+fixture, or report-output changes affect the rendered product.

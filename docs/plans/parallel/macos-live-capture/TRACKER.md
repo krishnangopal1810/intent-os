@@ -1,8 +1,8 @@
 # macOS Live Capture Parallel Tracker
 
 This tracker coordinates three Codex agents building the metadata-only macOS
-live activity capture prototype from the active plan:
-[2026-04-26-macos-live-activity-capture-prototype.md](../../active/2026-04-26-macos-live-activity-capture-prototype.md).
+live activity capture prototype from the completed plan:
+[2026-04-26-macos-live-activity-capture-prototype.md](../../completed/2026-04-26-macos-live-activity-capture-prototype.md).
 
 ## Coordination Rules
 
@@ -80,11 +80,13 @@ Agents should preserve `unknown` when metadata is sparse or conflicting.
   rules for any new product modules.
 - Run `make harness-check`, `make harness-lint`, `make cleanup-check`,
   `make verify`, `make dev`, `make app-status`, and `make observe`.
-- Update the active plan progress log with final verification evidence.
+- Update the relevant plan progress log with final verification evidence.
 
 ## Integration Notes
 
 - The three work packages were implemented together in one branch.
-- The implementation uses fake-sensor fixtures only; live `NSWorkspace`,
-  Accessibility, and browser automation adapters remain the next product step.
+- The fake-sensor fixture loop, manual macOS frontmost app/window adapter, and
+  browser active-tab enrichment have shipped.
+- The next product step is a short live session timeline built on top of the
+  one-shot adapter.
 - Replay artifacts are produced by `make dev` under `.harness/runtime/artifacts/`.

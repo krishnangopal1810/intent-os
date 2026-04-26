@@ -1,6 +1,7 @@
 # macOS Live Activity Capture Prototype
 
-Status: In Progress
+Date: 2026-04-26
+Status: Completed
 
 ## Goal
 
@@ -61,8 +62,21 @@ one browser's active tab metadata.
 - 2026-04-26: Implemented all three parallel packages as a fake-sensor capture
   loop: app/window observations plus browser metadata normalize to
   `ActivityEvent` JSONL, privacy policy applies exclusions/redaction, and replay
-  uses existing classifier reports. Live macOS sensor APIs are still pending.
+  uses existing classifier reports.
 - 2026-04-26: Added a manual macOS frontmost app/window adapter using
   `osascript`/System Events. It captures app name, bundle ID, process ID, and
-  focused window title into the existing `ActivityEvent` JSONL path. Live
-  browser tab metadata remains pending.
+  focused window title into the existing `ActivityEvent` JSONL path.
+- 2026-04-26: Added best-effort browser active-tab enrichment for supported
+  browsers through local Automation, live replay artifacts for the UI, privacy
+  handling for empty/excluded live captures, and deterministic adapter
+  fixtures.
+- 2026-04-26: Added checked-in UI screenshot evidence and freshness checks so
+  UI-visible capture/report changes require updated visual evidence.
+
+## Handoff Notes
+
+Completed as a one-shot manual live sensor. The next active plan is the live
+capture session timeline: repeat sampling, merge adjacent activity, replay the
+session, and render the timeline in the UI. Verification passed through
+`make observe-live`, `make validate-ui`, `make check-ui-screenshot`, and
+`make verify`.

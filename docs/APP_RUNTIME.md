@@ -6,13 +6,16 @@ slices.
 
 ## Commands
 
-- `make dev`: generate current product artifacts and launch the local UI shell
-  for the current worktree.
+- `make dev`: generate fixture-only product artifacts and launch the local UI
+  shell for the current worktree.
+- `make dev-live`: run a fresh bounded macOS live session, preserve its replay
+  artifact, and launch the local UI shell against that live session summary.
 - `make app-status`: show runtime mode, process status when relevant, log
   locations, and UI HTTP health.
 - `make app-stop`: stop the local app process started by the harness.
 - `make validate-ui`: validate the local UI shell against deterministic runtime
-  artifacts.
+  artifacts and run local headless browser render checks when Chrome or
+  Chromium exists.
 - `make update-ui-screenshot`: regenerate the checked-in UI screenshot evidence
   from a local browser.
 - `make check-ui-screenshot`: verify that checked-in UI screenshot evidence is
@@ -22,18 +25,26 @@ slices.
   evidence, and recent logs.
 - `make observe-live`: run the manual macOS frontmost app/window sensor smoke
   loop, print the latest event, and replay it through the classifier.
+- `make observe-session`: run a bounded live metadata session, merge adjacent
+  equivalent activity, and replay the resulting timeline.
 - `make harness-lint`: validate structural and taste rules that keep the repo
   legible to agents.
 - `make verify`: run harness checks plus product checks.
 
-The current product slice now has a static local UI shell. `make dev` runs the
-sample analysis, writes reports, normalizes fake capture observations, replays
+The current product slice now has a static local UI shell. `make dev` is
+fixture-only: it clears live capture artifacts, runs the sample analysis,
+writes deterministic reports, normalizes fake capture observations, replays
 captured JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI
-on a per-run localhost port recorded in `.harness/runtime/app.env`. `make
-observe-live` exercises the manual macOS metadata-only adapter outside CI and
-writes live replay artifacts that the UI can prefer. Future live capture
-runtime commands must expose the capture mode, permission state, output JSONL
-path, and latest classifier replay summary.
+on a per-run localhost port recorded in `.harness/runtime/app.env` with
+`INTENTOS_APP_DATA_MODE=fixture`. It does not capture current macOS activity and
+does not read historical app, browser, or Codex activity.
+
+`make dev-live` is the explicit live-data path: it runs the bounded
+`make observe-session` workflow first, preserves the fresh live session replay
+artifacts, then starts the UI with `INTENTOS_APP_DATA_MODE=live_session`.
+`make observe-live` and `make observe-session` exercise manual macOS
+metadata-only adapters outside CI and write replay artifacts under
+`.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
 
 ## Runtime State
 
@@ -41,17 +52,21 @@ Local runtime artifacts live under `.harness/runtime/` and are ignored by git.
 Expected artifacts after product code exists:
 
 - `.harness/runtime/app.env`: runtime status, process ID when relevant, log
-  path, artifact path, runtime mode, and UI URL.
+  path, artifact path, runtime mode, data mode, and UI URL.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
   harness and product scripts.
 - `.harness/runtime/logs/live-capture.log`: manual live sensor diagnostic log
   when `make observe-live` is run.
+- `.harness/runtime/logs/live-session-capture.log`: manual bounded session
+  diagnostic log when `make observe-session` is run.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
   `live-capture-events.jsonl`, `live-capture-summary.txt`, and
-  `live-capture-summary.json`.
+  `live-capture-summary.json`. Manual live sessions write
+  `live-session-capture-events.jsonl`, `live-session-capture-summary.txt`, and
+  `live-session-capture-summary.json`.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
 
 ## Product Runtime Contract
@@ -70,8 +85,8 @@ The implementation must also provide one of these verification paths:
 - Another explicit product verifier called by `scripts/harness/verify.sh`
 
 IntentOS currently provides `scripts/product/dev.sh`,
-`scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`, and
-`scripts/product/verify.sh`.
+`scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`,
+`scripts/product/verify.sh`, and `scripts/harness/dev-live.sh`.
 
 ## UI Validation Contract
 
@@ -87,11 +102,15 @@ IntentOS currently provides `scripts/product/dev.sh`,
 
 The current validator fetches the page plus JSON artifacts through a temporary
 local server. It writes `ui-validation.txt`, `ui-validation.json`, and
-`ui-snapshot.html`, then checks the committed screenshot evidence under
-`docs/assets/screenshots/`. Run `make update-ui-screenshot` after UI source,
-fixture, or report-output changes. CI does not need Chrome to validate the
-committed screenshot; the screenshot metadata records a source hash and
-`make verify` fails when the image is stale.
+`ui-snapshot.html`. When Chrome or Chromium is available locally, it also
+captures `ui-render.png` and checks that the rendered screenshot is non-blank.
+If the local browser can also dump the rendered DOM probe, the validator checks
+for horizontal overflow, clipped visible text, and expected capture events. It
+also checks the committed screenshot evidence under `docs/assets/screenshots/`.
+Run `make update-ui-screenshot` after UI source, fixture, or report-output
+changes. CI does not need Chrome to validate the committed screenshot; the
+screenshot metadata records a source hash and `make verify` fails when the
+image is stale.
 
 ## Observability Contract
 
@@ -114,8 +133,8 @@ recent app log.
 
 ## Live Capture Runtime Contract
 
-When a live capture slice exists, `make dev` or a documented product command
-must make these visible:
+When a live capture slice exists, fixture and live commands must make these
+visible:
 
 - capture mode: fixture, fake sensor, manual live sensor, or replay
 - permission state for Accessibility permission, browser automation, and future
@@ -124,6 +143,15 @@ must make these visible:
 - redaction/exclusion policy loaded by the runtime
 - latest classification summary from replay, including
   `live-capture-summary.json` for UI consumption
+
+For IntentOS today, the split is intentional:
+
+- `make dev`: fixture-only UI. It clears live artifacts before serving so stale
+  live data cannot masquerade as the current session.
+- `make observe-session`: manual live capture diagnostic only. It writes live
+  artifacts but does not start or restart the UI.
+- `make dev-live`: live session UI. It captures a fresh bounded live session,
+  preserves the resulting live artifacts, and serves the UI against them.
 
 CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
 local macOS permissions and should not block `make verify`.
@@ -147,6 +175,23 @@ app/window metadata when possible. Privacy exclusions can produce zero captured
 rows; the harness still writes an empty replay summary. It must not be added to
 `make verify` because the result depends on live macOS state.
 
+Manual live session smoke command:
+
+```sh
+make observe-session
+```
+
+Equivalent explicit commands:
+
+```sh
+python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl
+python3 -m intentos.capture_cli replay .harness/runtime/artifacts/live-session-capture-events.jsonl --allow-empty
+```
+
+Manual live diagnostics stay outside CI, while parser, merge, privacy, replay,
+and UI timeline behavior are covered by deterministic fixtures in
+`make verify`.
+
 Current capture artifacts:
 
 - `capture-events.jsonl`
@@ -156,6 +201,14 @@ Current capture artifacts:
 - `live-capture-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
+- `session-capture-events.jsonl`
+- `session-capture-summary.txt`
+- `session-capture-summary.json`
+- `live-session-capture-events.jsonl`
+- `live-session-capture-summary.txt`
+- `live-session-capture-summary.json`
 - `ui-validation.txt`
 - `ui-validation.json`
 - `ui-snapshot.html`
+- checked-in `docs/assets/screenshots/intent-os-ui.png`
+- checked-in `docs/assets/screenshots/intent-os-ui.json`

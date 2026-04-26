@@ -19,9 +19,11 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
   richer DOM automation is still pending.
-- Continuous browser/app session capture is not implemented; manual macOS
-  app/window capture with browser tab enrichment exists as the first
-  metadata-only sensor.
+- Continuous always-on browser/app capture is not implemented; manual bounded
+  session capture now exists as a metadata-only diagnostic with deterministic
+  fixture coverage.
+- Session timeline fixtures, merge tests, replay checks, and UI timeline
+  validation are covered for the current bounded session slice.
 - Classifier quality is only local-fixture-tested; real evaluation data is
   pending.
 - No manual import path exists yet for real user activity.

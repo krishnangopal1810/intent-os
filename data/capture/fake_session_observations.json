@@ -1,0 +1,83 @@
+[
+  {
+    "start_time": "2026-04-26T10:00:00Z",
+    "end_time": "2026-04-26T10:00:05Z",
+    "app_name": "Google Chrome",
+    "bundle_id": "com.google.Chrome",
+    "process_id": 1001,
+    "window_title": "Transformer lecture - YouTube",
+    "url": "https://www.youtube.com/watch?v=learning123",
+    "domain": "youtube.com",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session",
+      "browser_name": "Google Chrome"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:05Z",
+    "end_time": "2026-04-26T10:00:10Z",
+    "app_name": "Google Chrome",
+    "bundle_id": "com.google.Chrome",
+    "process_id": 1001,
+    "window_title": "Transformer lecture - YouTube",
+    "url": "https://www.youtube.com/watch?v=learning123",
+    "domain": "youtube.com",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session",
+      "browser_name": "Google Chrome"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:10Z",
+    "end_time": "2026-04-26T10:00:15Z",
+    "app_name": "Google Chrome",
+    "bundle_id": "com.google.Chrome",
+    "process_id": 1001,
+    "window_title": "Bank account login",
+    "url": "https://bank.example/login",
+    "domain": "bank.example",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session",
+      "browser_name": "Google Chrome"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:15Z",
+    "end_time": "2026-04-26T10:00:20Z",
+    "app_name": "VS Code",
+    "bundle_id": "com.microsoft.VSCode",
+    "process_id": 2002,
+    "window_title": "session.py - intent-os",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:20Z",
+    "end_time": "2026-04-26T10:00:25Z",
+    "app_name": "VS Code",
+    "bundle_id": "com.microsoft.VSCode",
+    "process_id": 2002,
+    "window_title": "session.py - intent-os",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:25Z",
+    "end_time": "2026-04-26T10:00:30Z",
+    "app_name": "Slack",
+    "bundle_id": "com.tinyspeck.slackmacgap",
+    "process_id": 3003,
+    "window_title": "Product planning",
+    "source": "fake_session",
+    "metadata": {
+      "capture_mode": "fixture_session"
+    }
+  }
+]

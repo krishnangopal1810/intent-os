@@ -13,9 +13,21 @@ artifacts, PR workflow, CI, documented live-capture/privacy contracts, a
 deterministic fake-sensor replay loop, a local app shell for the UI,
 deterministic UI validation, checked-in screenshot evidence, structured runtime
 JSONL events, `make diagnose`, and a manual macOS metadata-only frontmost
-app/window adapter with best-effort browser tab enrichment. It does not yet
-include rich DOM automation, rich metrics/traces, continuous session capture,
-or autonomous agent-to-agent review.
+app/window adapter with best-effort browser tab enrichment plus bounded session
+timeline capture. It does not yet include rich DOM automation, rich
+metrics/traces, always-on session capture, or autonomous agent-to-agent review.
+
+## Self-Sufficiency Verdict
+
+The harness is self-sufficient for the product surface shipped so far:
+fixture-backed classification, fake capture replay, one-shot manual live
+macOS/browser metadata capture, bounded live session timeline capture, local UI
+inspection, optional headless browser render diagnostics, screenshot evidence,
+CI, PR review, and merge workflows all have repository-local commands and docs.
+
+The harness is not yet sufficient for later ScreenCaptureKit/OCR/local-model or
+always-on capture work. Those slices must first add fake adapters, privacy
+gates, metrics/traces where justified, and stricter architecture lint rules.
 
 ## Principle Coverage
 
@@ -25,12 +37,12 @@ or autonomous agent-to-agent review.
 | Humans steer, agents execute | Green | Product intent lives in `docs/product/BRIEF.md`; Codex is expected to implement slices through plans. |
 | Short `AGENTS.md` as map | Green | `AGENTS.md` is short and points to deeper docs. |
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
-| First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP and multi-app ActivityEvent foundation. |
+| First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP, multi-app ActivityEvent foundation, live capture, UI shell, and session timeline. |
 | Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene and quality scorecard structure. |
-| App legibility | Green | `make dev` generates MVP artifacts, serves the local UI shell, records the URL in `.harness/runtime/app.env`, `make validate-ui` checks the shell against local artifacts, and checked-in screenshot evidence is guarded by a source manifest. |
+| App legibility | Green | `make dev` generates fixture-only MVP and session timeline artifacts, serves the local UI shell, records the URL and `INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`, `make dev-live` is the explicit capture-then-serve path for fresh macOS session data, `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics, and checked-in screenshot evidence is guarded by a source manifest. |
 | Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
-| Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS capture has deterministic fixture tests. |
+| Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS, browser active-tab, and session merge paths have deterministic fixture tests. |
 | Multi-agent coordination | Yellow | A parallel macOS live-capture package defines a shared tracker, three disjoint task files, merge order, and harness ownership checks. |
 | Agent review and CI remediation loops | Yellow | Operating model exists; GitHub review automation is not yet wired into repo scripts. |
 | Product verification gates | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, capture replay, and UI validation. CI runs `make verify`. |
@@ -41,7 +53,8 @@ or autonomous agent-to-agent review.
 `make verify` passes for the current product surface. It runs harness checks,
 structural/taste linting, product unit tests, YouTube CLI and evaluation checks,
 multi-app ActivityEvent CLI and evaluation checks, fake capture replay checks,
-and cleanup-sensitive structural checks.
+session timeline replay checks, UI validation, and cleanup-sensitive structural
+checks.
 
 The harness also requires live-capture and on-device inference docs so future
 macOS sensor work starts from the privacy and architecture contract. It
@@ -51,17 +64,19 @@ from explicit ownership boundaries.
 Manual live validation is intentionally separate from CI:
 
 ```sh
+make dev-live
 make observe-live
+make observe-session
 ```
 
-This command writes live capture diagnostics and replay evidence under
-`.harness/runtime/`, but it may require local Accessibility and Automation
+These commands write live capture diagnostics and replay evidence under
+`.harness/runtime/`, but they may require local Accessibility and Automation
 permissions.
 
 ## Next Harness Upgrades
 
-- Add richer DOM automation to `make validate-ui` when the UI becomes
-  interactive.
+- Expand browser automation in `make validate-ui` when the UI becomes
+  interactive enough to require click, filter, and navigation checks.
 - Keep deterministic capture fixtures for each real adapter. CI must exercise
   parser, normalization, privacy exclusion, and replay behavior without reading
   live user state.

@@ -33,12 +33,15 @@ from local runtime artifacts.
 - `make dev` serves the shell at the URL recorded in
   `.harness/runtime/app.env`.
 - `make validate-ui` builds the shell, starts a temporary local server, fetches
-  the page and JSON artifacts, and writes
-  `.harness/runtime/artifacts/ui-validation.txt`.
+  the page and JSON artifacts, writes
+  `.harness/runtime/artifacts/ui-validation.txt`, and, when Chrome or Chromium
+  exists locally, captures rendered browser evidence under
+  `.harness/runtime/artifacts/ui-render*`.
 - `docs/assets/screenshots/intent-os-ui.png` is the checked-in visual baseline
   for the current fixture-backed UI.
 
-## Future Design System Notes
+## Design System Notes
 
-Record product-specific typography, color, spacing, component, and accessibility
-rules here once the product direction is known.
+The local shell follows macOS utility-app conventions: split-view navigation,
+SF system typography, restrained light materials, 8px cards, compact status
+badges, and behavior-color dots that match the timeline and breakdown.

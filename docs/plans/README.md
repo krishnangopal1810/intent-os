@@ -36,7 +36,7 @@ product or architecture direction, update the relevant docs too.
 Use a parallel work package when a slice can be split into disjoint ownership
 areas. Each package should include a tracker plus one task file per agent.
 
-Current package:
+Historical package:
 
 - [parallel/macos-live-capture/TRACKER.md](parallel/macos-live-capture/TRACKER.md)
 
@@ -46,4 +46,5 @@ Rules:
 - Shared interfaces live in the tracker.
 - The coordinator owns tracker updates and final integration.
 - `make harness-lint` checks the macOS live-capture package for required task
-  sections and ownership conflicts.
+  sections and ownership conflicts. Create a new parallel package when the
+  active manual import plan is split across multiple agents.
