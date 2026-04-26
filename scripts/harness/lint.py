@@ -31,6 +31,7 @@ EXPECTED_LAYERS = {
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
     "tests/test_capture_browser.py",
+    "tests/test_capture_cli.py",
     "tests/test_capture_core.py",
     "tests/test_capture_macos.py",
     "tests/test_capture_privacy.py",
@@ -73,6 +74,11 @@ ALLOWED_IMPORTS = {
         "intentos.reporting",
     },
     "tests/test_capture_browser.py": {"intentos.capture.browser"},
+    "tests/test_capture_cli.py": {
+        "intentos.capture.browser",
+        "intentos.capture.macos",
+        "intentos.capture_cli",
+    },
     "tests/test_capture_core.py": {
         "intentos.capture.core",
         "intentos.capture.jsonl",
@@ -327,6 +333,11 @@ def check_ui_harness(failures: list[str]) -> None:
         "web/app.js",
         "scripts/product/start-ui.sh",
         "scripts/product/validate-ui.sh",
+        "scripts/product/update-ui-screenshot.sh",
+        "scripts/product/check-ui-screenshot.sh",
+        "scripts/product/ui-screenshot-manifest.py",
+        "docs/assets/screenshots/intent-os-ui.png",
+        "docs/assets/screenshots/intent-os-ui.json",
         "scripts/harness/runtime-log.py",
         "scripts/harness/diagnose.sh",
     ]
@@ -341,12 +352,20 @@ def check_ui_harness(failures: list[str]) -> None:
             "ui-validation.txt",
             "ui-validation.json",
             "ui-snapshot.html",
+            "check-ui-screenshot.sh",
             "activity-summary.json",
             "capture-summary.json",
             "live-capture-summary.json",
         ]:
             if phrase not in text:
                 failures.append(f"scripts/product/validate-ui.sh must mention {phrase}")
+
+    makefile = ROOT / "Makefile"
+    if makefile.is_file():
+        makefile_text = makefile.read_text(encoding="utf-8")
+        for phrase in ["update-ui-screenshot:", "check-ui-screenshot:"]:
+            if phrase not in makefile_text:
+                failures.append(f"Makefile must expose {phrase}")
 
     observe = ROOT / "scripts/harness/observe.sh"
     if observe.is_file() and "events.jsonl" not in observe.read_text(encoding="utf-8"):

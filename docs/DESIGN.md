@@ -21,8 +21,9 @@ from local runtime artifacts.
 - Text must fit within its containers.
 - Interactive controls must have obvious affordances and focus states.
 - UI changes should be verified visually when the product has a frontend.
-- UI changes must pass `make validate-ui`; browser screenshots should be added
-  once a browser automation dependency is introduced.
+- UI changes must pass `make validate-ui`.
+- UI source, fixture, or report-output changes must refresh the checked-in
+  screenshot with `make update-ui-screenshot`.
 
 ## Current UI Shell
 
@@ -34,6 +35,8 @@ from local runtime artifacts.
 - `make validate-ui` builds the shell, starts a temporary local server, fetches
   the page and JSON artifacts, and writes
   `.harness/runtime/artifacts/ui-validation.txt`.
+- `docs/assets/screenshots/intent-os-ui.png` is the checked-in visual baseline
+  for the current fixture-backed UI.
 
 ## Future Design System Notes
 

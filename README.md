@@ -60,6 +60,7 @@ make dev
 make app-status
 make diagnose
 make validate-ui
+make update-ui-screenshot
 make observe
 make observe-live
 ```
@@ -86,6 +87,9 @@ the command still writes a valid empty replay summary for the UI.
 `make dev` serves the UI URL recorded in `.harness/runtime/app.env`. The UI
 prefers `live-capture-summary.json` when `make observe-live` has produced it,
 and falls back to fixture replay otherwise.
+`make update-ui-screenshot` refreshes the checked-in UI screenshot at
+`docs/assets/screenshots/intent-os-ui.png`. `make verify` checks that screenshot
+manifest so UI source changes cannot leave stale visual evidence behind.
 `make diagnose` prints app state, structured runtime events, UI validation
 evidence, and recent logs.
 

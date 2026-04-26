@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "source_files": [
+    "web/index.html",
+    "web/styles.css",
+    "web/app.js",
+    "scripts/product/dev.sh",
+    "data/activity/multi_app_events.json",
+    "data/capture/fake_browser_tabs.json",
+    "data/capture/fake_macos_observations.json",
+    "data/capture/privacy_policy.json",
+    "data/youtube/sample_watch_history.json",
+    "intentos/activity.py",
+    "intentos/activity_cli.py",
+    "intentos/capture_cli.py",
+    "intentos/capture/browser.py",
+    "intentos/capture/core.py",
+    "intentos/capture/jsonl.py",
+    "intentos/capture/privacy.py",
+    "intentos/capture_replay.py",
+    "intentos/classifier.py",
+    "intentos/cli.py",
+    "intentos/reporting.py",
+    "intentos/youtube.py"
+  ],
+  "source_hash": "9987f9c3d4f38059f5d08d69a87aa2da858361e765e096882a798445a49fc216",
+  "path": "docs/assets/screenshots/intent-os-ui.png",
+  "source_url": "/site/index.html",
+  "viewport": "1440,1000",
+  "width": 1440,
+  "height": 1000,
+  "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+}

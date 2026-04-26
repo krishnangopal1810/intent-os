@@ -111,3 +111,5 @@ PY
 
 scripts/harness/runtime-log.py ui validation_completed \
   status=ok artifact_path="$artifact_dir/ui-validation.json"
+
+scripts/product/check-ui-screenshot.sh
