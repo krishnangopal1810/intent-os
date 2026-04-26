@@ -5,8 +5,9 @@ product functionality.
 
 ## Current State
 
-IntentOS has a product direction and Week 1 MVP scope. No product code has been
-implemented yet.
+IntentOS has a product direction and a first local CLI MVP. The current
+implementation classifies deterministic sample YouTube watch activity into
+learning, entertainment, or unknown and reports aggregate time insights.
 
 ## Product Definition
 

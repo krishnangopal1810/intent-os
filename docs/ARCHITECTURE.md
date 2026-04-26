@@ -1,6 +1,8 @@
 # Architecture
 
-No product architecture has been selected yet.
+IntentOS currently ships a local-first Python CLI MVP for YouTube activity
+classification. The implementation uses only the Python standard library so a
+fresh checkout can run product verification without dependency installation.
 
 ## Architecture Principles
 
@@ -11,17 +13,26 @@ No product architecture has been selected yet.
 - Choose tooling that Codex can run locally in this repository.
 - Add mechanical checks for architectural rules once code exists.
 
-## Expected Layers
+## Current Stack
 
-The exact stack is still TBD, but product code should keep these concerns
-separate:
+- Language: Python 3
+- Runtime: CLI-first local process
+- Dependencies: Python standard library only
+- Input: local JSON watch-history fixture
+- Output: CLI narrative and JSON report
 
-- Product domain types and validation
-- Persistence and external integrations
-- Application services and workflows
-- Runtime wiring
-- UI or interface layer
-- Test and observability utilities
+## Current Layers
+
+The first slice keeps these concerns separate:
+
+- `intentos/youtube.py`: domain types, boundary validation, classification,
+  aggregation, and report generation.
+- `intentos/cli.py`: command line interface.
+- `data/youtube/sample_watch_history.json`: deterministic local fixture.
+- `tests/test_youtube_mvp.py`: product behavior tests.
+- `scripts/product/verify.sh`: product verification entry point for
+  `make verify`.
+- `scripts/product/dev.sh`: local artifact server for inspecting CLI output.
 
 ## Dependency Rules
 
@@ -33,5 +44,11 @@ separate:
 
 ## Current Decisions
 
-No architecture decisions have been made yet. Add durable decisions under
-`docs/decisions/` as the product takes shape.
+- The MVP uses deterministic, inspectable classification rules instead of a
+  model. This is intentional: it gives Codex and reviewers a visible baseline
+  for labels, confidence, uncertainty, and aggregation before a local model is
+  introduced.
+- The first interface is a CLI, not a graphical UI. Browser validation remains
+  out of scope until a UI exists.
+- The classifier preserves uncertainty with an `unknown` label when metadata is
+  sparse or cue scores are too close.

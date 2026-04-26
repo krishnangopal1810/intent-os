@@ -7,18 +7,18 @@ Use this document to keep quality visible to future Codex runs.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Product definition | Green | IntentOS brief and Week 1 YouTube MVP are specified. |
-| Architecture | Red | Stack and boundaries not selected yet. |
-| Verification | Yellow | Harness checks exist; product checks must fail until product runtime exists. |
-| Security | Yellow | Baseline exists; product model pending. |
-| Reliability | Yellow | Baseline exists; runtime pending. |
+| Architecture | Yellow | Local-first Python CLI stack and MVP boundaries are documented. |
+| Verification | Green | `make verify` runs harness checks, unit tests, and fixture evaluation. |
+| Security | Yellow | MVP is local-only; real user data capture policy is still pending. |
+| Reliability | Yellow | CLI verification and artifact runtime exist; UI and richer observability are pending. |
 | UX | Yellow | Week 1 YouTube classification workflow specified; UI not designed yet. |
 
 ## Known Gaps
 
-- Architecture needs stack choice after product requirements are known.
-- Product tests cannot exist until product code exists.
-- Runtime harness commands exist, but no product runtime has been wired yet.
+- Architecture lints do not exist yet.
 - Browser validation is specified but not implemented because no UI exists.
+- Live YouTube capture is not implemented.
+- Classifier quality is only fixture-tested; real evaluation data is pending.
 
 ## Cleanup Process
 

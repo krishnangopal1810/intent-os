@@ -1,4 +1,4 @@
-name: Harness
+name: Verify
 
 on:
   pull_request:
@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  harness:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Run harness checks
-        run: make harness-check
+      - name: Run product verification
+        run: make verify

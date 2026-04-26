@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Advanced Python Concurrency: asyncio Tasks and Cancellation",
+    "url": "https://www.youtube.com/watch?v=learn-python-concurrency",
+    "channel": "Engineering Deep Dives",
+    "watched_at": "2026-04-25T09:12:00Z",
+    "duration_seconds": 1680,
+    "description": "A technical tutorial on Python asyncio, structured concurrency, cancellation, and production patterns."
+  },
+  {
+    "title": "Building Local LLM Apps with Ollama and Apple Silicon",
+    "url": "https://www.youtube.com/watch?v=local-llm-apps",
+    "channel": "Practical AI Engineering",
+    "watched_at": "2026-04-25T10:05:00Z",
+    "duration_seconds": 600,
+    "description": "Step by step guide to local inference, model selection, prompt routing, and on-device app architecture."
+  },
+  {
+    "title": "I Let YouTube Recommendations Decide My Night",
+    "url": "https://www.youtube.com/watch?v=recommendations-night",
+    "channel": "Internet Culture Daily",
+    "watched_at": "2026-04-25T20:04:00Z",
+    "duration_seconds": 1320,
+    "description": "A casual entertainment video following recommendation-driven viewing."
+  },
+  {
+    "title": "Try Not To Laugh Compilation 2026",
+    "url": "https://www.youtube.com/watch?v=laugh-compilation",
+    "channel": "Daily Clips",
+    "watched_at": "2026-04-25T20:32:00Z",
+    "duration_seconds": 1200,
+    "description": "Short funny clips and reaction moments."
+  },
+  {
+    "title": "Celebrity Drama Explained in 15 Minutes",
+    "url": "https://www.youtube.com/watch?v=celebrity-drama",
+    "channel": "Pop Recap",
+    "watched_at": "2026-04-25T21:01:00Z",
+    "duration_seconds": 900,
+    "description": "A recap of online celebrity discourse and reactions."
+  },
+  {
+    "title": "Gaming Highlights That Broke The Internet",
+    "url": "https://www.youtube.com/watch?v=gaming-highlights",
+    "channel": "Highlight Reel",
+    "watched_at": "2026-04-25T21:28:00Z",
+    "duration_seconds": 1500,
+    "description": "Fast-cut gameplay highlights, reactions, and viral moments."
+  }
+]
