@@ -28,6 +28,13 @@ end tell
 return appName & linefeed & appBundle & linefeed & appPid & linefeed & windowName
 """.strip()
 
+FRONTMOST_FIELD_SCRIPTS = [
+    'tell application "System Events" to get name of first application process whose frontmost is true',
+    'tell application "System Events" to get bundle identifier of first application process whose frontmost is true',
+    'tell application "System Events" to get unix id of first application process whose frontmost is true',
+    'tell application "System Events" to tell first application process whose frontmost is true to get name of front window',
+]
+
 
 class MacOSCaptureError(RuntimeError):
     """Raised when local macOS metadata capture cannot run."""
@@ -62,8 +69,7 @@ def frontmost_app_snapshot(
         ["osascript", "-e", FRONTMOST_APP_SCRIPT],
     )
     if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip()
-        raise MacOSCaptureError(permission_help(detail))
+        completed = frontmost_app_snapshot_field_fallback(runner or run_command, completed)
 
     lines = completed.stdout.splitlines()
     if not lines or not lines[0].strip():
@@ -81,6 +87,27 @@ def frontmost_app_snapshot(
         bundle_id=bundle_id,
         process_id=process_id,
         window_title=value_or_none(lines[3] if len(lines) > 3 else ""),
+    )
+
+
+def frontmost_app_snapshot_field_fallback(
+    runner: CommandRunner,
+    original: subprocess.CompletedProcess[str],
+) -> subprocess.CompletedProcess[str]:
+    values: list[str] = []
+    for script in FRONTMOST_FIELD_SCRIPTS:
+        completed = runner(["osascript", "-e", script])
+        if completed.returncode != 0:
+            detail = completed.stderr.strip() or completed.stdout.strip()
+            if not detail:
+                detail = original.stderr.strip() or original.stdout.strip()
+            raise MacOSCaptureError(permission_help(detail))
+        values.append(completed.stdout.strip())
+    return subprocess.CompletedProcess(
+        ["osascript", "-e", "frontmost field fallback"],
+        0,
+        stdout="\n".join(values) + "\n",
+        stderr="",
     )
 
 

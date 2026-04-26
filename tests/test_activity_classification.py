@@ -24,6 +24,72 @@ class ActivityClassificationTest(unittest.TestCase):
         self.assertEqual(labels["admin"]["duration"], "30m")
         self.assertIn("largest behavior bucket was deep_work", result["summary"]["narrative"])
 
+    def test_report_sessionizes_adjacent_same_url_rows_and_shows_seconds(self):
+        events = [
+            ActivityEvent(
+                source_app="Google Chrome",
+                surface="127.0.0.1:55123",
+                title="IntentOS",
+                started_at="2026-04-26T18:34:03Z",
+                duration_seconds=2,
+                url="http://127.0.0.1:55123/site/index.html",
+                metadata={},
+            ),
+            ActivityEvent(
+                source_app="Google Chrome",
+                surface="127.0.0.1:55123",
+                title="IntentOS",
+                started_at="2026-04-26T18:34:05Z",
+                duration_seconds=2,
+                url="http://127.0.0.1:55123/site/index.html",
+                metadata={},
+            ),
+            ActivityEvent(
+                source_app="Google Chrome",
+                surface="youtube.com",
+                title="Dhurandhar - YouTube",
+                started_at="2026-04-26T18:34:07Z",
+                duration_seconds=2,
+                url="https://www.youtube.com/watch?v=example",
+                metadata={},
+            ),
+        ]
+
+        result = activity_report(events)
+
+        self.assertEqual(result["summary"]["total_duration"], "6s")
+        self.assertEqual(result["summary"]["labels"]["unknown"]["duration"], "6s")
+        self.assertEqual(len(result["items"]), 2)
+        self.assertEqual(result["items"][0]["duration"], "4s")
+        self.assertEqual(result["items"][0]["sample_count"], 2)
+        self.assertEqual(result["items"][1]["duration"], "2s")
+
+    def test_report_keeps_adjacent_non_url_titles_separate(self):
+        events = [
+            ActivityEvent(
+                source_app="Codex",
+                surface="macos_frontmost",
+                title="Implement live capture",
+                started_at="2026-04-26T18:34:03Z",
+                duration_seconds=2,
+                metadata={},
+            ),
+            ActivityEvent(
+                source_app="Codex",
+                surface="macos_frontmost",
+                title="Review pull request",
+                started_at="2026-04-26T18:34:05Z",
+                duration_seconds=2,
+                metadata={},
+            ),
+        ]
+
+        result = activity_report(events)
+
+        self.assertEqual(len(result["items"]), 2)
+        self.assertEqual(result["items"][0]["title"], "Implement live capture")
+        self.assertEqual(result["items"][1]["title"], "Review pull request")
+
     def test_chatgpt_is_classified_by_conversation_intent(self):
         coding = ActivityEvent(
             source_app="ChatGPT",

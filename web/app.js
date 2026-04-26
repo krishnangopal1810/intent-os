@@ -6,6 +6,7 @@ const paths = {
     "../artifacts/live-capture-summary.json",
     "../artifacts/capture-summary.json",
   ],
+  captureStatus: "../artifacts/live-capture-status.json",
   youtube: "../artifacts/youtube-summary.json",
 };
 
@@ -144,13 +145,36 @@ function renderTimeline(items) {
       const title = document.createElement("span");
       title.className = "event-title";
       title.textContent = `${item.source_app} - ${item.title}`;
+      const surface = document.createElement("span");
+      surface.className = "event-surface";
+      surface.textContent = item.url
+        ? `${item.surface} - ${item.url}`
+        : item.surface;
       const meta = document.createElement("span");
       meta.className = "event-meta";
-      meta.textContent = `${formatLabel(item.label)} - ${Math.round(item.confidence * 100)}%`;
-      row.append(time, title, meta);
+      const samples =
+        item.sample_count && item.sample_count > 1
+          ? ` - ${item.sample_count} samples`
+          : "";
+      const duration = item.duration || formatDuration(item.duration_seconds);
+      meta.textContent = `${duration} - ${formatLabel(item.label)} - ${Math.round(item.confidence * 100)}%${samples}`;
+      row.append(time, title, surface, meta);
       return row;
     }),
   );
+}
+
+function captureStatusText(isLiveCapture, status) {
+  if (!isLiveCapture) {
+    return "Fixture reports loaded";
+  }
+  if (!status) {
+    return "Live capture starting";
+  }
+  if (status.state === "running") {
+    return `Live capture running - ${status.events} event${status.events === 1 ? "" : "s"}`;
+  }
+  return `Live capture ${status.state}`;
 }
 
 async function boot() {
@@ -173,15 +197,31 @@ async function boot() {
   const primarySummary = isLiveSession || isSession || isLiveCapture
     ? capture.summary
     : activity.summary;
+  let status = null;
+  if (isLiveCapture) {
+    try {
+      status = await loadJson(paths.captureStatus);
+    } catch (error) {
+      status = null;
+    }
+  }
 
   document.querySelector("[data-primary-narrative]").textContent =
     formatNarrative(primarySummary.narrative);
   document.querySelector("[data-youtube-narrative]").textContent =
     formatNarrative(youtube.summary.narrative);
-  document.querySelector("[data-status]").textContent =
-    isLiveSession || isLiveCapture ? "Live capture loaded" : "Fixture reports loaded";
-  document.querySelector("[data-activity-source]").textContent = captureSource;
-  document.querySelector("[data-capture-source]").textContent = captureSource;
+  const statusText = isLiveCapture
+    ? captureStatusText(isLiveCapture, status)
+    : isLiveSession
+      ? "Live capture loaded"
+      : "Fixture reports loaded";
+  const captureLabel =
+    isLiveCapture && status
+      ? `${captureSource} - ${status.interval_seconds}s`
+      : captureSource;
+  document.querySelector("[data-status]").textContent = statusText;
+  document.querySelector("[data-activity-source]").textContent = captureLabel;
+  document.querySelector("[data-capture-source]").textContent = captureLabel;
 
   renderStats(primarySummary);
   renderBars(primarySummary);
@@ -192,3 +232,10 @@ boot().catch((error) => {
   document.querySelector("[data-status]").textContent = "Report load failed";
   document.querySelector("[data-primary-narrative]").textContent = error.message;
 });
+
+setInterval(() => {
+  boot().catch((error) => {
+    document.querySelector("[data-status]").textContent = "Report load failed";
+    document.querySelector("[data-primary-narrative]").textContent = error.message;
+  });
+}, 2000);

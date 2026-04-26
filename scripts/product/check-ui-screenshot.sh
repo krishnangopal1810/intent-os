@@ -10,32 +10,33 @@ METADATA="${INTENTOS_UI_SCREENSHOT_METADATA:-docs/assets/screenshots/intent-os-u
 python3 - "$SCREENSHOT" "$METADATA" <<'PY'
 import json
 import importlib.util
-import struct
 import sys
 from pathlib import Path
 
 screenshot = Path(sys.argv[1])
 metadata_path = Path(sys.argv[2])
 manifest_path = Path("scripts/product/ui-screenshot-manifest.py")
+png_validation_path = Path("scripts/product/png_validation.py")
 spec = importlib.util.spec_from_file_location("ui_screenshot_manifest", manifest_path)
 module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(module)
+png_spec = importlib.util.spec_from_file_location("png_validation", png_validation_path)
+png_module = importlib.util.module_from_spec(png_spec)
+assert png_spec.loader is not None
+png_spec.loader.exec_module(png_module)
 
 if not screenshot.is_file():
     raise SystemExit(f"missing UI screenshot {screenshot}; run make update-ui-screenshot")
 if not metadata_path.is_file():
     raise SystemExit(f"missing UI screenshot metadata {metadata_path}; run make update-ui-screenshot")
 
-data = screenshot.read_bytes()
-if not data.startswith(b"\x89PNG\r\n\x1a\n"):
-    raise SystemExit(f"{screenshot} is not a PNG")
-if len(data) < 24:
-    raise SystemExit(f"{screenshot} is too small to be a valid PNG")
-
-width, height = struct.unpack(">II", data[16:24])
-if width < 1024 or height < 700:
-    raise SystemExit(f"{screenshot} dimensions are too small: {width}x{height}")
+try:
+    stats = png_module.assert_useful_png(screenshot, min_width=1024, min_height=700)
+except Exception as exc:
+    raise SystemExit(str(exc)) from exc
+width = stats["width"]
+height = stats["height"]
 
 metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 current = module.manifest()
@@ -48,5 +49,9 @@ if metadata.get("width") != width or metadata.get("height") != height:
 if metadata.get("path") != str(screenshot):
     raise SystemExit(f"{metadata_path} path does not match {screenshot}")
 
-print(f"ui-screenshot-check: ok ({width}x{height})")
+print(
+    "ui-screenshot-check: ok "
+    f"({width}x{height}, colors={stats['unique_color_count']}, "
+    f"luminance_range={stats['luminance_range']})"
+)
 PY

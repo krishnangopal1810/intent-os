@@ -35,7 +35,10 @@ def main() -> int:
     print()
     for item in result["items"]:
         confidence = int(round(item["confidence"] * 100))
-        print(f"- {item['label']} ({confidence}%): {item['source_app']} - {item['title']}")
+        print(
+            f"- {item['label']} ({confidence}%, {item['duration']}): "
+            f"{item['source_app']} - {item['title']}"
+        )
         print(f"  {item['reason']}")
     return 0
 

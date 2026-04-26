@@ -8,6 +8,7 @@ RUNTIME_DIR=".harness/runtime"
 APP_ENV="$RUNTIME_DIR/app.env"
 EVENT_LOG="$RUNTIME_DIR/logs/events.jsonl"
 APP_LOG="$RUNTIME_DIR/logs/app.log"
+LIVE_CAPTURE_LOG="$RUNTIME_DIR/logs/live-capture.log"
 UI_VALIDATION="$RUNTIME_DIR/artifacts/ui-validation.txt"
 
 echo "diagnose: runtime state"
@@ -27,6 +28,14 @@ if [ -f "$UI_VALIDATION" ]; then
   cat "$UI_VALIDATION"
 else
   echo "diagnose: no UI validation artifact found at $UI_VALIDATION"
+fi
+
+echo
+echo "diagnose: recent live capture log"
+if [ -f "$LIVE_CAPTURE_LOG" ]; then
+  tail -n 80 "$LIVE_CAPTURE_LOG"
+else
+  echo "diagnose: no live capture log found at $LIVE_CAPTURE_LOG"
 fi
 
 echo

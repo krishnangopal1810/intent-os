@@ -32,6 +32,9 @@ calls.
 The planned live capture slice is metadata-first. It may request Accessibility
 permission for focused-window metadata and browser automation permission for
 active-tab title/URL. Screen Recording is not required for the first live slice.
+When started through `make dev`, background capture is explicit in
+`.harness/runtime/app.env`, `make app-status`, and
+`.harness/runtime/logs/live-capture.log`, and it stops with `make app-stop`.
 
 If future work adds ScreenCaptureKit, it must use Screen Recording permission
 only for low-confidence fallback capture. Raw screenshots are disabled by

@@ -15,10 +15,20 @@ def event_to_dict(event: ActivityEvent) -> dict[str, object]:
 
 
 def write_events_jsonl(events: Iterable[ActivityEvent], path: str | Path) -> int:
+    return write_events_jsonl_with_mode(events, path, "w")
+
+
+def append_events_jsonl(events: Iterable[ActivityEvent], path: str | Path) -> int:
+    return write_events_jsonl_with_mode(events, path, "a")
+
+
+def write_events_jsonl_with_mode(
+    events: Iterable[ActivityEvent], path: str | Path, mode: str
+) -> int:
     count = 0
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as handle:
+    with output.open(mode, encoding="utf-8") as handle:
         for event in events:
             handle.write(json.dumps(event_to_dict(event), sort_keys=True))
             handle.write("\n")
