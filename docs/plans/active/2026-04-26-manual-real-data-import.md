@@ -52,6 +52,28 @@ ScreenCaptureKit, OCR, or a local model.
 - `make verify` covers import conversion, validation, replay, and any UI
   behavior with no live user data.
 
+## Harness Impact
+
+- Runtime commands and artifacts: add an import command that writes
+  `import-events.jsonl`, `import-summary.txt`, `import-summary.json`, and
+  `import-validation.json` under `.harness/runtime/artifacts/`.
+- Fixtures or fakes required for deterministic `make verify`: add local CSV and
+  JSON fixtures for valid records, mixed app/browser/chat activity, validation
+  failures, and privacy exclusions.
+- UI validation or screenshot evidence: extend `make validate-ui` and refresh
+  screenshot evidence only if import artifacts create a new visible report
+  source.
+- Structured logs, metrics, or diagnostics: emit stable runtime events for
+  accepted rows, excluded rows, validation errors, output paths, and replay
+  status.
+- Privacy, permission, or local-only constraints: apply the existing privacy
+  policy before persisting imported user-derived records; keep the path
+  permission-free and local-only.
+- Docs or harness checks to update: update `docs/APP_RUNTIME.md`,
+  `docs/ARCHITECTURE.md`, `docs/RELIABILITY.md`, `docs/QUALITY.md`,
+  `docs/product/imports.md`, `scripts/product/verify.sh`, and
+  `scripts/harness/lint.py` as needed.
+
 ## Verification
 
 - `python3 -m unittest discover -s tests`
