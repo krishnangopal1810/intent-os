@@ -24,8 +24,10 @@ artifacts.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
 - `make dev`, `make app-status`, and `make observe` provide local runtime
-  legibility for the current CLI product. `make validate-ui` is reserved for a
-  future frontend.
+  legibility for the current CLI product.
+- `make observe-live` provides manual local sensor diagnostics for the macOS
+  frontmost app/window adapter.
+- `make validate-ui` is reserved for a future frontend.
 
 ## Product Commands
 
@@ -35,6 +37,8 @@ artifacts.
 - `python3 -m intentos.activity_cli data/activity/multi_app_events.json --json`
 - `python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl`
 - `python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl`
+- `python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl`
+- `make observe-live`
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
@@ -46,6 +50,13 @@ artifacts.
 `make dev` runs the sample analysis, writes text and JSON reports under
 `.harness/runtime/artifacts/`, records a completed runtime status, and writes
 the text summary to the local runtime log. `make observe` shows that log.
+`make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
+one live local metadata event, and replays it through the classifier.
+
+Future persistent runtime code should emit structured, line-oriented logs with
+stable fields for `component`, `event`, `mode`, `artifact_path`, `duration_ms`,
+`event_count`, and `status` so Codex can inspect capture, classification, and
+reporting behavior without reading ad hoc prose.
 
 Current artifacts:
 
@@ -56,6 +67,7 @@ Current artifacts:
 - `capture-events.jsonl`
 - `capture-summary.txt`
 - `capture-summary.json`
+- `live-capture-events.jsonl`
 
 ## Future Live Capture Reliability
 
@@ -71,3 +83,11 @@ The first live sensor implementation should add:
 
 - clear failures when Accessibility permission or browser automation permission
   is missing
+
+The current manual macOS adapter already reports Accessibility permission help
+when System Events denies frontmost app/window metadata. Live browser automation
+permission handling is still pending.
+
+Adapter tests must remain deterministic. The macOS adapter is covered by
+`data/capture/macos_frontmost_snapshot.json` and fake runners in
+`tests/test_capture_macos.py`; future real adapters need equivalent fixtures.

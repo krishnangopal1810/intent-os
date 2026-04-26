@@ -1,0 +1,10 @@
+{
+  "description": "Deterministic stdout fixture for the macOS frontmost app adapter.",
+  "stdout": "Codex\ncom.openai.codex\n37701\nCodex\n",
+  "expected": {
+    "app_name": "Codex",
+    "bundle_id": "com.openai.codex",
+    "process_id": 37701,
+    "window_title": "Codex"
+  }
+}

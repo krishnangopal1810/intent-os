@@ -22,9 +22,9 @@ product verification without dependency installation.
 - Input: local JSON fixtures for YouTube and generic activity events
 - Output: CLI narratives and JSON reports
 
-Future live capture work should add macOS source adapters that emit raw
-observations into the generic `ActivityEvent` boundary. Those adapters are not
-implemented yet.
+Live capture work emits raw observations into the generic `ActivityEvent`
+boundary. The current real adapter captures frontmost macOS app/window metadata
+manually; browser tab metadata still uses deterministic fixtures.
 
 ## Current Layers
 
@@ -42,6 +42,8 @@ The current local-first slice keeps these concerns separate:
 - `intentos/capture/privacy.py`: local privacy policy, exclusion, and redaction
   helpers.
 - `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
+- `intentos/capture/macos.py`: manual macOS frontmost app/window metadata
+  adapter using local System Events through `osascript`.
 - `intentos/capture_cli.py`: fake-sensor normalization and replay CLI.
 - `intentos/capture_replay.py`: JSONL replay through the existing behavior
   report.
@@ -54,6 +56,8 @@ The current local-first slice keeps these concerns separate:
 - `data/capture/fake_macos_observations.json`: deterministic fake app/window
   capture observations.
 - `data/capture/fake_browser_tabs.json`: deterministic browser tab metadata.
+- `data/capture/macos_frontmost_snapshot.json`: deterministic real-adapter
+  stdout fixture for macOS frontmost app/window parsing.
 - `data/capture/privacy_policy.json`: local exclusion and text-bounding policy.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
@@ -61,6 +65,8 @@ The current local-first slice keeps these concerns separate:
 - `tests/test_capture_core.py`: fake capture normalization and JSONL tests.
 - `tests/test_capture_browser.py`: browser metadata normalization tests.
 - `tests/test_capture_privacy.py`: exclusion and redaction policy tests.
+- `tests/test_capture_macos.py`: macOS adapter parsing and permission-error
+  tests that do not call live macOS APIs.
 - `tests/test_capture_replay.py`: capture replay tests.
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
@@ -109,11 +115,11 @@ pipeline.
   sparse or cue scores are too close.
 - Generic activity classification is now the preferred product path. YouTube is
   still supported as a concrete domain-specific path and fixture.
-- The first capture implementation uses fake metadata fixtures in CI. The first
-  live sensor slice should add `NSWorkspace`, Accessibility, and one browser
-  metadata adapter behind the same `ActivityEvent` boundary. ScreenCaptureKit,
-  Vision OCR, and model inference come later when metadata-only capture leaves
-  meaningful gaps.
+- The first capture implementation uses fake metadata fixtures in CI and a
+  manual macOS frontmost app/window adapter for local smoke tests. The next live
+  sensor slice should add one browser metadata adapter behind the same
+  `ActivityEvent` boundary. ScreenCaptureKit, Vision OCR, and model inference
+  come later when metadata-only capture leaves meaningful gaps.
 
 ## Mechanical Enforcement
 
@@ -122,10 +128,21 @@ basic file-size limits, generated-file hygiene, active-plan hygiene, quality
 scorecard rows, and labeled evaluation set coverage. Add new rules there when a
 review finding or repeated mistake should become agent-visible policy.
 
+As modules grow, promote these expectations from docs into lints:
+
+- source adapters may emit observations but must not classify behavior
+- event-boundary modules may parse and validate but must not own reporting
+- classifiers may depend on taxonomy and event types but not live sensors
+- reports may depend on classifier output but not raw capture adapters
+- UI/runtime wiring may orchestrate lower layers but should not bypass privacy
+  filtering
+
 ## Next Architecture Work
 
-- Add adapter layer once live capture implementation begins.
+- Add a live browser metadata adapter.
 - Expand lint rules to enforce source adapter -> event -> classifier -> report
   direction when those modules exist.
+- Add cleanup/audit checks for stale plans, stale docs, fixture drift, and
+  quality scorecard gaps as the documentation surface grows.
 - Add a local model boundary only after fixture evaluation shows deterministic
   rules are insufficient.

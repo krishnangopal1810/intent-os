@@ -16,14 +16,16 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - Deterministic local fixtures and labeled evaluation sets.
 - CLI reports and JSON reports.
 - Metadata-only fake-sensor capture normalization and replay.
+- Manual metadata-only macOS frontmost app/window capture.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
   CI running `make verify`.
-- Live-capture and on-device inference specs for the next macOS slice.
+- Live-capture and on-device inference specs for the next macOS slices.
 
-There is no live capture yet. The next planned slice is metadata-only macOS
-app/window/browser capture that writes local `ActivityEvent` JSONL. Screenshot
-capture, OCR, local model inference, and UI/browser validation remain future
-extensions after the metadata path is reliable.
+The first real live sensor is intentionally narrow: it samples the current
+frontmost macOS app/window through local System Events metadata and writes
+`ActivityEvent` JSONL. Browser tab metadata, screenshot capture, OCR, local
+model inference, and UI/browser validation remain future extensions after the
+metadata path is reliable.
 
 ## Start Here
 
@@ -54,6 +56,7 @@ make verify
 make dev
 make app-status
 make observe
+make observe-live
 ```
 
 Run the current product:
@@ -61,10 +64,17 @@ Run the current product:
 ```sh
 python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl
 python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl
+python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl
 python3 -m intentos.activity_cli data/activity/multi_app_events.json
 python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85
 python3 -m intentos.cli data/youtube/sample_watch_history.json
 ```
+
+`make observe-live` runs the manual macOS frontmost app/window smoke loop,
+writes `.harness/runtime/artifacts/live-capture-events.jsonl`, replays it
+through the classifier, and writes `.harness/runtime/logs/live-capture.log`.
+It may require Accessibility and Automation permissions for the Codex host app
+or terminal. CI uses deterministic fixtures instead of live macOS state.
 
 Create a scoped execution plan with:
 
@@ -82,4 +92,4 @@ smoke checks.
 ## Next Work
 
 See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). The recommended next slice is
-the metadata-only macOS live activity capture prototype.
+the metadata-only browser tab capture adapter.
