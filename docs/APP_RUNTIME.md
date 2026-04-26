@@ -6,22 +6,26 @@ slices.
 
 ## Commands
 
-- `make dev`: run the current CLI runtime or launch the app for the current
-  worktree.
-- `make app-status`: show runtime mode, process status when relevant, and log
-  locations.
+- `make dev`: generate current product artifacts and launch the local UI shell
+  for the current worktree.
+- `make app-status`: show runtime mode, process status when relevant, log
+  locations, and UI HTTP health.
 - `make app-stop`: stop the local app process started by the harness.
-- `make validate-ui`: drive the UI through browser automation when a UI exists.
+- `make validate-ui`: validate the local UI shell against deterministic runtime
+  artifacts.
 - `make observe`: print local runtime signals that Codex can inspect.
+- `make diagnose`: print app state, structured runtime events, validation
+  evidence, and recent logs.
 - `make observe-live`: run the manual macOS frontmost app/window sensor smoke
   loop, print the latest event, and replay it through the classifier.
 - `make harness-lint`: validate structural and taste rules that keep the repo
   legible to agents.
 - `make verify`: run harness checks plus product checks.
 
-The current product slice is CLI-first. `make dev` runs the sample analysis,
-writes reports, normalizes fake capture observations, replays captured JSONL,
-and keeps the generated summary visible through the runtime log. `make
+The current product slice now has a static local UI shell. `make dev` runs the
+sample analysis, writes reports, normalizes fake capture observations, replays
+captured JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI
+on a per-run localhost port recorded in `.harness/runtime/app.env`. `make
 observe-live` exercises the manual macOS metadata-only adapter outside CI.
 Future live capture runtime commands must expose the capture mode, permission
 state, output JSONL path, and latest classifier replay summary.
@@ -32,14 +36,17 @@ Local runtime artifacts live under `.harness/runtime/` and are ignored by git.
 Expected artifacts after product code exists:
 
 - `.harness/runtime/app.env`: runtime status, process ID when relevant, log
-  path, artifact path, and runtime mode.
+  path, artifact path, runtime mode, and UI URL.
 - `.harness/runtime/logs/app.log`: app logs.
+- `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
+  harness and product scripts.
 - `.harness/runtime/logs/live-capture.log`: manual live sensor diagnostic log
   when `make observe-live` is run.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
   `live-capture-events.jsonl`.
+- `.harness/runtime/site/`: generated local UI shell served by `make dev`.
 
 ## Product Runtime Contract
 
@@ -56,19 +63,26 @@ The implementation must also provide one of these verification paths:
 - `python -m pytest` with product tests
 - Another explicit product verifier called by `scripts/harness/verify.sh`
 
-IntentOS currently provides `scripts/product/dev.sh` and
+IntentOS currently provides `scripts/product/dev.sh`,
+`scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`, and
 `scripts/product/verify.sh`.
 
 ## UI Validation Contract
 
-When IntentOS has a UI, `make validate-ui` must:
+`make validate-ui` must:
 
 - Launch or connect to the local app.
 - Use a local app shell that can run per worktree without shared mutable state.
 - Visit the primary user workflow.
-- Capture at least one screenshot into `.harness/runtime/artifacts/`.
-- Fail on blank screens, console errors, or missing core UI text.
+- Validate that the page shell and product JSON artifacts load.
+- Write validation evidence into `.harness/runtime/artifacts/`.
+- Fail on blank screens, missing JSON artifacts, or missing core UI text.
 - Record validation notes in the active execution plan when relevant.
+
+The current validator is dependency-free and fetches the page plus JSON
+artifacts through a temporary local server. It writes `ui-validation.txt`,
+`ui-validation.json`, and `ui-snapshot.html`. Add screenshot and DOM automation
+when the repo introduces a browser automation dependency.
 
 ## Observability Contract
 
@@ -84,6 +98,10 @@ classification, and reporting paths should log stable fields such as
 `component`, `event`, `mode`, `artifact_path`, `duration_ms`, `event_count`,
 and `status`. Add metrics and traces when the runtime grows beyond a single
 local process.
+
+Use `make diagnose` when a future agent needs the fastest full runtime picture:
+it prints `app.env`, recent structured events, UI validation evidence, and the
+recent app log.
 
 ## Live Capture Runtime Contract
 
@@ -124,3 +142,6 @@ Current capture artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `ui-validation.txt`
+- `ui-validation.json`
+- `ui-snapshot.html`

@@ -98,6 +98,7 @@ def main() -> int:
     check_evaluation_set(failures)
     check_capture_adapter_fixtures(failures)
     check_live_observation_harness(failures)
+    check_ui_harness(failures)
     check_live_capture_contract(failures)
     check_parallel_plan_contract(failures)
 
@@ -305,6 +306,45 @@ def check_live_observation_harness(failures: list[str]) -> None:
     for phrase in ["capture-macos", "live-capture-events.jsonl", "live-capture.log"]:
         if phrase not in text:
             failures.append(f"scripts/harness/observe-live.sh must mention {phrase}")
+
+
+def check_ui_harness(failures: list[str]) -> None:
+    required_paths = [
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "scripts/product/start-ui.sh",
+        "scripts/product/validate-ui.sh",
+        "scripts/harness/runtime-log.py",
+        "scripts/harness/diagnose.sh",
+    ]
+    for path in required_paths:
+        if not (ROOT / path).is_file():
+            failures.append(f"missing {path}; keep the UI shell runnable by Codex")
+
+    validate = ROOT / "scripts/product/validate-ui.sh"
+    if validate.is_file():
+        text = validate.read_text(encoding="utf-8")
+        for phrase in [
+            "ui-validation.txt",
+            "ui-validation.json",
+            "ui-snapshot.html",
+            "activity-summary.json",
+            "capture-summary.json",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/product/validate-ui.sh must mention {phrase}")
+
+    observe = ROOT / "scripts/harness/observe.sh"
+    if observe.is_file() and "events.jsonl" not in observe.read_text(encoding="utf-8"):
+        failures.append("scripts/harness/observe.sh must expose structured events.jsonl")
+
+    diagnose = ROOT / "scripts/harness/diagnose.sh"
+    if diagnose.is_file():
+        text = diagnose.read_text(encoding="utf-8")
+        for phrase in ["app-status.sh", "events.jsonl", "ui-validation.txt"]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/diagnose.sh must mention {phrase}")
 
 
 def check_live_capture_contract(failures: list[str]) -> None:

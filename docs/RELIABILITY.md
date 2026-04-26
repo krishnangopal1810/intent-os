@@ -8,8 +8,9 @@ artifacts.
 - The app should be runnable from a fresh checkout with documented commands.
 - Startup failures should be visible in logs.
 - Tests should cover core product workflows.
-- UI workflows should be verifiable through browser automation once a frontend
-  exists.
+- UI workflows should be verifiable through `make validate-ui`; browser
+  screenshot automation should be added once a browser automation dependency is
+  introduced.
 - Long-running tasks should expose progress and recoverable errors.
 - Live capture adapters should have fixture or fake-based tests so CI does not
   require macOS permissions.
@@ -23,11 +24,12 @@ artifacts.
   file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
-- `make dev`, `make app-status`, and `make observe` provide local runtime
-  legibility for the current CLI product.
+- `make dev`, `make app-status`, `make validate-ui`, `make observe`, and
+  `make diagnose` provide local runtime legibility for the current UI-backed
+  product.
 - `make observe-live` provides manual local sensor diagnostics for the macOS
   frontmost app/window adapter.
-- `make validate-ui` is reserved for a future frontend.
+- `make validate-ui` validates the local UI shell and JSON artifact loading.
 
 ## Product Commands
 
@@ -42,14 +44,18 @@ artifacts.
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
+- `make validate-ui`
+- `make diagnose`
 - `python3 -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90`
 - `python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85`
 
 ## Runtime Notes
 
 `make dev` runs the sample analysis, writes text and JSON reports under
-`.harness/runtime/artifacts/`, records a completed runtime status, and writes
-the text summary to the local runtime log. `make observe` shows that log.
+`.harness/runtime/artifacts/`, serves the local UI shell, records its URL and
+process in `.harness/runtime/app.env`, and writes runtime logs. `make observe`
+shows structured events plus the app log. `make diagnose` prints app state,
+structured events, UI validation evidence, and app logs in one place.
 `make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 one live local metadata event, and replays it through the classifier.
 
@@ -68,6 +74,9 @@ Current artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `ui-validation.txt`
+- `ui-validation.json`
+- `ui-snapshot.html`
 
 ## Future Live Capture Reliability
 

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IntentOS</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell" data-ui-root>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local behavior intelligence</p>
+          <h1>IntentOS</h1>
+        </div>
+        <div class="status" data-status>Loading local reports</div>
+      </header>
+
+      <section class="hero" aria-labelledby="summary-title">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h2 id="summary-title" data-primary-narrative>Preparing behavior summary</h2>
+        </div>
+        <dl class="stats" data-stats></dl>
+      </section>
+
+      <section class="grid" aria-label="Behavior reports">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Activity</h2>
+            <span data-activity-source>Fixture replay</span>
+          </div>
+          <div class="bars" data-activity-bars></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Capture Replay</h2>
+            <span>Privacy filtered</span>
+          </div>
+          <ol class="event-list" data-capture-events></ol>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>YouTube</h2>
+            <span>MVP slice</span>
+          </div>
+          <p class="narrative" data-youtube-narrative>Loading YouTube report</p>
+        </article>
+      </section>
+    </main>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

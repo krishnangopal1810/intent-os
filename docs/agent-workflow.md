@@ -63,9 +63,10 @@ When product code exists, verification must include runtime legibility:
 
 - `make dev` starts the app for the current worktree.
 - `make app-status` confirms the app URL, process, and logs.
-- `make validate-ui` exercises the app through browser automation once a UI
-  exists.
+- `make validate-ui` validates the local UI shell and product artifacts.
 - `make observe` exposes local logs and runtime signals.
+- `make diagnose` prints app state, structured runtime events, UI validation
+  evidence, and recent logs.
 - `make observe-live` manually exercises live local sensors when the task
   changes macOS capture behavior. Do not put this in CI; use fixtures for
   deterministic verification.

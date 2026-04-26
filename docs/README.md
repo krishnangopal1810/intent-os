@@ -12,13 +12,14 @@ IntentOS has a local-first Python CLI foundation:
 - YouTube-specific classification from the first MVP slice.
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture.
+- Local UI shell for inspecting current behavior summaries.
 - Labeled fixture evaluation for both paths.
 - Harness linting and cleanup checks.
 - CI running `make verify`.
 - Specs for metadata-first macOS live capture and local on-device inference.
 
-Browser live capture, screenshot fallback, OCR, local model inference, and UI
-are not implemented yet.
+Browser live capture, screenshot fallback, OCR, local model inference, and
+browser screenshot automation are not implemented yet.
 
 ## Product
 
@@ -41,7 +42,7 @@ are not implemented yet.
 - [ARCHITECTURE.md](ARCHITECTURE.md): system shape, layers, dependency rules,
   and known tradeoffs.
 - [DESIGN.md](DESIGN.md): UX principles, visual rules, and interaction quality
-  bar.
+  bar for the local UI shell.
 - [SECURITY.md](SECURITY.md): security baseline and data handling rules.
 - [RELIABILITY.md](RELIABILITY.md): observability, failure handling, and local
   verification expectations.
@@ -91,11 +92,16 @@ Run:
 ```sh
 make dev
 make app-status
+make diagnose
 make observe
 make observe-live
+make validate-ui
 ```
 
 The current CLI runtime writes inspectable text and JSON artifacts under
-`.harness/runtime/artifacts/`.
+`.harness/runtime/artifacts/`, and `make dev` serves the local UI shell from
+`.harness/runtime/site/`.
+`make diagnose` prints app state, structured runtime events, validation
+evidence, and recent logs.
 `make observe-live` is a manual local-only sensor diagnostic and is not part of
 CI because it depends on macOS permissions and current user state.

@@ -16,6 +16,7 @@ def main() -> int:
     check_stale_plans(failures)
     check_stale_docs(failures)
     check_fixture_drift(failures)
+    check_ui_shell(failures)
     check_quality_gaps(failures)
 
     if failures:
@@ -55,6 +56,7 @@ def check_stale_docs(failures: list[str]) -> None:
         "There is no live capture yet": "manual macOS frontmost capture now exists",
         "Live capture and UI are not implemented yet": "manual macOS frontmost capture now exists",
         "Live multi-app capture is not implemented": "manual macOS frontmost capture now exists",
+        "No product UI has been specified yet": "the local UI shell now exists",
     }
 
     doc_paths = sorted((ROOT / "docs").rglob("*.md")) + [ROOT / "README.md"]
@@ -66,7 +68,7 @@ def check_stale_docs(failures: list[str]) -> None:
 
     required_doc_phrases = {
         "README.md": ["make observe-live", "Manual metadata-only macOS"],
-        "docs/APP_RUNTIME.md": ["make observe-live", "structured", "local app shell"],
+        "docs/APP_RUNTIME.md": ["make validate-ui", "make observe-live", "structured", "local app shell"],
         "docs/HARNESS_AUDIT.md": [
             "local app shell",
             "deterministic capture fixtures",
@@ -79,7 +81,8 @@ def check_stale_docs(failures: list[str]) -> None:
             "fixture drift",
             "quality scorecard gaps",
         ],
-        "docs/RELIABILITY.md": ["make observe-live", "structured"],
+        "docs/RELIABILITY.md": ["make observe-live", "structured", "ui-validation.json"],
+        "docs/DESIGN.md": ["IntentOS UI shell", "daily behavior review"],
     }
     for relative_path, phrases in required_doc_phrases.items():
         path = ROOT / relative_path
@@ -137,6 +140,42 @@ def check_fixture_drift(failures: list[str]) -> None:
                     failures.append(
                         f"{rel(macos_fixture)} expected.{field} does not match stdout"
                     )
+
+
+def check_ui_shell(failures: list[str]) -> None:
+    required_files = [
+        "web/index.html",
+        "web/styles.css",
+        "web/app.js",
+        "scripts/product/start-ui.sh",
+        "scripts/product/validate-ui.sh",
+        "scripts/harness/runtime-log.py",
+        "scripts/harness/diagnose.sh",
+    ]
+    for relative_path in required_files:
+        if not (ROOT / relative_path).is_file():
+            failures.append(f"missing UI harness file {relative_path}")
+
+    app_html = ROOT / "web/index.html"
+    if app_html.is_file():
+        text = read(app_html)
+        for phrase in ["data-ui-root", "IntentOS", "Behavior reports"]:
+            if phrase not in text:
+                failures.append(f"web/index.html must mention {phrase!r}")
+
+    app_js = ROOT / "web/app.js"
+    if app_js.is_file():
+        text = read(app_js)
+        for phrase in ["activity-summary.json", "capture-summary.json", "youtube-summary.json"]:
+            if phrase not in text:
+                failures.append(f"web/app.js must load {phrase}")
+
+    validate = ROOT / "scripts/product/validate-ui.sh"
+    if validate.is_file():
+        text = read(validate)
+        for phrase in ["ui-validation.json", "ui-snapshot.html", "runtime-log.py"]:
+            if phrase not in text:
+                failures.append(f"scripts/product/validate-ui.sh must mention {phrase}")
 
 
 def check_quality_gaps(failures: list[str]) -> None:
