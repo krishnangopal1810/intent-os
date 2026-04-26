@@ -10,12 +10,14 @@ when product, architecture, or workflow knowledge changes.
 2. Read [docs/README.md](docs/README.md) for the knowledge index.
 3. Read [docs/product/BRIEF.md](docs/product/BRIEF.md) before making product
    decisions.
-4. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding code.
-5. Read the relevant active plan in [docs/plans/active](docs/plans/active)
+4. Read [docs/product/TAXONOMY.md](docs/product/TAXONOMY.md) before changing
+   classification behavior.
+5. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding code.
+6. Read the relevant active plan in [docs/plans/active](docs/plans/active)
    before implementation.
-6. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
+7. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
    app runtime behavior.
-7. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
+8. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
    reviewing, or merging changes.
 
 ## Working Rules
@@ -51,6 +53,8 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 ## Verification
 
 - Run `make harness-check` after editing harness docs or plans.
+- Run `make harness-lint` after changing product layers, fixtures, plans, or
+  quality docs.
 - Run `make verify` before considering implementation complete.
 - If verification cannot run, record the blocker in the active plan and final
   handoff.
@@ -59,11 +63,14 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 ## Repo Knowledge
 
 - Product source of truth: [docs/product/BRIEF.md](docs/product/BRIEF.md)
+- Behavior taxonomy: [docs/product/TAXONOMY.md](docs/product/TAXONOMY.md)
+- Domain specs: [docs/product/domains/README.md](docs/product/domains/README.md)
 - Architecture source of truth: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - UX and design rules: [docs/DESIGN.md](docs/DESIGN.md)
 - Reliability and operations: [docs/RELIABILITY.md](docs/RELIABILITY.md)
 - Security baseline: [docs/SECURITY.md](docs/SECURITY.md)
 - Quality scorecard: [docs/QUALITY.md](docs/QUALITY.md)
+- Recommended next work: [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md)
 - Harness audit: [docs/HARNESS_AUDIT.md](docs/HARNESS_AUDIT.md)
 - App runtime harness: [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md)
 - Agent operating model: [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md)
