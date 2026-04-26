@@ -34,6 +34,17 @@ class CaptureReplayTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "at least one ActivityEvent"):
                 replay_capture(output)
 
+    def test_allows_empty_jsonl_for_live_observation_diagnostics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "events.jsonl"
+            output.write_text("", encoding="utf-8")
+
+            report = replay_capture(output, allow_empty=True)
+
+        self.assertEqual(report["summary"]["total_seconds"], 0)
+        self.assertEqual(report["summary"]["labels"], {})
+        self.assertEqual(report["items"], [])
+
     def test_rejects_malformed_jsonl(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "events.jsonl"

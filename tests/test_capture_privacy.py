@@ -45,6 +45,21 @@ class CapturePrivacyTest(unittest.TestCase):
             )
         )
 
+    def test_default_policy_excludes_map_navigation_urls(self):
+        policy = load_privacy_policy("data/capture/privacy_policy.json")
+
+        self.assertTrue(
+            should_exclude(
+                {
+                    "app_name": "Google Chrome",
+                    "domain": "google.com",
+                    "url": "https://www.google.com/maps/dir/12.0,77.0/example",
+                    "title": "Directions",
+                },
+                policy,
+            )
+        )
+
     def test_bounds_visible_text_excerpt(self):
         self.assertEqual(bound_text("alpha   beta gamma", 20), "alpha beta gamma")
         self.assertEqual(bound_text("abcdefghijklmnopqrstuvwxyz", 10), "abcdefg...")

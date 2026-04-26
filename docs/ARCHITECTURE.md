@@ -24,7 +24,8 @@ product verification without dependency installation.
 
 Live capture work emits raw observations into the generic `ActivityEvent`
 boundary. The current real adapter captures frontmost macOS app/window metadata
-manually; browser tab metadata still uses deterministic fixtures.
+manually and enriches active browser tab metadata when local Automation
+permission allows it.
 
 ## Current Layers
 
@@ -38,7 +39,8 @@ The current local-first slice keeps these concerns separate:
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
 - `intentos/capture/core.py`: metadata-only capture observation validation and
   conversion to `ActivityEvent`.
-- `intentos/capture/browser.py`: browser tab URL/title/domain normalization.
+- `intentos/capture/browser.py`: browser tab URL/title/domain normalization
+  and best-effort active tab capture through local browser automation.
 - `intentos/capture/privacy.py`: local privacy policy, exclusion, and redaction
   helpers.
 - `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
@@ -56,6 +58,8 @@ The current local-first slice keeps these concerns separate:
 - `data/capture/fake_macos_observations.json`: deterministic fake app/window
   capture observations.
 - `data/capture/fake_browser_tabs.json`: deterministic browser tab metadata.
+- `data/capture/browser_active_tab_snapshot.json`: deterministic live browser
+  active-tab fixture.
 - `data/capture/macos_frontmost_snapshot.json`: deterministic real-adapter
   stdout fixture for macOS frontmost app/window parsing.
 - `data/capture/privacy_policy.json`: local exclusion and text-bounding policy.
@@ -121,10 +125,9 @@ pipeline.
 - Generic activity classification is now the preferred product path. YouTube is
   still supported as a concrete domain-specific path and fixture.
 - The first capture implementation uses fake metadata fixtures in CI and a
-  manual macOS frontmost app/window adapter for local smoke tests. The next live
-  sensor slice should add one browser metadata adapter behind the same
-  `ActivityEvent` boundary. ScreenCaptureKit, Vision OCR, and model inference
-  come later when metadata-only capture leaves meaningful gaps.
+  manual macOS frontmost app/window adapter with best-effort browser tab
+  enrichment for local smoke tests. ScreenCaptureKit, Vision OCR, and model
+  inference come later when metadata-only capture leaves meaningful gaps.
 
 ## Mechanical Enforcement
 
@@ -144,7 +147,7 @@ As modules grow, promote these expectations from docs into lints:
 
 ## Next Architecture Work
 
-- Add a live browser metadata adapter.
+- Sessionize repeated live app/browser metadata samples into a short timeline.
 - Expand lint rules to enforce source adapter -> event -> classifier -> report
   direction when those modules exist.
 - Add cleanup/audit checks for stale plans, stale docs, fixture drift, and

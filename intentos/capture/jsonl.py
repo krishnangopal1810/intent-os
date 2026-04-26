@@ -26,7 +26,7 @@ def write_events_jsonl(events: Iterable[ActivityEvent], path: str | Path) -> int
     return count
 
 
-def read_events_jsonl(path: str | Path) -> list[ActivityEvent]:
+def read_events_jsonl(path: str | Path, allow_empty: bool = False) -> list[ActivityEvent]:
     input_path = Path(path)
     events: list[ActivityEvent] = []
     for index, line in enumerate(input_path.read_text(encoding="utf-8").splitlines()):
@@ -37,6 +37,6 @@ def read_events_jsonl(path: str | Path) -> list[ActivityEvent]:
         except json.JSONDecodeError as exc:
             raise ValueError(f"line {index + 1} is invalid JSON") from exc
         events.append(parse_event(item, index))
-    if not events:
+    if not events and not allow_empty:
         raise ValueError("capture JSONL must contain at least one ActivityEvent")
     return events

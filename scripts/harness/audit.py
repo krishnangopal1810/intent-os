@@ -108,6 +108,7 @@ def check_fixture_drift(failures: list[str]) -> None:
         "data/activity/multi_app_events.json",
         "data/capture/fake_browser_tabs.json",
         "data/capture/fake_macos_observations.json",
+        "data/capture/browser_active_tab_snapshot.json",
         "data/capture/macos_frontmost_snapshot.json",
         "data/capture/privacy_policy.json",
         "data/youtube/evaluation_set.json",
@@ -141,6 +142,23 @@ def check_fixture_drift(failures: list[str]) -> None:
                         f"{rel(macos_fixture)} expected.{field} does not match stdout"
                     )
 
+    browser_fixture = ROOT / "data/capture/browser_active_tab_snapshot.json"
+    if browser_fixture in valid_json:
+        fixture = valid_json[browser_fixture]
+        if not isinstance(fixture, dict):
+            failures.append(f"{rel(browser_fixture)} must be a JSON object")
+            return
+        stdout = fixture.get("stdout", "")
+        expected = fixture.get("expected", {})
+        lines = stdout.splitlines()
+        if len(lines) < 2:
+            failures.append(f"{rel(browser_fixture)} stdout must contain two lines")
+        elif isinstance(expected, dict):
+            if expected.get("title") != lines[0]:
+                failures.append(f"{rel(browser_fixture)} expected.title does not match stdout")
+            if expected.get("url") != lines[1]:
+                failures.append(f"{rel(browser_fixture)} expected.url does not match stdout")
+
 
 def check_ui_shell(failures: list[str]) -> None:
     required_files = [
@@ -166,7 +184,12 @@ def check_ui_shell(failures: list[str]) -> None:
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
         text = read(app_js)
-        for phrase in ["activity-summary.json", "capture-summary.json", "youtube-summary.json"]:
+        for phrase in [
+            "activity-summary.json",
+            "capture-summary.json",
+            "live-capture-summary.json",
+            "youtube-summary.json",
+        ]:
             if phrase not in text:
                 failures.append(f"web/app.js must load {phrase}")
 

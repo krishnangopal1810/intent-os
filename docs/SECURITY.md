@@ -41,6 +41,8 @@ Sensitive surfaces must support exclusion by app, domain, URL pattern, and
 window title. Private/incognito browser contexts should be ignored or reduced to
 coarse app-level events. Password fields, authentication pages, banking, tax,
 health, and payment forms should default to metadata-only capture or exclusion.
+Map and directions URLs are also excluded by default because they can contain
+precise location coordinates inside otherwise ordinary browser metadata.
 
 ## Required Before Real Users
 

@@ -1,6 +1,9 @@
 const paths = {
   activity: "../artifacts/activity-summary.json",
-  capture: "../artifacts/capture-summary.json",
+  capture: [
+    "../artifacts/live-capture-summary.json",
+    "../artifacts/capture-summary.json",
+  ],
   youtube: "../artifacts/youtube-summary.json",
 };
 
@@ -21,6 +24,18 @@ async function loadJson(path) {
     throw new Error(`Failed to load ${path}: ${response.status}`);
   }
   return response.json();
+}
+
+async function loadFirst(pathsToTry) {
+  const errors = [];
+  for (const path of pathsToTry) {
+    try {
+      return { path, data: await loadJson(path) };
+    } catch (error) {
+      errors.push(error.message);
+    }
+  }
+  throw new Error(errors.join("; "));
 }
 
 function formatLabel(label) {
@@ -97,20 +112,27 @@ function renderEvents(items) {
 }
 
 async function boot() {
-  const [activity, capture, youtube] = await Promise.all([
+  const [activity, captureResult, youtube] = await Promise.all([
     loadJson(paths.activity),
-    loadJson(paths.capture),
+    loadFirst(paths.capture),
     loadJson(paths.youtube),
   ]);
+  const capture = captureResult.data;
+  const isLiveCapture = captureResult.path.includes("live-capture");
 
   document.querySelector("[data-primary-narrative]").textContent =
-    activity.summary.narrative;
+    isLiveCapture ? capture.summary.narrative : activity.summary.narrative;
   document.querySelector("[data-youtube-narrative]").textContent =
     youtube.summary.narrative;
-  document.querySelector("[data-status]").textContent = "Local reports loaded";
+  document.querySelector("[data-status]").textContent = isLiveCapture
+    ? "Live capture loaded"
+    : "Fixture reports loaded";
+  document.querySelector("[data-activity-source]").textContent = isLiveCapture
+    ? "Live capture replay"
+    : "Fixture replay";
 
-  renderStats(activity.summary);
-  renderBars(activity.summary);
+  renderStats(isLiveCapture ? capture.summary : activity.summary);
+  renderBars(isLiveCapture ? capture.summary : activity.summary);
   renderEvents(capture.items || []);
 }
 

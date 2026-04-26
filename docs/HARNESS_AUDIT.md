@@ -12,9 +12,10 @@ knowledge, execution plans, structural linting, product verification, runtime
 artifacts, PR workflow, CI, documented live-capture/privacy contracts, a
 deterministic fake-sensor replay loop, a local app shell for the UI,
 deterministic UI validation, structured runtime JSONL events, `make diagnose`,
-and a manual macOS metadata-only frontmost app/window adapter. It does not yet
-include browser screenshot automation, rich metrics/traces, browser live
-capture, or autonomous agent-to-agent review.
+and a manual macOS metadata-only frontmost app/window adapter with best-effort
+browser tab enrichment. It does not yet include browser screenshot automation,
+rich metrics/traces, continuous session capture, or autonomous agent-to-agent
+review.
 
 ## Principle Coverage
 

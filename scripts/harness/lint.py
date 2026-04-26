@@ -266,32 +266,44 @@ def check_evaluation_set(failures: list[str]) -> None:
 
 
 def check_capture_adapter_fixtures(failures: list[str]) -> None:
-    path = ROOT / "data/capture/macos_frontmost_snapshot.json"
-    if not path.is_file():
-        failures.append(
-            "missing data/capture/macos_frontmost_snapshot.json; real adapters "
-            "need deterministic fixtures for CI"
-        )
-        return
-
-    try:
-        fixture = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        failures.append(f"data/capture/macos_frontmost_snapshot.json is invalid JSON: {exc}")
-        return
-
-    if not isinstance(fixture.get("stdout"), str) or not fixture["stdout"].strip():
-        failures.append("data/capture/macos_frontmost_snapshot.json must include stdout")
-    expected = fixture.get("expected")
-    if not isinstance(expected, dict):
-        failures.append("data/capture/macos_frontmost_snapshot.json must include expected")
-        return
-    for field in ["app_name", "bundle_id", "process_id", "window_title"]:
-        if field not in expected:
+    required = {
+        "data/capture/macos_frontmost_snapshot.json": [
+            "app_name",
+            "bundle_id",
+            "process_id",
+            "window_title",
+        ],
+        "data/capture/browser_active_tab_snapshot.json": [
+            "browser_name",
+            "domain",
+            "source",
+            "title",
+            "url",
+        ],
+    }
+    for relative_path, fields in required.items():
+        path = ROOT / relative_path
+        if not path.is_file():
             failures.append(
-                "data/capture/macos_frontmost_snapshot.json expected is missing "
-                f"{field}"
+                f"missing {relative_path}; real adapters need deterministic fixtures for CI"
             )
+            continue
+
+        try:
+            fixture = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            failures.append(f"{relative_path} is invalid JSON: {exc}")
+            continue
+
+        if not isinstance(fixture.get("stdout"), str) or not fixture["stdout"].strip():
+            failures.append(f"{relative_path} must include stdout")
+        expected = fixture.get("expected")
+        if not isinstance(expected, dict):
+            failures.append(f"{relative_path} must include expected")
+            continue
+        for field in fields:
+            if field not in expected:
+                failures.append(f"{relative_path} expected is missing {field}")
 
 
 def check_live_observation_harness(failures: list[str]) -> None:
@@ -331,6 +343,7 @@ def check_ui_harness(failures: list[str]) -> None:
             "ui-snapshot.html",
             "activity-summary.json",
             "capture-summary.json",
+            "live-capture-summary.json",
         ]:
             if phrase not in text:
                 failures.append(f"scripts/product/validate-ui.sh must mention {phrase}")

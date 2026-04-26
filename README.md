@@ -17,16 +17,18 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - CLI reports and JSON reports.
 - Local UI shell served from generated runtime artifacts.
 - Metadata-only fake-sensor capture normalization and replay.
-- Manual metadata-only macOS frontmost app/window capture.
+- Manual metadata-only macOS frontmost app/window capture with best-effort
+  browser tab URL/title enrichment.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
   CI running `make verify`.
 - Live-capture and on-device inference specs for the next macOS slices.
 
 The first real live sensor is intentionally narrow: it samples the current
-frontmost macOS app/window through local System Events metadata and writes
-`ActivityEvent` JSONL. Browser tab metadata, screenshot capture, OCR, local
-model inference, and UI/browser validation remain future extensions after the
-metadata path is reliable.
+frontmost macOS app/window through local System Events metadata, enriches active
+browser URL/title when Automation permission allows it, and writes
+`ActivityEvent` JSONL. Screenshot capture, OCR, local model inference, and
+browser screenshot validation remain future extensions after the metadata path
+is reliable.
 
 ## Start Here
 
@@ -75,11 +77,15 @@ python3 -m intentos.cli data/youtube/sample_watch_history.json
 
 `make observe-live` runs the manual macOS frontmost app/window smoke loop,
 writes `.harness/runtime/artifacts/live-capture-events.jsonl`, replays it
-through the classifier, and writes `.harness/runtime/logs/live-capture.log`.
-It may require Accessibility and Automation permissions for the Codex host app
-or terminal. CI uses deterministic fixtures instead of live macOS state.
+through the classifier, writes `live-capture-summary.json`, and writes
+`.harness/runtime/logs/live-capture.log`. It may require Accessibility and
+Automation permissions for the Codex host app or terminal. CI uses deterministic
+fixtures instead of live macOS state. If privacy rules exclude every live row,
+the command still writes a valid empty replay summary for the UI.
 
-`make dev` serves the UI URL recorded in `.harness/runtime/app.env`.
+`make dev` serves the UI URL recorded in `.harness/runtime/app.env`. The UI
+prefers `live-capture-summary.json` when `make observe-live` has produced it,
+and falls back to fixture replay otherwise.
 `make diagnose` prints app state, structured runtime events, UI validation
 evidence, and recent logs.
 
@@ -99,4 +105,4 @@ smoke checks.
 ## Next Work
 
 See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). The recommended next slice is
-the metadata-only browser tab capture adapter.
+sessionizing repeated live capture into a short timeline.
