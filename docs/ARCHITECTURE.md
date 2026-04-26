@@ -17,10 +17,10 @@ product verification without dependency installation.
 ## Current Stack
 
 - Language: Python 3
-- Runtime: CLI-first local process
+- Runtime: CLI plus local static UI shell
 - Dependencies: Python standard library only
 - Input: local JSON fixtures for YouTube and generic activity events
-- Output: CLI narratives and JSON reports
+- Output: CLI narratives, JSON reports, and local UI shell
 
 Live capture work emits raw observations into the generic `ActivityEvent`
 boundary. The current real adapter captures frontmost macOS app/window metadata
@@ -72,6 +72,10 @@ The current local-first slice keeps these concerns separate:
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
 - `scripts/product/dev.sh`: local artifact server for inspecting CLI output.
+- `scripts/product/start-ui.sh`: local static UI server for generated runtime
+  artifacts.
+- `scripts/product/validate-ui.sh`: dependency-free UI smoke validator.
+- `web/`: static local UI shell that reads generated JSON artifacts.
 
 ## Dependency Rules
 
@@ -109,8 +113,9 @@ pipeline.
   model. This is intentional: it gives Codex and reviewers a visible baseline
   for labels, confidence, uncertainty, and aggregation before a local model is
   introduced.
-- The first interface is a CLI, not a graphical UI. Browser validation remains
-  out of scope until a UI exists.
+- The first interface is now a local static UI shell backed by generated JSON
+  artifacts. Browser screenshot automation is deferred until a browser
+  automation dependency is introduced.
 - The classifier preserves uncertainty with an `unknown` label when metadata is
   sparse or cue scores are too close.
 - Generic activity classification is now the preferred product path. YouTube is

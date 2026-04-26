@@ -15,6 +15,7 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - YouTube-specific fixture classification from the first MVP slice.
 - Deterministic local fixtures and labeled evaluation sets.
 - CLI reports and JSON reports.
+- Local UI shell served from generated runtime artifacts.
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
@@ -55,6 +56,8 @@ make cleanup-check
 make verify
 make dev
 make app-status
+make diagnose
+make validate-ui
 make observe
 make observe-live
 ```
@@ -75,6 +78,10 @@ writes `.harness/runtime/artifacts/live-capture-events.jsonl`, replays it
 through the classifier, and writes `.harness/runtime/logs/live-capture.log`.
 It may require Accessibility and Automation permissions for the Codex host app
 or terminal. CI uses deterministic fixtures instead of live macOS state.
+
+`make dev` serves the UI URL recorded in `.harness/runtime/app.env`.
+`make diagnose` prints app state, structured runtime events, UI validation
+evidence, and recent logs.
 
 Create a scoped execution plan with:
 

@@ -37,3 +37,6 @@ echo "+ $python_bin -m intentos.capture_cli normalize-observations data/capture/
 
 echo "+ $python_bin -m intentos.capture_cli replay $capture_jsonl"
 "$python_bin" -m intentos.capture_cli replay "$capture_jsonl"
+
+echo "+ scripts/product/validate-ui.sh"
+scripts/product/validate-ui.sh

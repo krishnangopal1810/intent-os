@@ -34,9 +34,12 @@ Acceptance criteria:
 
 ## Harness Upgrades To Keep Current
 
-- Add a local app shell when we build the UI. It should run per worktree,
-  publish URL/process/log state through `.harness/runtime/app.env`, and be
-  validated by `make validate-ui`.
+- Keep the local UI shell current as product slices land. New user-visible
+  behavior should appear in `web/` and pass `make validate-ui`.
+- Keep structured runtime events current when new capture, classification,
+  reporting, or UI paths are added.
+- Add browser screenshot and DOM automation to `make validate-ui` once a browser
+  automation dependency is introduced.
 - Add deterministic capture fixtures for every real adapter. The macOS
   frontmost adapter now has `data/capture/macos_frontmost_snapshot.json`; future
   browser, ScreenCaptureKit, OCR, and model adapters need equivalent fixtures.
@@ -59,7 +62,7 @@ Acceptance criteria:
 5. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
 6. Local model second-pass classifier through Foundation Models, Core ML, or
    MLX once fixture evaluation justifies it.
-7. Browser/UI validation harness once a frontend exists.
+7. Browser screenshot validation harness for the existing local UI shell.
 
 ## Not Yet
 

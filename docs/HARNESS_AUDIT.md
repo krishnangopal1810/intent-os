@@ -10,10 +10,11 @@ Engineering model described in:
 The harness now supports an agent-first local product loop: repository-local
 knowledge, execution plans, structural linting, product verification, runtime
 artifacts, PR workflow, CI, documented live-capture/privacy contracts, a
-deterministic fake-sensor replay loop, and a manual macOS metadata-only
-frontmost app/window adapter. It does not yet include implemented UI/browser
-validation, rich observability, browser live capture, or autonomous
-agent-to-agent review.
+deterministic fake-sensor replay loop, a local app shell for the UI,
+deterministic UI validation, structured runtime JSONL events, `make diagnose`,
+and a manual macOS metadata-only frontmost app/window adapter. It does not yet
+include browser screenshot automation, rich metrics/traces, browser live
+capture, or autonomous agent-to-agent review.
 
 ## Principle Coverage
 
@@ -25,13 +26,13 @@ agent-to-agent review.
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
 | First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP and multi-app ActivityEvent foundation. |
 | Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene and quality scorecard structure. |
-| App legibility | Yellow | `make dev` generates MVP artifacts and exposes the summary through local logs; `make observe-live` exposes the manual macOS sensor loop; UI validation awaits a UI. |
-| Logs and observability legibility | Yellow | `make observe` exposes local runtime logs and `make observe-live` writes live sensor diagnostics; structured metrics and traces are deferred until runtime complexity justifies them. |
+| App legibility | Green | `make dev` generates MVP artifacts, serves the local UI shell, records the URL in `.harness/runtime/app.env`, and `make validate-ui` checks the shell against local artifacts. |
+| Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
 | Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS capture has deterministic fixture tests. |
 | Multi-agent coordination | Yellow | A parallel macOS live-capture package defines a shared tracker, three disjoint task files, merge order, and harness ownership checks. |
 | Agent review and CI remediation loops | Yellow | Operating model exists; GitHub review automation is not yet wired into repo scripts. |
-| Product verification gates | Green | `make verify` runs harness checks, harness linting, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, and labeled multi-app fixture evaluation. CI runs `make verify`. |
+| Product verification gates | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, capture replay, and UI validation. CI runs `make verify`. |
 | Recurring cleanup | Yellow | `make cleanup-check` catches several drift classes; no scheduled cleanup agent exists yet. |
 
 ## Current Verification State
@@ -58,14 +59,13 @@ permissions.
 
 ## Next Harness Upgrades
 
-- Add a local app shell when the first UI exists. It must be bootable per
-  worktree, expose its URL/process/logs through `.harness/runtime/app.env`, and
-  be drivable by `make validate-ui`.
+- Add browser screenshot and DOM automation to `make validate-ui` once the repo
+  introduces a browser automation dependency.
 - Keep deterministic capture fixtures for each real adapter. CI must exercise
   parser, normalization, privacy exclusion, and replay behavior without reading
   live user state.
-- Convert capture, classification, and reporting runtime logs to structured
-  fields before adding a persistent service or UI.
+- Extend structured runtime events as new capture, classification, reporting,
+  and UI workflows are added.
 - Keep `make observe-live` as the manual live sensor diagnostic and expand it
   as browser metadata adapters are added.
 - Expand architecture lints as the codebase gains layers, especially
