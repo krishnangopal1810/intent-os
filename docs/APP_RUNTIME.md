@@ -11,6 +11,8 @@ slices.
 - `make app-stop`: stop the local app process started by the harness.
 - `make validate-ui`: drive the UI through browser automation when a UI exists.
 - `make observe`: print local runtime signals that Codex can inspect.
+- `make harness-lint`: validate structural and taste rules that keep the repo
+  legible to agents.
 - `make verify`: run harness checks plus product checks.
 
 The current product slice is CLI-first. `make dev` runs the sample analysis,

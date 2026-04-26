@@ -1,0 +1,74 @@
+[
+  {
+    "title": "Python Data Classes Explained",
+    "url": "https://www.youtube.com/watch?v=eval-python-dataclasses",
+    "channel": "Code Lab",
+    "watched_at": "2026-04-24T08:00:00Z",
+    "duration_seconds": 900,
+    "description": "A tutorial on dataclasses, type hints, and Python architecture.",
+    "expected_label": "learning"
+  },
+  {
+    "title": "System Design Deep Dive: Queues and Backpressure",
+    "url": "https://www.youtube.com/watch?v=eval-system-design",
+    "channel": "Engineering Deep Dives",
+    "watched_at": "2026-04-24T09:00:00Z",
+    "duration_seconds": 1500,
+    "description": "Technical lecture about distributed systems, queues, architecture, and reliability.",
+    "expected_label": "learning"
+  },
+  {
+    "title": "Ollama Local Inference Tutorial for Private AI Apps",
+    "url": "https://www.youtube.com/watch?v=eval-ollama",
+    "channel": "Practical AI Engineering",
+    "watched_at": "2026-04-24T10:00:00Z",
+    "duration_seconds": 1200,
+    "description": "Step by step guide to local inference and model setup.",
+    "expected_label": "learning"
+  },
+  {
+    "title": "Try Not To Laugh: Funniest Internet Clips",
+    "url": "https://www.youtube.com/watch?v=eval-laugh",
+    "channel": "Daily Clips",
+    "watched_at": "2026-04-24T20:00:00Z",
+    "duration_seconds": 780,
+    "description": "Funny reaction compilation of viral clips.",
+    "expected_label": "entertainment"
+  },
+  {
+    "title": "Gaming Highlights and Viral Reactions",
+    "url": "https://www.youtube.com/watch?v=eval-gaming",
+    "channel": "Highlight Reel",
+    "watched_at": "2026-04-24T20:30:00Z",
+    "duration_seconds": 960,
+    "description": "Gaming highlights, reactions, and viral moments.",
+    "expected_label": "entertainment"
+  },
+  {
+    "title": "Celebrity Drama Recap",
+    "url": "https://www.youtube.com/watch?v=eval-drama",
+    "channel": "Pop Recap",
+    "watched_at": "2026-04-24T21:00:00Z",
+    "duration_seconds": 720,
+    "description": "Celebrity drama recap and reaction coverage.",
+    "expected_label": "entertainment"
+  },
+  {
+    "title": "Untitled Upload",
+    "url": "https://www.youtube.com/watch?v=eval-unknown",
+    "channel": "Archive",
+    "watched_at": "2026-04-24T21:30:00Z",
+    "duration_seconds": 300,
+    "description": "",
+    "expected_label": "unknown"
+  },
+  {
+    "title": "Python drama recap",
+    "url": "https://www.youtube.com/watch?v=eval-balanced",
+    "channel": "Mixed Signals",
+    "watched_at": "2026-04-24T22:00:00Z",
+    "duration_seconds": 300,
+    "description": "",
+    "expected_label": "unknown"
+  }
+]
