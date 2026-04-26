@@ -5,34 +5,41 @@ at a time into an execution plan under `docs/plans/active/`.
 
 ## Recommended Next Slice
 
-Manual real-activity import.
+Metadata-only macOS live activity capture prototype.
 
-Goal: let a user provide local CSV or JSON activity events, normalize them into
-`ActivityEvent`, classify them, and compare output against the fixture-based
-pipeline.
+Goal: sample the active macOS app, focused window, and one browser's active tab
+metadata; normalize that data into local `ActivityEvent` JSONL; and replay it
+through the existing classifier.
 
 Why this is next:
 
 - It moves IntentOS from synthetic fixtures toward real user behavior.
-- It avoids browser permissions and macOS capture complexity.
-- It expands evaluation data before adding sensors.
+- It gives the product a real capture loop without screenshots, OCR, or model
+  complexity.
+- It validates the `ActivityEvent` abstraction against live app/window/browser
+  data.
 - It keeps privacy local by default.
 
 Acceptance criteria:
 
-- Add a documented CSV/JSON import format.
-- Normalize imported rows into `ActivityEvent`.
-- Reject malformed rows with clear errors.
-- Add real-ish fixture examples and tests.
+- Add metadata-only macOS capture adapters for active app/window and one
+  browser.
+- Write local JSONL `ActivityEvent` records.
+- Replay captured JSONL through the existing classifier and reports.
+- Add fixture or fake-based tests so CI does not require macOS permissions.
+- Preserve No keylogging and no raw screenshot retention.
 - Update `make verify`.
 
 ## Then
 
-1. Browser history import for local Chrome/Safari/Arc exports or copied DBs.
-2. ChatGPT export parser for classifying conversation intent.
-3. macOS active app/window capture.
+1. Manual CSV/JSON import for real `ActivityEvent` data.
+2. Browser history import for local Chrome/Safari/Arc exports or copied DBs.
+3. ChatGPT export parser for classifying conversation intent.
 4. UI for daily behavior narratives once data import and evaluation stabilize.
-5. Browser/UI validation harness once a frontend exists.
+5. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
+6. Local model second-pass classifier through Foundation Models, Core ML, or
+   MLX once fixture evaluation justifies it.
+7. Browser/UI validation harness once a frontend exists.
 
 ## Not Yet
 

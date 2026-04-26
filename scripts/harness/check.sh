@@ -23,6 +23,8 @@ required_files=(
   "docs/README.md"
   "docs/agent-workflow.md"
   "docs/product/BRIEF.md"
+  "docs/product/live-capture.md"
+  "docs/product/on-device-inference.md"
   "docs/product/spec-template.md"
   "docs/ARCHITECTURE.md"
   "docs/DESIGN.md"
@@ -36,6 +38,7 @@ required_files=(
   "docs/plans/templates/exec-plan.md"
   "docs/decisions/README.md"
   "docs/references/README.md"
+  "docs/references/mac-local-capture-and-inference.md"
 )
 
 required_dirs=(

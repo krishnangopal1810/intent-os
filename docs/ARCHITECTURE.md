@@ -22,6 +22,10 @@ product verification without dependency installation.
 - Input: local JSON fixtures for YouTube and generic activity events
 - Output: CLI narratives and JSON reports
 
+Future live capture work should add macOS source adapters that emit raw
+observations into the generic `ActivityEvent` boundary. Those adapters are not
+implemented yet.
+
 ## Current Layers
 
 The current local-first slice keeps these concerns separate:
@@ -55,13 +59,18 @@ The current local-first slice keeps these concerns separate:
   one obvious entry point.
 - Live capture adapters should normalize into `ActivityEvent`; they should not
   own classification rules.
+- Capture adapters should be metadata-first. ScreenCaptureKit and Vision OCR
+  are fallbacks for low-confidence events, not default sensors.
+- Local model inference should be a second-pass classifier behind an explicit
+  boundary; core reporting should not depend on a model being installed.
 
 ## Data Flow
 
 ```text
-fixtures or future adapters
+fixtures or future source adapters
   -> ActivityEvent boundary validation
-  -> behavior classifier
+  -> deterministic classifier
+  -> optional local model second pass
   -> aggregate reporting
   -> CLI/runtime artifacts
   -> evaluation and CI gates
@@ -83,6 +92,9 @@ pipeline.
   sparse or cue scores are too close.
 - Generic activity classification is now the preferred product path. YouTube is
   still supported as a concrete domain-specific path and fixture.
+- The first live capture slice should use `NSWorkspace`, Accessibility, and one
+  browser metadata adapter. ScreenCaptureKit, Vision OCR, and model inference
+  come later when metadata-only capture leaves meaningful gaps.
 
 ## Mechanical Enforcement
 
@@ -93,8 +105,8 @@ review finding or repeated mistake should become agent-visible policy.
 
 ## Next Architecture Work
 
-- Add adapter layer once real imports begin.
-- Expand lint rules to enforce adapter -> event -> classifier -> report
-  direction.
+- Add adapter layer once live capture implementation begins.
+- Expand lint rules to enforce source adapter -> event -> classifier -> report
+  direction when those modules exist.
 - Add a local model boundary only after fixture evaluation shows deterministic
   rules are insufficient.

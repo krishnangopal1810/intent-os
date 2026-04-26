@@ -13,6 +13,7 @@ IntentOS has a local-first Python CLI foundation:
 - Labeled fixture evaluation for both paths.
 - Harness linting and cleanup checks.
 - CI running `make verify`.
+- Specs for metadata-first macOS live capture and local on-device inference.
 
 Live capture and UI are not implemented yet.
 
@@ -22,6 +23,10 @@ Live capture and UI are not implemented yet.
   constraints, current state, and long-term direction.
 - [product/TAXONOMY.md](product/TAXONOMY.md): behavior labels and
   classification guidance.
+- [product/live-capture.md](product/live-capture.md): macOS live activity
+  capture strategy, source adapters, permissions, and privacy defaults.
+- [product/on-device-inference.md](product/on-device-inference.md): rules-first
+  and local-model inference strategy.
 - [product/domains/README.md](product/domains/README.md): domain-specific specs.
 - [product/mvp-youtube-classification.md](product/mvp-youtube-classification.md):
   YouTube classification MVP.
@@ -54,6 +59,8 @@ Live capture and UI are not implemented yet.
 - [decisions/README.md](decisions/README.md): architecture decision records.
 - [references/README.md](references/README.md): external or copied reference
   material that agents may need.
+- [references/mac-local-capture-and-inference.md](references/mac-local-capture-and-inference.md):
+  Apple/macOS capture and local inference references.
 
 ## Mechanical Checks
 

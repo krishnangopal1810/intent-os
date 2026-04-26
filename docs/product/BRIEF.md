@@ -12,6 +12,11 @@ deterministic fixtures into behavior labels and reports aggregate time insights.
 The preferred product path is now generic `ActivityEvent` classification. The
 YouTube MVP remains as a concrete domain slice and regression fixture.
 
+The next planned product step is a metadata-only macOS live activity capture
+prototype. It should collect active app, focused window, and one browser's
+active tab metadata into local `ActivityEvent` JSONL before adding screenshots,
+OCR, or model-backed classification.
+
 ## Product Definition
 
 IntentOS is a personal behavior intelligence system. It runs on-device and
@@ -54,9 +59,9 @@ digital activity into semantic insights about attention, intent, and behavior.
 
 1. Activity capture: app usage through macOS APIs, browser URLs and titles, and
    optional page metadata such as YouTube titles or document titles.
-2. Semantic classification: on-device models classify activity into categories
-   such as deep work, shallow work, learning, passive consumption, and
-   communication.
+2. Semantic classification: deterministic rules and, later, optional
+   on-device models classify activity into categories such as deep work,
+   shallow work, learning, passive consumption, and communication.
 3. Behavior inference: the system detects intent/outcome mismatch, recurring
    patterns, and time leakage.
 4. Insight engine: the product outputs daily narratives, "you thought vs
@@ -105,6 +110,17 @@ Example output:
 The detailed MVP spec is
 [mvp-youtube-classification.md](mvp-youtube-classification.md).
 
+## Planned Capture and Inference
+
+- [live-capture.md](live-capture.md) defines the metadata-first macOS capture
+  architecture, source adapters, permissions, privacy defaults, and first live
+  slice.
+- [on-device-inference.md](on-device-inference.md) defines the rules-first
+  inference ladder and where Apple Foundation Models, Core ML, or MLX may fit
+  after deterministic fixture evaluation shows a need.
+- The first live slice must not use keylogging, raw screenshot retention, cloud
+  inference, or always-on background capture.
+
 ## Current Verification
 
 - `make verify` runs harness checks, structural linting, unit tests, CLI smoke
@@ -134,6 +150,7 @@ The detailed MVP spec is
   slices.
 - Generic productivity dashboards that only restate app usage.
 - Live capture is not implemented yet.
+- Screenshot capture and OCR are not part of the first live capture slice.
 
 ## Constraints
 

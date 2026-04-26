@@ -11,6 +11,10 @@ artifacts.
 - UI workflows should be verifiable through browser automation once a frontend
   exists.
 - Long-running tasks should expose progress and recoverable errors.
+- Live capture adapters should have fixture or fake-based tests so CI does not
+  require macOS permissions.
+- Manual sensor smoke tests should record enough runtime evidence for Codex to
+  inspect logs and generated `ActivityEvent` JSONL.
 
 ## Verification Targets
 
@@ -47,3 +51,15 @@ Current artifacts:
 - `youtube-summary.json`
 - `activity-summary.txt`
 - `activity-summary.json`
+
+## Future Live Capture Reliability
+
+The first live capture implementation should add:
+
+- a bounded local JSONL output path for captured `ActivityEvent` records
+- replay verification from JSONL into classifier reports
+- clear failures when Accessibility permission or browser automation permission
+  is missing
+- fake sensor fixtures for CI
+- no dependency on Screen Recording, ScreenCaptureKit, Vision OCR, or model
+  downloads in `make verify`

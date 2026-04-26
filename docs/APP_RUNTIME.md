@@ -19,6 +19,8 @@ slices.
 
 The current product slice is CLI-first. `make dev` runs the sample analysis,
 writes reports, and keeps the generated summary visible through the runtime log.
+Future live capture runtime commands must expose the capture mode, permission
+state, output JSONL path, and latest classifier replay summary.
 
 ## Runtime State
 
@@ -71,3 +73,18 @@ When IntentOS has a runtime service, `make observe` must expose:
 
 For early local-only builds, text logs are enough. Add metrics and traces when
 the runtime grows beyond a single local process.
+
+## Live Capture Runtime Contract
+
+When a live capture slice exists, `make dev` or a documented product command
+must make these visible:
+
+- capture mode: fixture, fake sensor, manual live sensor, or replay
+- permission state for Accessibility permission, browser automation, and future
+  Screen Recording
+- output path for local `ActivityEvent` JSONL
+- redaction/exclusion policy loaded by the runtime
+- latest classification summary from replay
+
+CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
+local macOS permissions and should not block `make verify`.
