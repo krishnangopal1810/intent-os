@@ -7,8 +7,9 @@ import json
 from pathlib import Path
 
 from intentos.capture.browser import browser_tab_metadata, parse_browser_tab
-from intentos.capture.core import parse_observation, observation_to_event
+from intentos.capture.core import CaptureObservation, parse_observation, observation_to_event
 from intentos.capture.jsonl import write_events_jsonl
+from intentos.capture.macos import MacOSCaptureError, capture_frontmost_observation
 from intentos.capture.privacy import (
     load_privacy_policy,
     redact_metadata,
@@ -39,6 +40,23 @@ def main() -> int:
         help="Local privacy policy JSON.",
     )
 
+    capture_macos = subparsers.add_parser(
+        "capture-macos",
+        help="Capture one metadata-only frontmost macOS app/window sample.",
+    )
+    capture_macos.add_argument("--output", required=True, help="Output JSONL path.")
+    capture_macos.add_argument(
+        "--duration-seconds",
+        type=int,
+        default=5,
+        help="Sample duration for the current frontmost app/window.",
+    )
+    capture_macos.add_argument(
+        "--privacy-policy",
+        default="data/capture/privacy_policy.json",
+        help="Local privacy policy JSON.",
+    )
+
     replay = subparsers.add_parser(
         "replay", help="Replay ActivityEvent JSONL through the behavior report."
     )
@@ -52,6 +70,19 @@ def main() -> int:
             Path(args.output),
             Path(args.privacy_policy),
             Path(args.browser_tabs) if args.browser_tabs else None,
+        )
+        print(f"capture-cli: wrote {count} ActivityEvent row(s) to {args.output}")
+        return 0
+
+    if args.command == "capture-macos":
+        try:
+            observation = capture_frontmost_observation(args.duration_seconds)
+        except MacOSCaptureError as exc:
+            raise SystemExit(str(exc)) from exc
+        count = normalize_observation_items(
+            [observation],
+            Path(args.output),
+            Path(args.privacy_policy),
         )
         print(f"capture-cli: wrote {count} ActivityEvent row(s) to {args.output}")
         return 0
@@ -70,15 +101,26 @@ def normalize_observations(
     privacy_policy_path: Path,
     browser_tabs_path: Path | None = None,
 ) -> int:
-    policy = load_privacy_policy(privacy_policy_path)
     browser_by_app = load_browser_tabs(browser_tabs_path)
     raw = json.loads(input_path.read_text(encoding="utf-8"))
     if not isinstance(raw, list):
         raise ValueError("capture observations must be a JSON array")
+    return normalize_observation_items(raw, output_path, privacy_policy_path, browser_by_app)
 
+
+def normalize_observation_items(
+    raw: list[object],
+    output_path: Path,
+    privacy_policy_path: Path,
+    browser_by_app: dict[str, object] | None = None,
+) -> int:
+    policy = load_privacy_policy(privacy_policy_path)
+    browser_by_app = browser_by_app or {}
     events = []
     for index, item in enumerate(raw):
-        observation = parse_observation(item, index)
+        observation = (
+            item if isinstance(item, CaptureObservation) else parse_observation(item, index)
+        )
         event = observation_to_event(observation)
         metadata = {
             "app_name": event.source_app,

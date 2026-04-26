@@ -66,6 +66,9 @@ When product code exists, verification must include runtime legibility:
 - `make validate-ui` exercises the app through browser automation once a UI
   exists.
 - `make observe` exposes local logs and runtime signals.
+- `make observe-live` manually exercises live local sensors when the task
+  changes macOS capture behavior. Do not put this in CI; use fixtures for
+  deterministic verification.
 
 Capture screenshots, logs, or notes in the active plan when visual or runtime
 behavior matters.

@@ -5,15 +5,17 @@ at a time into an execution plan under `docs/plans/active/`.
 
 ## Recommended Next Slice
 
-Metadata-only macOS live activity capture prototype.
+Metadata-only browser tab capture adapter.
 
-Goal: sample the active macOS app, focused window, and one browser's active tab
-metadata; normalize that data into local `ActivityEvent` JSONL; and replay it
-through the existing classifier.
+Goal: enrich the current frontmost macOS app/window capture with one browser's
+active tab URL/title metadata; normalize that data into local `ActivityEvent`
+JSONL; and replay it through the existing classifier.
 
 Why this is next:
 
-- It moves IntentOS from synthetic fixtures toward real user behavior.
+- The first real macOS app/window adapter already exists, but browser tab
+  metadata is still fixture-only.
+- It moves IntentOS from app/window metadata toward semantic browsing behavior.
 - It gives the product a real capture loop without screenshots, OCR, or model
   complexity.
 - It validates the `ActivityEvent` abstraction against live app/window/browser
@@ -22,13 +24,31 @@ Why this is next:
 
 Acceptance criteria:
 
-- Add metadata-only macOS capture adapters for active app/window and one
-  browser.
+- Add a metadata-only browser adapter for one supported browser.
 - Write local JSONL `ActivityEvent` records.
 - Replay captured JSONL through the existing classifier and reports.
 - Add fixture or fake-based tests so CI does not require macOS permissions.
 - Preserve No keylogging and no raw screenshot retention.
-- Update `make verify`.
+- Update `make verify` and `make observe-live` documentation if the live
+  diagnostic starts reporting browser permission state.
+
+## Harness Upgrades To Keep Current
+
+- Add a local app shell when we build the UI. It should run per worktree,
+  publish URL/process/log state through `.harness/runtime/app.env`, and be
+  validated by `make validate-ui`.
+- Add deterministic capture fixtures for every real adapter. The macOS
+  frontmost adapter now has `data/capture/macos_frontmost_snapshot.json`; future
+  browser, ScreenCaptureKit, OCR, and model adapters need equivalent fixtures.
+- Add structured runtime logs for capture, classification, and reporting before
+  adding a persistent service. Stable fields should include `component`,
+  `event`, `mode`, `artifact_path`, `duration_ms`, `event_count`, and `status`.
+- Keep `make observe-live` as the manual local sensor diagnostic and expand it
+  when browser metadata capture lands.
+- Add stricter architecture rules as modules grow. Promote repeated review
+  comments into `scripts/harness/lint.py`.
+- Add cleanup/audit scripts that scan stale plans, stale docs, fixture drift,
+  and quality scorecard gaps.
 
 ## Then
 

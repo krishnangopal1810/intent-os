@@ -62,3 +62,7 @@ one browser's active tab metadata.
   loop: app/window observations plus browser metadata normalize to
   `ActivityEvent` JSONL, privacy policy applies exclusions/redaction, and replay
   uses existing classifier reports. Live macOS sensor APIs are still pending.
+- 2026-04-26: Added a manual macOS frontmost app/window adapter using
+  `osascript`/System Events. It captures app name, bundle ID, process ID, and
+  focused window title into the existing `ActivityEvent` JSONL path. Live
+  browser tab metadata remains pending.

@@ -10,12 +10,15 @@ IntentOS has a local-first Python CLI foundation:
 
 - Generic multi-app `ActivityEvent` behavior classification.
 - YouTube-specific classification from the first MVP slice.
+- Metadata-only fake-sensor capture normalization and replay.
+- Manual metadata-only macOS frontmost app/window capture.
 - Labeled fixture evaluation for both paths.
 - Harness linting and cleanup checks.
 - CI running `make verify`.
 - Specs for metadata-first macOS live capture and local on-device inference.
 
-Live capture and UI are not implemented yet.
+Browser live capture, screenshot fallback, OCR, local model inference, and UI
+are not implemented yet.
 
 ## Product
 
@@ -77,8 +80,9 @@ make verify
 
 `harness-check` validates the harness structure and links. `harness-lint`
 enforces the current layer map, generated-file hygiene, active-plan hygiene,
-quality scorecard shape, and evaluation fixture coverage. `verify` runs the
-full product and harness gate.
+quality scorecard shape, and evaluation fixture coverage. `cleanup-check` also
+runs the repository audit for stale plans, stale docs, fixture drift, and
+quality scorecard gaps. `verify` runs the full product and harness gate.
 
 ## Runtime Inspection
 
@@ -88,7 +92,10 @@ Run:
 make dev
 make app-status
 make observe
+make observe-live
 ```
 
 The current CLI runtime writes inspectable text and JSON artifacts under
 `.harness/runtime/artifacts/`.
+`make observe-live` is a manual local-only sensor diagnostic and is not part of
+CI because it depends on macOS permissions and current user state.

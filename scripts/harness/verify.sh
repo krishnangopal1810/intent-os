@@ -31,6 +31,7 @@ npm_runner() {
 
 run scripts/harness/check.sh
 run scripts/harness/lint.py
+run scripts/harness/audit.py
 
 product_specified=false
 if grep -q '^# Product Brief: IntentOS' docs/product/BRIEF.md; then

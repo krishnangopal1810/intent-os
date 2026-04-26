@@ -1,8 +1,9 @@
 # Live Activity Capture
 
-This spec defines the intended local capture architecture for IntentOS. It is
-not implemented yet. Future work must keep the first live slice metadata-first,
-permission-aware, and reversible.
+This spec defines the intended local capture architecture for IntentOS. The
+current implementation includes fake-sensor capture fixtures and a manual
+frontmost macOS app/window adapter. Future work must keep live capture
+metadata-first, permission-aware, and reversible.
 
 ## Goal
 
@@ -87,7 +88,7 @@ transcripts, screenshots, or conversations.
 
 Build the first live slice in this order:
 
-1. Active app/window sampler using `NSWorkspace` and Accessibility.
+1. Active app/window sampler using macOS frontmost app/window metadata.
 2. Browser active-tab metadata for one browser.
 3. JSONL writer for local `ActivityEvent` records.
 4. Replay command that classifies captured JSONL with the existing classifier.
@@ -96,6 +97,35 @@ Build the first live slice in this order:
 ScreenCaptureKit and Vision OCR are deferred until metadata-only capture shows
 clear gaps. On-device model inference is a second-pass classifier, not a
 requirement for the first live slice.
+
+## Current Manual Adapter
+
+IntentOS currently provides a manual macOS frontmost app/window adapter through:
+
+```sh
+python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl
+```
+
+The adapter uses local `osascript`/System Events metadata to capture app name,
+bundle ID, process ID, and focused window title. It does not capture
+keystrokes, screenshots, OCR text, clipboard contents, or browser tab URL/title.
+It may require Accessibility permission for the terminal or Codex host app.
+
+Replay the result with:
+
+```sh
+python3 -m intentos.capture_cli replay .harness/runtime/artifacts/live-capture-events.jsonl
+```
+
+Or use the harness wrapper:
+
+```sh
+make observe-live
+```
+
+`make observe-live` captures one live metadata sample, prints the latest
+`ActivityEvent`, replays it through the classifier, and writes
+`.harness/runtime/logs/live-capture.log`.
 
 ## Harness Requirements
 
@@ -109,3 +139,6 @@ Future capture work must update:
 
 `make verify` must remain local and deterministic. Live sensor tests should use
 fixtures or fakes in CI, with manual capture smoke checks documented separately.
+The current macOS adapter fixture is
+`data/capture/macos_frontmost_snapshot.json`; future real adapters must add
+equivalent fixtures before they are considered harness-ready.

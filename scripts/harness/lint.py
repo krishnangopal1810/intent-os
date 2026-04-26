@@ -22,6 +22,7 @@ EXPECTED_LAYERS = {
     "intentos/capture/browser.py",
     "intentos/capture/core.py",
     "intentos/capture/jsonl.py",
+    "intentos/capture/macos.py",
     "intentos/capture/privacy.py",
     "intentos/capture_cli.py",
     "intentos/capture_replay.py",
@@ -31,6 +32,7 @@ EXPECTED_LAYERS = {
     "tests/test_activity_classification.py",
     "tests/test_capture_browser.py",
     "tests/test_capture_core.py",
+    "tests/test_capture_macos.py",
     "tests/test_capture_privacy.py",
     "tests/test_capture_replay.py",
     "tests/test_youtube_mvp.py",
@@ -53,12 +55,14 @@ ALLOWED_IMPORTS = {
     "intentos/capture/browser.py": set(),
     "intentos/capture/core.py": {"intentos.activity"},
     "intentos/capture/jsonl.py": {"intentos.activity"},
+    "intentos/capture/macos.py": {"intentos.capture.core"},
     "intentos/capture/privacy.py": set(),
     "intentos/capture_replay.py": {"intentos.capture.jsonl", "intentos.reporting"},
     "intentos/capture_cli.py": {
         "intentos.capture.browser",
         "intentos.capture.core",
         "intentos.capture.jsonl",
+        "intentos.capture.macos",
         "intentos.capture.privacy",
         "intentos.capture_replay",
     },
@@ -73,6 +77,7 @@ ALLOWED_IMPORTS = {
         "intentos.capture.core",
         "intentos.capture.jsonl",
     },
+    "tests/test_capture_macos.py": {"intentos.capture.macos"},
     "tests/test_capture_privacy.py": {"intentos.capture.privacy"},
     "tests/test_capture_replay.py": {
         "intentos.capture_cli",
@@ -91,6 +96,8 @@ def main() -> int:
     check_no_stale_active_plans(failures)
     check_quality_scorecard(failures)
     check_evaluation_set(failures)
+    check_capture_adapter_fixtures(failures)
+    check_live_observation_harness(failures)
     check_live_capture_contract(failures)
     check_parallel_plan_contract(failures)
 
@@ -255,6 +262,49 @@ def check_evaluation_set(failures: list[str]) -> None:
         },
         minimum=10,
     )
+
+
+def check_capture_adapter_fixtures(failures: list[str]) -> None:
+    path = ROOT / "data/capture/macos_frontmost_snapshot.json"
+    if not path.is_file():
+        failures.append(
+            "missing data/capture/macos_frontmost_snapshot.json; real adapters "
+            "need deterministic fixtures for CI"
+        )
+        return
+
+    try:
+        fixture = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        failures.append(f"data/capture/macos_frontmost_snapshot.json is invalid JSON: {exc}")
+        return
+
+    if not isinstance(fixture.get("stdout"), str) or not fixture["stdout"].strip():
+        failures.append("data/capture/macos_frontmost_snapshot.json must include stdout")
+    expected = fixture.get("expected")
+    if not isinstance(expected, dict):
+        failures.append("data/capture/macos_frontmost_snapshot.json must include expected")
+        return
+    for field in ["app_name", "bundle_id", "process_id", "window_title"]:
+        if field not in expected:
+            failures.append(
+                "data/capture/macos_frontmost_snapshot.json expected is missing "
+                f"{field}"
+            )
+
+
+def check_live_observation_harness(failures: list[str]) -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    script = ROOT / "scripts/harness/observe-live.sh"
+    if "observe-live:" not in makefile:
+        failures.append("Makefile must expose make observe-live for manual sensor diagnostics")
+    if not script.is_file():
+        failures.append("missing scripts/harness/observe-live.sh")
+        return
+    text = script.read_text(encoding="utf-8")
+    for phrase in ["capture-macos", "live-capture-events.jsonl", "live-capture.log"]:
+        if phrase not in text:
+            failures.append(f"scripts/harness/observe-live.sh must mention {phrase}")
 
 
 def check_live_capture_contract(failures: list[str]) -> None:
