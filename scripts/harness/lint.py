@@ -13,14 +13,34 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MAX_PYTHON_LINES = 320
 EXPECTED_LAYERS = {
+    "intentos/activity.py",
+    "intentos/classifier.py",
+    "intentos/reporting.py",
+    "intentos/activity_cli.py",
+    "intentos/activity_evaluate.py",
     "intentos/youtube.py",
     "intentos/cli.py",
     "intentos/evaluate.py",
+    "tests/test_activity_classification.py",
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
     "intentos/cli.py": {"intentos.youtube"},
     "intentos/evaluate.py": {"intentos.youtube"},
+    "intentos/classifier.py": {"intentos.activity"},
+    "intentos/reporting.py": {
+        "intentos.activity",
+        "intentos.classifier",
+        "intentos.youtube",
+    },
+    "intentos/activity_cli.py": {"intentos.activity", "intentos.reporting"},
+    "intentos/activity_evaluate.py": {"intentos.activity", "intentos.classifier"},
+    "tests/test_activity_classification.py": {
+        "intentos.activity",
+        "intentos.activity_evaluate",
+        "intentos.classifier",
+        "intentos.reporting",
+    },
     "tests/test_youtube_mvp.py": {"intentos.youtube"},
 }
 
@@ -65,11 +85,11 @@ def check_python_syntax_and_imports(failures: list[str]) -> None:
             continue
 
         imported = import_targets(tree)
-        if path == "intentos/youtube.py":
+        if path in {"intentos/youtube.py", "intentos/activity.py"}:
             forbidden = sorted(
                 target
                 for target in imported
-                if target.startswith("intentos.") and target != "intentos.youtube"
+                if target.startswith("intentos.") and target != path.removesuffix(".py").replace("/", ".")
             )
             if forbidden:
                 failures.append(
@@ -175,26 +195,53 @@ def check_quality_scorecard(failures: list[str]) -> None:
 
 
 def check_evaluation_set(failures: list[str]) -> None:
-    path = ROOT / "data/youtube/evaluation_set.json"
+    check_labeled_fixture(
+        failures,
+        ROOT / "data/youtube/evaluation_set.json",
+        {"learning", "entertainment", "unknown"},
+        minimum=6,
+    )
+    check_labeled_fixture(
+        failures,
+        ROOT / "data/activity/evaluation_set.json",
+        {
+            "deep_work",
+            "learning",
+            "communication",
+            "admin",
+            "passive_consumption",
+            "active_creation",
+            "entertainment",
+            "unknown",
+        },
+        minimum=10,
+    )
+
+
+def check_labeled_fixture(
+    failures: list[str], path: Path, required_labels: set[str], minimum: int
+) -> None:
     if not path.is_file():
-        failures.append("missing data/youtube/evaluation_set.json")
+        failures.append(f"missing {path.relative_to(ROOT)}")
         return
 
     try:
         rows = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        failures.append(f"data/youtube/evaluation_set.json is invalid JSON: {exc}")
+        failures.append(f"{path.relative_to(ROOT)} is invalid JSON: {exc}")
         return
 
-    if not isinstance(rows, list) or len(rows) < 6:
-        failures.append("evaluation set must contain at least 6 labeled examples")
+    if not isinstance(rows, list) or len(rows) < minimum:
+        failures.append(
+            f"{path.relative_to(ROOT)} must contain at least {minimum} labeled examples"
+        )
         return
 
     labels = {row.get("expected_label") for row in rows if isinstance(row, dict)}
-    for required in {"learning", "entertainment", "unknown"}:
+    for required in sorted(required_labels):
         if required not in labels:
             failures.append(
-                f"evaluation set must include at least one {required} example"
+                f"{path.relative_to(ROOT)} must include at least one {required} example"
             )
 
 

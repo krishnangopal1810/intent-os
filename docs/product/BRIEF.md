@@ -5,9 +5,9 @@ product functionality.
 
 ## Current State
 
-IntentOS has a product direction and a first local CLI MVP. The current
-implementation classifies deterministic sample YouTube watch activity into
-learning, entertainment, or unknown and reports aggregate time insights.
+IntentOS has a product direction and local CLI MVPs for YouTube and generic
+multi-app activity classification. The current implementation classifies
+deterministic fixtures into behavior labels and reports aggregate time insights.
 
 ## Product Definition
 

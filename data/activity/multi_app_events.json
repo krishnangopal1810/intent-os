@@ -1,0 +1,104 @@
+[
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Debug failing Python unittest for IntentOS classifier",
+    "started_at": "2026-04-25T09:00:00Z",
+    "duration_seconds": 1800,
+    "metadata": {
+      "conversation_summary": "Debugging code, writing tests, and reasoning about classifier boundaries."
+    }
+  },
+  {
+    "source_app": "VS Code",
+    "surface": "editor",
+    "title": "intentos/activity.py - implement ActivityEvent model",
+    "started_at": "2026-04-25T09:40:00Z",
+    "duration_seconds": 2400,
+    "metadata": {
+      "project": "intent-os"
+    }
+  },
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Explain transformers attention mechanism with examples",
+    "started_at": "2026-04-25T11:00:00Z",
+    "duration_seconds": 1200,
+    "metadata": {
+      "conversation_summary": "Learning session about machine learning fundamentals."
+    }
+  },
+  {
+    "source_app": "WhatsApp",
+    "surface": "desktop",
+    "title": "Family group - coordinate dinner plans",
+    "started_at": "2026-04-25T12:20:00Z",
+    "duration_seconds": 600,
+    "metadata": {
+      "conversation_summary": "Messages coordinating timing and logistics."
+    }
+  },
+  {
+    "source_app": "Safari",
+    "surface": "incometax.gov.in",
+    "title": "Income Tax e-Filing - submit return",
+    "url": "https://www.incometax.gov.in/iec/foportal/",
+    "started_at": "2026-04-25T14:00:00Z",
+    "duration_seconds": 1800,
+    "metadata": {
+      "category": "tax filing"
+    }
+  },
+  {
+    "source_app": "LinkedIn",
+    "surface": "feed",
+    "title": "LinkedIn feed scrolling",
+    "url": "https://www.linkedin.com/feed/",
+    "started_at": "2026-04-25T15:20:00Z",
+    "duration_seconds": 1500,
+    "metadata": {
+      "interaction": "feed scroll"
+    }
+  },
+  {
+    "source_app": "X",
+    "surface": "home feed",
+    "title": "Twitter/X home feed doomscrolling",
+    "url": "https://x.com/home",
+    "started_at": "2026-04-25T16:00:00Z",
+    "duration_seconds": 900,
+    "metadata": {
+      "interaction": "timeline scroll"
+    }
+  },
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Make up a silly superhero story",
+    "started_at": "2026-04-25T20:00:00Z",
+    "duration_seconds": 600,
+    "metadata": {
+      "conversation_summary": "Casual fun conversation for entertainment."
+    }
+  },
+  {
+    "source_app": "YouTube",
+    "surface": "youtube.com",
+    "title": "System Design Deep Dive: Queues and Backpressure",
+    "url": "https://www.youtube.com/watch?v=system-design",
+    "started_at": "2026-04-25T21:00:00Z",
+    "duration_seconds": 1500,
+    "metadata": {
+      "description": "Technical lecture about distributed systems and architecture."
+    }
+  },
+  {
+    "source_app": "Unknown App",
+    "surface": "unknown",
+    "title": "Untitled window",
+    "started_at": "2026-04-25T22:00:00Z",
+    "duration_seconds": 300,
+    "metadata": {}
+  }
+]

@@ -19,6 +19,7 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser validation is specified but not implemented because no UI exists.
 - Live YouTube capture is not implemented.
+- Live multi-app capture is not implemented.
 - Classifier quality is only local-fixture-tested; real evaluation data is
   pending.
 

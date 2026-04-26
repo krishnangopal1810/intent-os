@@ -1,0 +1,167 @@
+[
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Debug failing Python unittest for IntentOS classifier",
+    "started_at": "2026-04-25T09:00:00Z",
+    "duration_seconds": 1800,
+    "metadata": {
+      "conversation_summary": "Debugging code, writing tests, and reasoning about classifier boundaries."
+    },
+    "expected_label": "deep_work"
+  },
+  {
+    "source_app": "Sublime Text",
+    "surface": "editor",
+    "title": "classifier.py - implement behavior scoring",
+    "started_at": "2026-04-25T09:35:00Z",
+    "duration_seconds": 2100,
+    "metadata": {
+      "project": "intent-os"
+    },
+    "expected_label": "deep_work"
+  },
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Explain transformers attention mechanism with examples",
+    "started_at": "2026-04-25T11:00:00Z",
+    "duration_seconds": 1200,
+    "metadata": {
+      "conversation_summary": "Learning session about machine learning fundamentals."
+    },
+    "expected_label": "learning"
+  },
+  {
+    "source_app": "LinkedIn",
+    "surface": "profile",
+    "title": "Research founder profile and company strategy",
+    "url": "https://www.linkedin.com/in/example-founder/",
+    "started_at": "2026-04-25T12:00:00Z",
+    "duration_seconds": 900,
+    "metadata": {
+      "intent": "research"
+    },
+    "expected_label": "learning"
+  },
+  {
+    "source_app": "WhatsApp",
+    "surface": "desktop",
+    "title": "Family group - coordinate dinner plans",
+    "started_at": "2026-04-25T12:20:00Z",
+    "duration_seconds": 600,
+    "metadata": {
+      "conversation_summary": "Messages coordinating timing and logistics."
+    },
+    "expected_label": "communication"
+  },
+  {
+    "source_app": "Slack",
+    "surface": "desktop",
+    "title": "Product sync - review launch checklist",
+    "started_at": "2026-04-25T13:00:00Z",
+    "duration_seconds": 1200,
+    "metadata": {
+      "conversation_summary": "Work coordination and planning."
+    },
+    "expected_label": "communication"
+  },
+  {
+    "source_app": "Safari",
+    "surface": "incometax.gov.in",
+    "title": "Income Tax e-Filing - submit return",
+    "url": "https://www.incometax.gov.in/iec/foportal/",
+    "started_at": "2026-04-25T14:00:00Z",
+    "duration_seconds": 1800,
+    "metadata": {
+      "category": "tax filing"
+    },
+    "expected_label": "admin"
+  },
+  {
+    "source_app": "Chrome",
+    "surface": "bank portal",
+    "title": "Credit card bill payment",
+    "started_at": "2026-04-25T14:40:00Z",
+    "duration_seconds": 480,
+    "metadata": {
+      "category": "bill payment"
+    },
+    "expected_label": "admin"
+  },
+  {
+    "source_app": "LinkedIn",
+    "surface": "feed",
+    "title": "LinkedIn feed scrolling",
+    "url": "https://www.linkedin.com/feed/",
+    "started_at": "2026-04-25T15:20:00Z",
+    "duration_seconds": 1500,
+    "metadata": {
+      "interaction": "feed scroll"
+    },
+    "expected_label": "passive_consumption"
+  },
+  {
+    "source_app": "Instagram",
+    "surface": "reels",
+    "title": "Instagram reels scrolling",
+    "started_at": "2026-04-25T16:20:00Z",
+    "duration_seconds": 900,
+    "metadata": {
+      "interaction": "short video scroll"
+    },
+    "expected_label": "passive_consumption"
+  },
+  {
+    "source_app": "Notion",
+    "surface": "workspace",
+    "title": "Draft product notes for IntentOS taxonomy",
+    "started_at": "2026-04-25T17:00:00Z",
+    "duration_seconds": 1200,
+    "metadata": {
+      "document": "IntentOS taxonomy"
+    },
+    "expected_label": "active_creation"
+  },
+  {
+    "source_app": "ChatGPT",
+    "surface": "chatgpt.com",
+    "title": "Make up a silly superhero story",
+    "started_at": "2026-04-25T20:00:00Z",
+    "duration_seconds": 600,
+    "metadata": {
+      "conversation_summary": "Casual fun conversation for entertainment."
+    },
+    "expected_label": "entertainment"
+  },
+  {
+    "source_app": "YouTube",
+    "surface": "youtube.com",
+    "title": "Try Not To Laugh Compilation 2026",
+    "url": "https://www.youtube.com/watch?v=laugh-compilation",
+    "started_at": "2026-04-25T20:30:00Z",
+    "duration_seconds": 900,
+    "metadata": {
+      "description": "Funny reaction compilation."
+    },
+    "expected_label": "entertainment"
+  },
+  {
+    "source_app": "Unknown App",
+    "surface": "unknown",
+    "title": "Untitled window",
+    "started_at": "2026-04-25T22:00:00Z",
+    "duration_seconds": 300,
+    "metadata": {},
+    "expected_label": "unknown"
+  },
+  {
+    "source_app": "Browser",
+    "surface": "unknown",
+    "title": "Python drama recap",
+    "started_at": "2026-04-25T22:10:00Z",
+    "duration_seconds": 300,
+    "metadata": {},
+    "expected_label": "unknown"
+  }
+]

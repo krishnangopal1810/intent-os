@@ -24,9 +24,9 @@ PR loops because product code has not been created.
 | Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene and quality scorecard structure. |
 | App legibility | Yellow | `make dev` generates MVP artifacts and exposes the summary through local logs; UI validation awaits a UI. |
 | Logs and observability legibility | Yellow | `make observe` exposes local runtime logs; metrics and traces are deferred until runtime complexity justifies them. |
-| Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, and generated-file hygiene. |
+| Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
 | Agent review and CI remediation loops | Yellow | Operating model exists; GitHub review automation is not yet wired into repo scripts. |
-| Product verification gates | Green | `make verify` runs harness checks, harness linting, unit tests, CLI smoke evaluation, and labeled fixture evaluation. CI runs `make verify`. |
+| Product verification gates | Green | `make verify` runs harness checks, harness linting, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, and labeled multi-app fixture evaluation. CI runs `make verify`. |
 | Recurring cleanup | Yellow | `make cleanup-check` catches several drift classes; no scheduled cleanup agent exists yet. |
 
 ## Current Intentional Failure
