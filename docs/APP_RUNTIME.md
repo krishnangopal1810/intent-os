@@ -235,3 +235,10 @@ manual import slice should add `import-events.jsonl`, `import-summary.txt`,
 narrative, ScreenCaptureKit/OCR, and local model slices must use similarly
 stable artifact names, structured runtime events, deterministic fixtures, and
 permission-free `make verify` coverage.
+
+Before implementation starts, the active execution plan must include a
+`## Harness Impact` section that names the runtime commands, artifacts,
+fixtures or fakes, UI validation, diagnostics, privacy or permission behavior,
+and docs or harness checks affected by the use-case. If a category does not
+apply, the plan should say that explicitly so future agents do not infer hidden
+manual work.

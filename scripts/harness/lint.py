@@ -269,6 +269,24 @@ def check_no_stale_active_plans(failures: list[str]) -> None:
                 f"{plan.relative_to(ROOT)} still contains TBD; resolve or narrow "
                 "the plan before implementation"
             )
+        if "## Harness Impact" not in text:
+            failures.append(
+                f"{plan.relative_to(ROOT)} must include ## Harness Impact so "
+                "future runtime, fixture, UI, diagnostics, and privacy work is explicit"
+            )
+        else:
+            for phrase in [
+                "Runtime commands and artifacts",
+                "Fixtures or fakes",
+                "UI validation",
+                "Structured logs",
+                "Privacy, permission",
+                "Docs or harness checks",
+            ]:
+                if phrase not in text:
+                    failures.append(
+                        f"{plan.relative_to(ROOT)} Harness Impact must mention {phrase!r}"
+                    )
 
 
 def check_quality_scorecard(failures: list[str]) -> None:
@@ -512,6 +530,13 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
             "ScreenCaptureKit and Vision OCR fallback",
             "Local model second-pass classifier",
             "Richer DOM automation",
+            "Universal Use-Case Classes",
+            "New data source or adapter",
+            "New permissioned live capability",
+            "New long-running process",
+            "New export or integration",
+            "Completion Checklist",
+            "Harness Impact",
             "make verify",
             "deterministic fixtures",
             "structured runtime events",
@@ -541,6 +566,7 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
             "import-events.jsonl",
             "import-validation.json",
             "HARNESS_FEATURES.md",
+            "Harness Impact",
         ],
     }
 

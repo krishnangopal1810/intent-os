@@ -104,7 +104,7 @@ check_markdown_links
 plan_count=0
 while IFS= read -r -d '' plan; do
   plan_count=$((plan_count + 1))
-  for heading in "## Goal" "## Scope" "## Non-Goals" "## Acceptance Criteria" "## Verification" "## Progress Log"; do
+  for heading in "## Goal" "## Scope" "## Non-Goals" "## Acceptance Criteria" "## Harness Impact" "## Verification" "## Progress Log"; do
     if ! grep -q "^$heading$" "$plan"; then
       fail "$plan is missing required heading: $heading"
     fi

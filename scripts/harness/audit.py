@@ -125,9 +125,11 @@ def check_stale_docs(failures: list[str]) -> None:
             "Manual real-data import",
             "Browser history import",
             "ChatGPT export parser",
+            "Universal Use-Case Classes",
             "ScreenCaptureKit and Vision OCR fallback",
             "Local model second-pass classifier",
             "Richer DOM automation",
+            "Completion Checklist",
         ],
         "docs/NEXT_STEPS.md": [
             "Manual real-data import",
