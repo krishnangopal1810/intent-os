@@ -7,9 +7,9 @@ Use this document to keep quality visible to future Codex runs.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Product definition | Green | IntentOS brief, behavior taxonomy, YouTube slice, and multi-app `ActivityEvent` foundation are specified. |
-| Architecture | Yellow | Local-first Python CLI stack, MVP boundaries, and future capture adapter boundaries are documented and linted. |
-| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, and labeled fixture evaluation. |
-| Security | Yellow | Local-only defaults, live-capture privacy rules, and manual macOS permission handling are documented; browser permission UX is pending. |
+| Architecture | Yellow | Local-first Python CLI/UI stack, MVP boundaries, and capture adapter boundaries are documented and linted. |
+| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, UI validation, and labeled fixture evaluation. |
+| Security | Yellow | Local-only defaults, live-capture privacy rules, background sampler visibility, and manual macOS permission handling are documented; browser permission UX is pending. |
 | Reliability | Yellow | CLI verification, UI validation, screenshot evidence, and artifact runtime exist; richer observability is pending. |
 | UX | Yellow | A local UI shell exists for current reports with checked-in screenshot evidence; richer interaction design is pending. |
 
@@ -19,14 +19,17 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
   richer DOM automation is still pending.
-- Continuous always-on browser/app capture is not implemented; manual bounded
-  session capture now exists as a metadata-only diagnostic with deterministic
-  fixture coverage.
+- Always-on browser/app capture is not implemented; current live capture is
+  limited to explicit manual commands and the visible `make dev` background
+  sampler, with deterministic fixture coverage for replay/session behavior.
 - Session timeline fixtures, merge tests, replay checks, and UI timeline
   validation are covered for the current bounded session slice.
 - Classifier quality is only local-fixture-tested; real evaluation data is
   pending.
 - No manual import path exists yet for real user activity.
+- Next-feature harness contracts now exist for manual import, browser history,
+  ChatGPT export parsing, daily narratives, fallback capture, local models, and
+  richer UI automation; implementation of those slices is still pending.
 - On-device model inference is specified but not implemented.
 
 ## Cleanup Process

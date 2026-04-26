@@ -61,9 +61,10 @@ make verify
 
 When product code exists, verification must include runtime legibility:
 
-- `make dev` starts the app for the current worktree in fixture-only mode.
+- `make dev` builds fixture-backed product artifacts, starts the app for the
+  current worktree, and starts the visible background metadata sampler.
 - `make dev-live` captures a fresh bounded macOS session and starts the UI with
-  that live session artifact preferred.
+  that live session artifact preferred while leaving sampler status visible.
 - `make app-status` confirms the app URL, process, and logs.
 - `make validate-ui` validates the local UI shell and product artifacts.
 - `make update-ui-screenshot` refreshes checked-in visual evidence whenever UI

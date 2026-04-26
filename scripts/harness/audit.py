@@ -56,9 +56,44 @@ def check_stale_docs(failures: list[str]) -> None:
         "There is no live capture yet": "manual macOS frontmost capture now exists",
         "Live capture and UI are not implemented yet": "manual macOS frontmost capture now exists",
         "Live multi-app capture is not implemented": "manual macOS frontmost capture now exists",
+        "`make dev` is fixture-only": (
+            "make dev builds fixture artifacts and then starts the visible "
+            "background metadata sampler"
+        ),
+        "make dev is fixture-only": (
+            "make dev builds fixture artifacts and then starts the visible "
+            "background metadata sampler"
+        ),
+        "It does not capture current macOS activity": (
+            "make dev starts the visible background metadata sampler after "
+            "fixture artifacts are built"
+        ),
+        "The planned live capture slice is metadata-first": (
+            "metadata-first live capture has shipped through manual commands "
+            "and the visible background sampler"
+        ),
+        "The current product processes local fixture data only": (
+            "manual live commands and the make dev background sampler can "
+            "process local macOS metadata"
+        ),
+        "live macOS capture, or external network calls": (
+            "manual live commands and the make dev background sampler can "
+            "process local macOS metadata"
+        ),
         "No product UI has been specified yet": "the local UI shell now exists",
         "browser screenshot automation are not implemented": "checked-in screenshot evidence now exists",
         "browser screenshot validation remain future extensions": "checked-in screenshot evidence now exists",
+        "when browser metadata capture lands": (
+            "browser active-tab metadata capture now exists; refer to future "
+            "metadata adapters instead"
+        ),
+        "Add cleanup/audit scripts that scan stale plans, stale docs, fixture drift": (
+            "cleanup/audit scripts now exist; describe expanding them instead"
+        ),
+        "Expand cleanup/audit scripts so stale plans, stale docs, fixture drift": (
+            "cleanup/audit scripts now exist; describe keeping or extending "
+            "them current instead"
+        ),
     }
 
     doc_paths = sorted((ROOT / "docs").rglob("*.md")) + [ROOT / "README.md"]
@@ -84,8 +119,20 @@ def check_stale_docs(failures: list[str]) -> None:
             "deterministic capture fixtures",
             "structured",
             "cleanup/audit scripts",
+            "docs/HARNESS_FEATURES.md",
+        ],
+        "docs/HARNESS_FEATURES.md": [
+            "Manual real-data import",
+            "Browser history import",
+            "ChatGPT export parser",
+            "ScreenCaptureKit and Vision OCR fallback",
+            "Local model second-pass classifier",
+            "Richer DOM automation",
         ],
         "docs/NEXT_STEPS.md": [
+            "Manual real-data import",
+            "HARNESS_FEATURES.md",
+            "product/imports.md",
             "Harness Upgrades To Keep Current",
             "stale plans",
             "fixture drift",
@@ -100,6 +147,12 @@ def check_stale_docs(failures: list[str]) -> None:
             "ui-validation.json",
         ],
         "docs/DESIGN.md": ["IntentOS UI shell", "daily behavior review"],
+        "docs/product/imports.md": [
+            "Manual CSV/JSON Import",
+            "Browser History Import",
+            "ChatGPT Export Parser",
+            "Privacy Rules",
+        ],
     }
     for relative_path, phrases in required_doc_phrases.items():
         path = ROOT / relative_path
@@ -125,6 +178,7 @@ def check_fixture_drift(failures: list[str]) -> None:
         "data/activity/multi_app_events.json",
         "data/capture/fake_browser_tabs.json",
         "data/capture/fake_macos_observations.json",
+        "data/capture/fake_session_observations.json",
         "data/capture/browser_active_tab_snapshot.json",
         "data/capture/macos_frontmost_snapshot.json",
         "data/capture/privacy_policy.json",

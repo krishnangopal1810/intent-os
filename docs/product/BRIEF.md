@@ -15,9 +15,10 @@ YouTube MVP remains as a concrete domain slice and regression fixture.
 The current live product slice captures metadata-only macOS app/window samples,
 enriches supported browser active-tab metadata when local Automation permission
 allows it, and replays the result into the UI. It now supports both one-shot
-manual capture and a bounded live session timeline that repeatedly samples this
-metadata, merges adjacent equivalent activity, and renders a timeline without
-adding screenshots, OCR, or model-backed classification.
+manual capture, a visible background sampler during local UI runs, and a
+bounded live session timeline that repeatedly samples this metadata, merges
+adjacent equivalent activity, and renders a timeline without adding
+screenshots, OCR, or model-backed classification.
 
 ## Product Definition
 
@@ -78,6 +79,7 @@ The current live capture slice supports manual local smoke loops:
 - frontmost macOS app/window metadata through local System Events
 - best-effort browser active tab URL/title/domain enrichment
 - local privacy exclusions and redaction before JSONL persistence
+- visible background live sampler status during `make dev` UI runs
 - adjacent equivalent session sample merging
 - replay through the generic `ActivityEvent` classifier
 - UI preference for session timeline replay artifacts
@@ -89,8 +91,8 @@ make observe-live
 make observe-session
 ```
 
-This command is intentionally manual and outside CI because it depends on local
-macOS Accessibility and browser Automation permissions.
+These commands are intentionally manual and outside CI because they depend on
+local macOS Accessibility and browser Automation permissions.
 
 ### Generic Multi-App Activity
 
@@ -141,6 +143,9 @@ The detailed MVP spec is
 - [on-device-inference.md](on-device-inference.md) defines the rules-first
   inference ladder and where Apple Foundation Models, Core ML, or MLX may fit
   after deterministic fixture evaluation shows a need.
+- [imports.md](imports.md) defines the local CSV/JSON, browser history, and
+  ChatGPT export import direction that should land before heavier sensors or
+  model-backed classification.
 - Live capture must not use keylogging, raw screenshot retention, cloud
   inference, or always-on background capture in the current local slices.
 

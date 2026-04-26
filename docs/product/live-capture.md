@@ -142,11 +142,11 @@ make observe-live
 `make observe-live` captures one live metadata sample, prints the latest
 `ActivityEvent`, replays it through the classifier, and writes
 `.harness/runtime/artifacts/live-capture-summary.json` plus
-`.harness/runtime/logs/live-capture.log`. `make dev` clears this live artifact
-because it is fixture-only; use `make dev-live` or preserve live artifacts
-explicitly when the UI should display live capture output. If privacy
-exclusions drop every row, the live summary is still written with an empty
-report.
+`.harness/runtime/logs/live-capture.log`. The deterministic product artifact
+build clears stale live capture artifacts unless preservation is requested; the
+`make dev` harness then starts a background sampler that writes fresh
+`live-capture-*` artifacts. If privacy exclusions drop every row, the live
+summary is still written with an empty report.
 
 ## Current Session Timeline
 
@@ -173,21 +173,27 @@ transcripts.
 
 Use `make dev-live` when the UI should show a fresh live session. It runs this
 bounded session command first, preserves the live replay artifact, and then
-starts the UI. The resulting UI reflects only the activity captured during that
-command window, not historical macOS usage.
+starts the UI. The resulting session timeline reflects only the activity
+captured during that bounded command window, not historical macOS usage. The UI
+prefers `live-session-capture-summary.json` over continuous live-capture
+artifacts when both exist.
 
-`make dev` starts the local UI and a background metadata sampler:
+## Current Background Sampler
+
+`make dev` starts the local UI and then starts a visible background metadata
+sampler:
 
 ```sh
-python3 -m intentos.capture_cli capture-live --interval-seconds 2 --output .harness/runtime/artifacts/live-capture-events.jsonl --summary-json .harness/runtime/artifacts/live-capture-summary.json --status-json .harness/runtime/artifacts/live-capture-status.json
+python3 -m intentos.capture_cli capture-live --interval-seconds 2 --output .harness/runtime/artifacts/live-capture-events.jsonl --summary-json .harness/runtime/artifacts/live-capture-summary.json --summary-text .harness/runtime/artifacts/live-capture-summary.txt --status-json .harness/runtime/artifacts/live-capture-status.json
 ```
 
 The sampler appends privacy-filtered `ActivityEvent` rows, refreshes the replay
 summary after each sample, and writes status under
-`.harness/runtime/artifacts/live-capture-status.json`. It records whether the
-frontmost app is Codex, ChatGPT, or a browser. For supported browsers, it also
-records the browser app and active tab URL/title/domain when Automation
-permission allows it.
+`.harness/runtime/artifacts/live-capture-status.json`. Its PID, interval,
+output path, status path, and log path are recorded in
+`.harness/runtime/app.env`, and `make app-stop` stops it. It records
+frontmost app/window metadata and, for supported browsers, active tab
+URL/title/domain when Automation permission allows it.
 
 ## Harness Requirements
 

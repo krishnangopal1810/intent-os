@@ -18,6 +18,9 @@ artifacts.
   require macOS permissions.
 - Manual sensor smoke tests should record enough runtime evidence for Codex to
   inspect logs and generated `ActivityEvent` JSONL.
+- Upcoming import, narrative, fallback-capture, model, and UI automation slices
+  should satisfy `docs/HARNESS_FEATURES.md` before depending on manual
+  inspection.
 
 ## Verification Targets
 
@@ -63,21 +66,25 @@ artifacts.
 
 ## Runtime Notes
 
-`make dev` is fixture-only. It clears live capture artifacts, runs the sample
-analysis, writes deterministic text and JSON reports under
-`.harness/runtime/artifacts/`, serves the local UI shell, records its URL,
-process, and `INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`,
-and writes runtime logs. It does not capture current macOS activity and does not
+`make dev` builds fixture-backed product artifacts first. That product artifact
+step clears stale live capture artifacts, runs the sample analysis, writes
+deterministic text and JSON reports under `.harness/runtime/artifacts/`, serves
+the local UI shell, records its URL, process, and
+`INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`, and writes
+runtime logs. After the UI starts, the harness starts a visible background
+metadata sampler and records its capture mode, PID, output path, status path,
+and log path in `.harness/runtime/app.env`. It captures only current frontmost
+app/window and browser metadata while the harness is running, and it does not
 read historical activity.
 
 `make dev-live` is the explicit real macOS UI path. It runs a fresh bounded
 `make observe-session`, preserves the live replay artifact, starts the UI, and
-records `INTENTOS_APP_DATA_MODE=live_session`. The UI then reflects only the
-activity captured during that live command window. `make observe` shows
-structured events plus the app log. `make diagnose` prints app state,
-structured events, UI validation evidence, and app logs in one place.
+records `INTENTOS_APP_DATA_MODE=live_session`. The UI then prefers activity
+captured during that bounded live command window, while the background sampler
+remains separately visible in runtime status. `make observe` shows structured
+events plus the app log. `make diagnose` prints app state, structured events,
+UI validation evidence, and app logs in one place.
 
-`make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 `make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 one live local metadata event, and replays it through the classifier. If privacy
 rules exclude every row, it still writes a valid empty replay summary so the UI
@@ -106,6 +113,7 @@ Current artifacts:
 - `live-capture-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
+- `live-capture-status.json`
 - `session-capture-events.jsonl`
 - `session-capture-summary.txt`
 - `session-capture-summary.json`
@@ -148,3 +156,12 @@ Adapter tests must remain deterministic. The macOS adapter is covered by
 by `data/capture/browser_active_tab_snapshot.json`; session behavior is covered
 by `data/capture/fake_session_observations.json`. Future real adapters need
 equivalent fixtures.
+
+## Future Feature Reliability
+
+Manual real-data import, browser history import, ChatGPT export parsing, daily
+behavior narratives, ScreenCaptureKit/OCR fallback, local model classification,
+and richer DOM automation must add deterministic fixtures, runtime artifacts,
+structured logs, and product verification hooks as defined in
+`docs/HARNESS_FEATURES.md`. Permission-dependent or user-data-dependent paths
+must have fixture-backed equivalents in `make verify`.

@@ -20,6 +20,8 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture with best-effort
   browser tab URL/title enrichment.
+- Visible background metadata sampler for local UI runs, with status recorded
+  in `.harness/runtime/app.env`.
 - Short live capture session timeline support that repeatedly samples
   metadata, merges adjacent equivalent activity, and renders a timeline in the
   UI.
@@ -51,6 +53,9 @@ metadata path is reliable.
   rules.
 - [docs/HARNESS_AUDIT.md](./docs/HARNESS_AUDIT.md): status against the OpenAI
   Harness Engineering model.
+- [docs/HARNESS_FEATURES.md](./docs/HARNESS_FEATURES.md): harness contracts
+  for upcoming import, narrative, fallback-capture, model, and UI automation
+  slices.
 - [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md): recommended next slices.
 - [docs/plans/README.md](./docs/plans/README.md): execution plan workflow.
 
@@ -101,17 +106,22 @@ The session command stays outside CI because it depends on live macOS state;
 `make verify` covers equivalent behavior through
 `data/capture/fake_session_observations.json`.
 
-`make dev` is fixture-only. It clears live capture artifacts, rebuilds
-deterministic fixture summaries, serves the UI URL recorded in
-`.harness/runtime/app.env`, and records `INTENTOS_APP_DATA_MODE=fixture`.
-It does not capture current macOS activity and it does not backfill historical
-activity.
+`make dev` rebuilds deterministic fixture summaries, clears stale live capture
+artifacts during the product artifact build, serves the UI URL recorded in
+`.harness/runtime/app.env`, records `INTENTOS_APP_DATA_MODE=fixture`, and then
+starts a visible background metadata sampler. The sampler writes
+`live-capture-events.jsonl`, `live-capture-summary.json`, and
+`live-capture-status.json`; its PID and log path are recorded in
+`.harness/runtime/app.env`. It captures only current frontmost app/window and
+browser metadata while the harness is running, and it does not backfill
+historical activity. Stop it with `make app-stop`.
 
 `make dev-live` is the explicit real macOS flow. It runs `make observe-session`
 first, preserves the fresh `live-session-capture-summary.json`, then starts the
-UI with `INTENTOS_APP_DATA_MODE=live_session`. It only captures activity during
-that bounded command window and may require Accessibility or browser Automation
-permissions.
+UI with `INTENTOS_APP_DATA_MODE=live_session`. The bounded session artifact
+stays preferred in the UI, while the same background sampler remains visible in
+runtime status. It only captures activity during those command windows and may
+require Accessibility or browser Automation permissions.
 
 `make update-ui-screenshot` refreshes the checked-in UI screenshot at
 `docs/assets/screenshots/intent-os-ui.png`. `make verify` checks that screenshot
@@ -138,4 +148,6 @@ checks.
 
 See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). Recommended next work now moves
 toward real user import paths and richer behavior narratives on top of the
-session timeline.
+session timeline. Future feature work should satisfy
+[docs/HARNESS_FEATURES.md](./docs/HARNESS_FEATURES.md) before it is considered
+complete.
