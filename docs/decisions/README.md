@@ -3,6 +3,10 @@
 Use this directory for durable architecture and product decisions that future
 Codex runs need to understand.
 
+## Decisions
+
+- [0001-python-cli-youtube-mvp.md](0001-python-cli-youtube-mvp.md)
+
 Create files named:
 
 ```text

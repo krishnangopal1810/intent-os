@@ -1,6 +1,7 @@
 # Security
 
-No product data model exists yet. Use this baseline for future implementation.
+The current MVP processes local YouTube watch-history fixture data only. It does
+not use cloud storage, cloud inference, browser APIs, or external network calls.
 
 ## Baseline Rules
 
@@ -10,6 +11,15 @@ No product data model exists yet. Use this baseline for future implementation.
 - Treat user data as private by default.
 - Prefer least-privilege tokens and service permissions.
 - Document new data stores, credentials, and external integrations.
+
+## Current Data Handling
+
+- Input data is read from a local JSON file.
+- Product verification uses deterministic fixture data under `data/youtube/`.
+- Runtime artifacts are written under `.harness/runtime/`, which is ignored by
+  git.
+- No secrets, tokens, accounts, or personal browser history are required for the
+  MVP.
 
 ## Required Before Real Users
 

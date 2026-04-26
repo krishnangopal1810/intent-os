@@ -8,8 +8,14 @@ RUNTIME_DIR=".harness/runtime"
 APP_ENV="$RUNTIME_DIR/app.env"
 PID_FILE="$RUNTIME_DIR/app.pid"
 
+if [ -f "$APP_ENV" ] && grep -q '^INTENTOS_APP_STATUS=completed$' "$APP_ENV"; then
+  echo "app-status: completed"
+  cat "$APP_ENV"
+  exit 0
+fi
+
 if [ ! -f "$PID_FILE" ]; then
-  echo "app-status: no app pid recorded"
+  echo "app-status: no app runtime recorded"
   exit 2
 fi
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Implemented for the first local fixture-based CLI slice.
 
 ## Goal
 
@@ -61,12 +61,12 @@ capture. The sample should support:
 
 ## Verification
 
-Future product implementation must add commands to `make verify` for:
+The current implementation includes:
 
 - Unit tests for classification rules and aggregation.
 - A fixture-based evaluation over sample YouTube activity.
-- Runtime validation for the chosen interface, such as CLI snapshot or browser
-  screenshot.
+- CLI output through `python3 -m intentos.cli`.
+- `scripts/product/verify.sh`, which is called by `make verify`.
 
 ## Product Risks
 

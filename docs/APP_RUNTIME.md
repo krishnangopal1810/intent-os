@@ -1,8 +1,8 @@
 # App Runtime Harness
 
-Codex must be able to run, inspect, and validate the product locally. Once
-product code exists, these commands become part of the required development
-loop.
+Codex must be able to run, inspect, and validate the product locally. Product
+runtime commands can be one-shot for CLI slices or persistent for UI/service
+slices.
 
 ## Commands
 
@@ -13,18 +13,20 @@ loop.
 - `make observe`: print local runtime signals that Codex can inspect.
 - `make verify`: run harness checks plus product checks.
 
-Before product code exists, app runtime commands report that no product runtime
-is configured. After the first product slice, this is no longer acceptable:
-`make verify` must fail until product checks are wired.
+The current product slice is CLI-first. `make dev` runs the sample analysis,
+writes reports, and keeps the generated summary visible through the runtime log.
 
 ## Runtime State
 
 Local runtime artifacts live under `.harness/runtime/` and are ignored by git.
 Expected artifacts after product code exists:
 
-- `.harness/runtime/app.env`: app URL, port, process ID, and runtime mode.
+- `.harness/runtime/app.env`: runtime status, process ID when relevant, log
+  path, artifact path, and runtime mode.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
+  The current CLI slice writes `youtube-summary.txt` and
+  `youtube-summary.json`.
 
 ## Product Runtime Contract
 
@@ -40,6 +42,9 @@ The implementation must also provide one of these verification paths:
 - `npm run lint`, `npm run test`, and `npm run build`
 - `python -m pytest` with product tests
 - Another explicit product verifier called by `scripts/harness/verify.sh`
+
+IntentOS currently provides `scripts/product/dev.sh` and
+`scripts/product/verify.sh`.
 
 ## UI Validation Contract
 
