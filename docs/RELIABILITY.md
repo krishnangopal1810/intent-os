@@ -19,8 +19,9 @@ artifacts.
   file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
-- `make dev`, `make app-status`, `make validate-ui`, and `make observe`
-  provide local runtime legibility once product code exists.
+- `make dev`, `make app-status`, and `make observe` provide local runtime
+  legibility for the current CLI product. `make validate-ui` is reserved for a
+  future frontend.
 
 ## Product Commands
 
@@ -39,3 +40,10 @@ artifacts.
 `make dev` runs the sample analysis, writes text and JSON reports under
 `.harness/runtime/artifacts/`, records a completed runtime status, and writes
 the text summary to the local runtime log. `make observe` shows that log.
+
+Current artifacts:
+
+- `youtube-summary.txt`
+- `youtube-summary.json`
+- `activity-summary.txt`
+- `activity-summary.json`

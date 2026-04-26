@@ -6,8 +6,10 @@ slices.
 
 ## Commands
 
-- `make dev`: launch the app for the current worktree.
-- `make app-status`: show app URL, process status, and log locations.
+- `make dev`: run the current CLI runtime or launch the app for the current
+  worktree.
+- `make app-status`: show runtime mode, process status when relevant, and log
+  locations.
 - `make app-stop`: stop the local app process started by the harness.
 - `make validate-ui`: drive the UI through browser automation when a UI exists.
 - `make observe`: print local runtime signals that Codex can inspect.
@@ -32,7 +34,7 @@ Expected artifacts after product code exists:
 
 ## Product Runtime Contract
 
-The first product implementation must provide one of these:
+Each product runtime implementation must provide one of these:
 
 - `scripts/product/dev.sh`
 - `npm run dev`

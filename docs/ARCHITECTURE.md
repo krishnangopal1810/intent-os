@@ -53,6 +53,23 @@ The current local-first slice keeps these concerns separate:
 - Shared utilities should be small, tested, and documented.
 - Cross-cutting concerns such as auth, telemetry, and configuration should have
   one obvious entry point.
+- Live capture adapters should normalize into `ActivityEvent`; they should not
+  own classification rules.
+
+## Data Flow
+
+```text
+fixtures or future adapters
+  -> ActivityEvent boundary validation
+  -> behavior classifier
+  -> aggregate reporting
+  -> CLI/runtime artifacts
+  -> evaluation and CI gates
+```
+
+The YouTube-specific path remains available as a domain fixture and regression
+suite, but new product surfaces should prefer the generic `ActivityEvent`
+pipeline.
 
 ## Current Decisions
 
@@ -73,3 +90,11 @@ The current local-first slice keeps these concerns separate:
 basic file-size limits, generated-file hygiene, active-plan hygiene, quality
 scorecard rows, and labeled evaluation set coverage. Add new rules there when a
 review finding or repeated mistake should become agent-visible policy.
+
+## Next Architecture Work
+
+- Add adapter layer once real imports begin.
+- Expand lint rules to enforce adapter -> event -> classifier -> report
+  direction.
+- Add a local model boundary only after fixture evaluation shows deterministic
+  rules are insufficient.

@@ -1,20 +1,39 @@
 # intent-os
 
-This repository currently contains the Codex product-building harness and the
-IntentOS product brief. Product code should be added after the architecture and
-first execution plan are written.
+IntentOS is a local-first personal behavior intelligence system. It is not a
+time tracker. It classifies digital activity by behavioral intent so a user can
+understand whether time was spent on deep work, learning, communication, admin,
+passive consumption, entertainment, or unknown activity.
 
-## Harness Entry Points
+This repository is also an agent-first product harness. Codex should be able to
+read the docs, choose the next scoped plan, implement the slice, verify it, and,
+when explicitly asked, open, review, and merge a PR once checks pass.
 
-- [AGENTS.md](./AGENTS.md) is the short map Codex should read first.
-- [docs/README.md](./docs/README.md) is the repository knowledge index.
-- [docs/product/BRIEF.md](./docs/product/BRIEF.md) captures the product intent.
-- [docs/product/mvp-youtube-classification.md](./docs/product/mvp-youtube-classification.md)
-  captures the Week 1 MVP scope.
-- [docs/plans/README.md](./docs/plans/README.md) explains execution plans.
-- [docs/agent-workflow.md](./docs/agent-workflow.md) defines the end-to-end Codex loop.
-- [docs/APP_RUNTIME.md](./docs/APP_RUNTIME.md) defines how Codex must run and
-  inspect the app once product code exists.
+## Current Product Surface
+
+- Generic multi-app `ActivityEvent` classification.
+- YouTube-specific fixture classification from the first MVP slice.
+- Deterministic local fixtures and labeled evaluation sets.
+- CLI reports and JSON reports.
+- Harness checks, architecture linting, cleanup checks, runtime artifacts, and
+  CI running `make verify`.
+
+There is no live capture yet. Browser history import, macOS app/window capture,
+ChatGPT export parsing, and UI/browser validation are future slices.
+
+## Start Here
+
+- [AGENTS.md](./AGENTS.md): short map Codex should read first.
+- [docs/README.md](./docs/README.md): full repository knowledge index.
+- [docs/product/BRIEF.md](./docs/product/BRIEF.md): product source of truth.
+- [docs/product/TAXONOMY.md](./docs/product/TAXONOMY.md): behavior labels and
+  classification rules of thumb.
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md): current layers and dependency
+  rules.
+- [docs/HARNESS_AUDIT.md](./docs/HARNESS_AUDIT.md): status against the OpenAI
+  Harness Engineering model.
+- [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md): recommended next slices.
+- [docs/plans/README.md](./docs/plans/README.md): execution plan workflow.
 
 ## Common Commands
 
@@ -24,9 +43,20 @@ make harness-lint
 make harness-status
 make cleanup-check
 make verify
+make dev
+make app-status
+make observe
 ```
 
-Create the first scoped execution plan with:
+Run the current product:
+
+```sh
+python3 -m intentos.activity_cli data/activity/multi_app_events.json
+python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85
+python3 -m intentos.cli data/youtube/sample_watch_history.json
+```
+
+Create a scoped execution plan with:
 
 ```sh
 scripts/harness/new-plan.sh first-product-slice
@@ -35,6 +65,11 @@ scripts/harness/new-plan.sh first-product-slice
 Then fill in the generated plan under `docs/plans/active/` and prompt Codex to
 implement that plan end to end.
 
-`make verify` is product-aware. It passes harness-only checks before a product is
-specified, but once a product brief exists it requires a runnable product
-verification path.
+`make verify` is the main merge gate. It runs harness checks, structural linting,
+unit tests, YouTube fixture evaluation, multi-app fixture evaluation, and CLI
+smoke checks.
+
+## Next Work
+
+See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). The recommended next slice is
+manual CSV/JSON import for real `ActivityEvent` data.
