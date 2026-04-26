@@ -16,15 +16,15 @@
         </div>
 
         <div class="brand">
-          <p class="eyebrow">Local behavior intelligence</p>
+          <p class="eyebrow">Local intelligence</p>
           <h1>IntentOS</h1>
         </div>
 
         <nav class="nav-list" aria-label="Sections">
-          <a class="nav-item active" href="#summary-title">Review</a>
-          <a class="nav-item" href="#activity-title">Activity</a>
-          <a class="nav-item" href="#timeline-title">Timeline</a>
-          <a class="nav-item" href="#youtube-title">YouTube</a>
+          <a class="nav-item active" href="#summary-title"><span aria-hidden="true"></span>Review</a>
+          <a class="nav-item" href="#activity-title"><span aria-hidden="true"></span>Activity</a>
+          <a class="nav-item" href="#timeline-title"><span aria-hidden="true"></span>Timeline</a>
+          <a class="nav-item" href="#youtube-title"><span aria-hidden="true"></span>YouTube</a>
         </nav>
 
         <div class="sidebar-status">
@@ -36,17 +36,55 @@
       <section class="workspace">
         <header class="toolbar">
           <div>
-            <p class="eyebrow">Today</p>
+            <p class="eyebrow">Private daily review</p>
             <h2>Daily Review</h2>
           </div>
-          <div class="source-pill" data-activity-source>Fixture replay</div>
+          <div class="toolbar-meta" aria-label="Loaded report sources">
+            <span class="source-pill" data-activity-source>Fixture replay</span>
+            <span class="source-pill quiet">On device</span>
+          </div>
         </header>
 
-        <section class="hero" aria-labelledby="summary-title">
-          <div class="hero-copy">
-            <h2 id="summary-title" data-primary-narrative>Preparing behavior summary</h2>
+        <section class="overview" aria-labelledby="summary-title">
+          <article class="brief">
+            <div class="brief-topline">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span>Today’s signal</span>
+            </div>
+            <div class="brief-copy">
+              <p class="brief-total" data-primary-total>--</p>
+              <h2 id="summary-title" data-primary-narrative>Preparing behavior summary</h2>
+            </div>
+            <div class="focus-meter" aria-label="Intent mix">
+              <div class="focus-meter-track" data-focus-meter></div>
+              <div class="focus-meter-labels">
+                <span>Focused</span>
+                <span>Reactive</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="score-card">
+            <div class="score-ring" data-focus-ring>
+              <span data-focus-score>--</span>
+            </div>
+            <div>
+              <p class="eyebrow">Intent score</p>
+              <h2 data-score-title>Loading</h2>
+              <p class="score-note" data-score-caption>Reading local behavior reports</p>
+            </div>
+          </article>
+        </section>
+
+        <dl class="metric-strip" data-stats></dl>
+
+        <section class="insights" aria-label="Review highlights" data-insights></section>
+
+        <section class="section-heading" aria-label="Report sections">
+          <div>
+            <p class="eyebrow">Evidence</p>
+            <h2>Behavior Reports</h2>
           </div>
-          <dl class="stats" data-stats></dl>
         </section>
 
         <section class="grid" aria-label="Behavior reports">
@@ -79,7 +117,10 @@
               </div>
               <span class="source-label">MVP slice</span>
             </div>
-            <p class="narrative" data-youtube-narrative>Loading YouTube report</p>
+            <div class="youtube-content">
+              <p class="narrative" data-youtube-narrative>Loading YouTube report</p>
+              <div class="youtube-meter" aria-label="YouTube behavior mix" data-youtube-meter></div>
+            </div>
           </article>
         </section>
       </section>

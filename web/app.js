@@ -51,8 +51,34 @@ function formatNarrative(text) {
   );
 }
 
+function summaryHeadline(summary) {
+  const rows = Object.entries(summary.labels || {}).sort(
+    (left, right) => right[1].seconds - left[1].seconds,
+  );
+  if (!rows.length) {
+    return formatNarrative(summary.narrative);
+  }
+  const [label, data] = rows[0];
+  return `${formatLabel(label)} led the day at ${Math.round(data.percentage)}%, with ${data.duration} captured across tracked activity.`;
+}
+
 function labelClass(label) {
   return `label-${label.replaceAll("_", "_")}`;
+}
+
+function percentage(value, total) {
+  if (!total) {
+    return 0;
+  }
+  return Math.round((value / total) * 100);
+}
+
+function labelSeconds(summary, label) {
+  return summary.labels?.[label]?.seconds || 0;
+}
+
+function labelDuration(summary, label) {
+  return summary.labels?.[label]?.duration || "0s";
 }
 
 function formatClock(value) {
@@ -66,6 +92,11 @@ function formatClock(value) {
 function formatDuration(seconds) {
   if (seconds < 60) {
     return `${seconds}s`;
+  }
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
   }
   const minutes = Math.round(seconds / 60);
   return `${minutes}m`;
@@ -86,6 +117,120 @@ function renderStats(summary) {
       const value = document.createElement("dd");
       value.textContent = data.duration;
       wrapper.append(term, value);
+      return wrapper;
+    }),
+  );
+}
+
+function renderFocusMeter(summary) {
+  const meter = document.querySelector("[data-focus-meter]");
+  const labelsInOrder = [
+    "deep_work",
+    "learning",
+    "active_creation",
+    "admin",
+    "communication",
+    "passive_consumption",
+    "entertainment",
+    "unknown",
+  ];
+  const total = summary.total_seconds || 0;
+  meter.replaceChildren(
+    ...labelsInOrder
+      .filter((label) => labelSeconds(summary, label) > 0)
+      .map((label) => {
+        const segment = document.createElement("div");
+        segment.className = `meter-segment meter-${label}`;
+        segment.style.width = `${Math.max(2, percentage(labelSeconds(summary, label), total))}%`;
+        segment.title = `${formatLabel(label)}: ${labelDuration(summary, label)}`;
+        return segment;
+      }),
+  );
+}
+
+function focusShare(summary) {
+  const focusSeconds =
+    labelSeconds(summary, "deep_work") +
+    labelSeconds(summary, "learning") +
+    labelSeconds(summary, "active_creation");
+  return percentage(focusSeconds, summary.total_seconds || 0);
+}
+
+function renderScore(summary) {
+  const score = focusShare(summary);
+  const ring = document.querySelector("[data-focus-ring]");
+  const scoreValue = document.querySelector("[data-focus-score]");
+  const scoreTitle = document.querySelector("[data-score-title]");
+  const scoreCaption = document.querySelector("[data-score-caption]");
+  const drift =
+    labelSeconds(summary, "passive_consumption") +
+    labelSeconds(summary, "entertainment");
+
+  ring.style.setProperty("--score", `${score}%`);
+  scoreValue.textContent = `${score}`;
+  scoreTitle.textContent = score >= 60 ? "Strong alignment" : "Mixed alignment";
+  scoreCaption.textContent =
+    drift > 0
+      ? `${formatDuration(drift)} of reactive activity is visible in the review.`
+      : "No reactive activity appeared in this report.";
+}
+
+function renderInsights(summary, capture, youtube) {
+  const insights = document.querySelector("[data-insights]");
+  const focusSeconds =
+    labelSeconds(summary, "deep_work") +
+    labelSeconds(summary, "learning") +
+    labelSeconds(summary, "active_creation");
+  const driftSeconds =
+    labelSeconds(summary, "passive_consumption") +
+    labelSeconds(summary, "entertainment");
+  const total = summary.total_seconds || 0;
+  const captureItems = capture.items || [];
+  const averageConfidence = captureItems.length
+    ? Math.round(
+        (captureItems.reduce((sum, item) => sum + item.confidence, 0) /
+          captureItems.length) *
+          100,
+      )
+    : 0;
+  const youtubeLearning = Math.round(
+    youtube.summary?.learning_percentage || 0,
+  );
+  const rows = [
+    {
+      label: "Focused work",
+      value: `${percentage(focusSeconds, total)}%`,
+      note: `${formatDuration(focusSeconds)} in deep work, learning, or active creation.`,
+      className: "label-deep_work",
+    },
+    {
+      label: "Reactive time",
+      value: `${percentage(driftSeconds, total)}%`,
+      note: `${formatDuration(driftSeconds)} in passive consumption or entertainment.`,
+      className: "label-passive_consumption",
+    },
+    {
+      label: "Replay confidence",
+      value: captureItems.length ? `${averageConfidence}%` : "No rows",
+      note: `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`,
+      className: "label-learning",
+    },
+  ];
+
+  insights.replaceChildren(
+    ...rows.map((item) => {
+      const wrapper = document.createElement("article");
+      wrapper.className = `insight ${item.className}`;
+      const title = document.createElement("div");
+      title.className = "insight-title";
+      title.textContent = item.label;
+      const value = document.createElement("div");
+      value.className = "insight-value";
+      value.textContent = item.value;
+      const note = document.createElement("p");
+      note.className = "insight-note";
+      note.textContent = item.note;
+      wrapper.append(title, value, note);
       return wrapper;
     }),
   );
@@ -164,6 +309,30 @@ function renderTimeline(items) {
   );
 }
 
+function renderYoutubeMeter(summary) {
+  const meter = document.querySelector("[data-youtube-meter]");
+  const learning = summary.learning_percentage || 0;
+  const passive = summary.passive_consumption_percentage || 0;
+  const unknown = summary.unknown_percentage || 0;
+  const entertainment = Math.max(0, 100 - learning - passive - unknown);
+  const rows = [
+    ["learning", learning],
+    ["passive_consumption", passive],
+    ["entertainment", entertainment],
+    ["unknown", unknown],
+  ].filter((row) => row[1] > 0);
+
+  meter.replaceChildren(
+    ...rows.map(([label, value]) => {
+      const segment = document.createElement("div");
+      segment.className = `meter-segment meter-${label}`;
+      segment.style.width = `${Math.max(2, Math.round(value))}%`;
+      segment.title = `${formatLabel(label)}: ${Math.round(value)}%`;
+      return segment;
+    }),
+  );
+}
+
 function captureStatusText(isLiveCapture, status) {
   if (!isLiveCapture) {
     return "Fixture reports loaded";
@@ -194,9 +363,12 @@ async function boot() {
       : isLiveCapture
         ? "Live capture replay"
         : "Fixture replay";
-  const primarySummary = isLiveSession || isSession || isLiveCapture
+  const primarySummary = isLiveSession || isLiveCapture
     ? capture.summary
     : activity.summary;
+  const primarySource = isLiveSession || isLiveCapture
+    ? captureSource
+    : "Daily activity report";
   let status = null;
   if (isLiveCapture) {
     try {
@@ -206,8 +378,10 @@ async function boot() {
     }
   }
 
+  document.querySelector("[data-primary-total]").textContent =
+    primarySummary.total_duration || formatDuration(primarySummary.total_seconds || 0);
   document.querySelector("[data-primary-narrative]").textContent =
-    formatNarrative(primarySummary.narrative);
+    summaryHeadline(primarySummary);
   document.querySelector("[data-youtube-narrative]").textContent =
     formatNarrative(youtube.summary.narrative);
   const statusText = isLiveCapture
@@ -220,12 +394,16 @@ async function boot() {
       ? `${captureSource} - ${status.interval_seconds}s`
       : captureSource;
   document.querySelector("[data-status]").textContent = statusText;
-  document.querySelector("[data-activity-source]").textContent = captureLabel;
+  document.querySelector("[data-activity-source]").textContent = primarySource;
   document.querySelector("[data-capture-source]").textContent = captureLabel;
 
+  renderFocusMeter(primarySummary);
+  renderScore(primarySummary);
+  renderInsights(primarySummary, capture, youtube);
   renderStats(primarySummary);
   renderBars(primarySummary);
   renderTimeline(capture.items || []);
+  renderYoutubeMeter(youtube.summary);
 }
 
 boot().catch((error) => {
