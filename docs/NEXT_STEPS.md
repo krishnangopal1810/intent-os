@@ -5,17 +5,17 @@ at a time into an execution plan under `docs/plans/active/`.
 
 ## Recommended Next Slice
 
-Metadata-only browser tab capture adapter.
+Live capture session timeline.
 
-Goal: enrich the current frontmost macOS app/window capture with one browser's
-active tab URL/title metadata; normalize that data into local `ActivityEvent`
-JSONL; and replay it through the existing classifier.
+Goal: sample real app/window/browser metadata repeatedly over a short manual
+session, merge adjacent samples, normalize them into local `ActivityEvent`
+JSONL, and show the resulting timeline in the UI.
 
 Why this is next:
 
-- The first real macOS app/window adapter already exists, but browser tab
-  metadata is still fixture-only.
-- It moves IntentOS from app/window metadata toward semantic browsing behavior.
+- The first real macOS app/window adapter and best-effort browser tab
+  enrichment now exist for one-shot manual capture.
+- A short timeline is the next step toward behavior summaries that feel real.
 - It gives the product a real capture loop without screenshots, OCR, or model
   complexity.
 - It validates the `ActivityEvent` abstraction against live app/window/browser
@@ -24,13 +24,12 @@ Why this is next:
 
 Acceptance criteria:
 
-- Add a metadata-only browser adapter for one supported browser.
-- Write local JSONL `ActivityEvent` records.
-- Replay captured JSONL through the existing classifier and reports.
+- Add a manual short-session capture command that samples every few seconds.
+- Merge adjacent samples with the same app/surface/title.
+- Replay the session JSONL through the existing classifier and reports.
 - Add fixture or fake-based tests so CI does not require macOS permissions.
 - Preserve No keylogging and no raw screenshot retention.
-- Update `make verify` and `make observe-live` documentation if the live
-  diagnostic starts reporting browser permission state.
+- Update the UI to show the session timeline.
 
 ## Harness Upgrades To Keep Current
 

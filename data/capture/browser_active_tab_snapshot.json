@@ -1,0 +1,13 @@
+{
+  "description": "Deterministic stdout fixture for live browser active tab capture.",
+  "app_name": "Chrome",
+  "bundle_id": "com.google.Chrome",
+  "stdout": "IntentOS live capture plan\nhttps://chatgpt.com/c/intent-os\n",
+  "expected": {
+    "browser_name": "Chrome",
+    "domain": "chatgpt.com",
+    "source": "live_browser_osascript",
+    "title": "IntentOS live capture plan",
+    "url": "https://chatgpt.com/c/intent-os"
+  }
+}

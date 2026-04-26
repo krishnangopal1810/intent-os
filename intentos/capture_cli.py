@@ -4,12 +4,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 
-from intentos.capture.browser import browser_tab_metadata, parse_browser_tab
+from intentos.capture.browser import (
+    BrowserCaptureError,
+    active_browser_tab,
+    browser_tab_metadata,
+    parse_browser_tab,
+)
 from intentos.capture.core import CaptureObservation, parse_observation, observation_to_event
 from intentos.capture.jsonl import write_events_jsonl
-from intentos.capture.macos import MacOSCaptureError, capture_frontmost_observation
+from intentos.capture.macos import (
+    MacOSCaptureError,
+    frontmost_app_snapshot,
+    snapshot_to_observation,
+    utc_now,
+)
 from intentos.capture.privacy import (
     load_privacy_policy,
     redact_metadata,
@@ -62,6 +73,11 @@ def main() -> int:
     )
     replay.add_argument("input", help="Path to ActivityEvent JSONL.")
     replay.add_argument("--json", action="store_true", help="Emit JSON output.")
+    replay.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Return an empty report instead of failing when all capture rows were excluded.",
+    )
 
     args = parser.parse_args()
     if args.command == "normalize-observations":
@@ -76,18 +92,21 @@ def main() -> int:
 
     if args.command == "capture-macos":
         try:
-            observation = capture_frontmost_observation(args.duration_seconds)
+            observation, browser_by_app = capture_live_observation_and_browser(
+                args.duration_seconds
+            )
         except MacOSCaptureError as exc:
             raise SystemExit(str(exc)) from exc
         count = normalize_observation_items(
             [observation],
             Path(args.output),
             Path(args.privacy_policy),
+            browser_by_app,
         )
         print(f"capture-cli: wrote {count} ActivityEvent row(s) to {args.output}")
         return 0
 
-    result = replay_capture(Path(args.input))
+    result = replay_capture(Path(args.input), allow_empty=args.allow_empty)
     if args.json:
         print(json.dumps(result, indent=2))
         return 0
@@ -161,6 +180,29 @@ def normalize_observation_items(
             )
         )
     return write_events_jsonl(events, output_path)
+
+
+def capture_live_observation_and_browser(duration_seconds: int):
+    if duration_seconds <= 0:
+        raise ValueError("duration_seconds must be positive")
+
+    start = utc_now()
+    snapshot = frontmost_app_snapshot()
+    browser_by_app = browser_snapshot_for_app(snapshot.app_name, snapshot.bundle_id)
+    time.sleep(duration_seconds)
+    observation = snapshot_to_observation(snapshot, start, utc_now())
+    return observation, browser_by_app
+
+
+def browser_snapshot_for_app(app_name: str, bundle_id: str | None) -> dict[str, object]:
+    try:
+        browser = active_browser_tab(app_name, bundle_id)
+    except BrowserCaptureError as exc:
+        print(f"capture-cli: browser metadata unavailable: {exc}")
+        return {}
+    if not browser:
+        return {}
+    return {app_name.lower(): browser}
 
 
 def load_browser_tabs(path: Path | None):

@@ -26,9 +26,10 @@ The current product slice now has a static local UI shell. `make dev` runs the
 sample analysis, writes reports, normalizes fake capture observations, replays
 captured JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI
 on a per-run localhost port recorded in `.harness/runtime/app.env`. `make
-observe-live` exercises the manual macOS metadata-only adapter outside CI.
-Future live capture runtime commands must expose the capture mode, permission
-state, output JSONL path, and latest classifier replay summary.
+observe-live` exercises the manual macOS metadata-only adapter outside CI and
+writes live replay artifacts that the UI can prefer. Future live capture
+runtime commands must expose the capture mode, permission state, output JSONL
+path, and latest classifier replay summary.
 
 ## Runtime State
 
@@ -45,7 +46,8 @@ Expected artifacts after product code exists:
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
-  `live-capture-events.jsonl`.
+  `live-capture-events.jsonl`, `live-capture-summary.txt`, and
+  `live-capture-summary.json`.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
 
 ## Product Runtime Contract
@@ -113,7 +115,8 @@ must make these visible:
   Screen Recording
 - output path for local `ActivityEvent` JSONL
 - redaction/exclusion policy loaded by the runtime
-- latest classification summary from replay
+- latest classification summary from replay, including
+  `live-capture-summary.json` for UI consumption
 
 CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
 local macOS permissions and should not block `make verify`.
@@ -128,11 +131,13 @@ Equivalent explicit commands:
 
 ```sh
 python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl
-python3 -m intentos.capture_cli replay .harness/runtime/artifacts/live-capture-events.jsonl
+python3 -m intentos.capture_cli replay .harness/runtime/artifacts/live-capture-events.jsonl --allow-empty
 ```
 
 `make observe-live` is expected to fail with a clear permission message if
-Accessibility or Automation access is missing. It must not be added to
+Accessibility access is missing. Browser Automation failures should degrade to
+app/window metadata when possible. Privacy exclusions can produce zero captured
+rows; the harness still writes an empty replay summary. It must not be added to
 `make verify` because the result depends on live macOS state.
 
 Current capture artifacts:
@@ -142,6 +147,8 @@ Current capture artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `live-capture-summary.txt`
+- `live-capture-summary.json`
 - `ui-validation.txt`
 - `ui-validation.json`
 - `ui-snapshot.html`

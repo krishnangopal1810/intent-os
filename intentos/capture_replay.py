@@ -9,5 +9,5 @@ from intentos.capture.jsonl import read_events_jsonl
 from intentos.reporting import activity_report
 
 
-def replay_capture(path: str | Path) -> dict[str, Any]:
-    return activity_report(read_events_jsonl(path))
+def replay_capture(path: str | Path, allow_empty: bool = False) -> dict[str, Any]:
+    return activity_report(read_events_jsonl(path, allow_empty=allow_empty))

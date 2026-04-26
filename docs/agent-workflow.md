@@ -69,7 +69,8 @@ When product code exists, verification must include runtime legibility:
   evidence, and recent logs.
 - `make observe-live` manually exercises live local sensors when the task
   changes macOS capture behavior. Do not put this in CI; use fixtures for
-  deterministic verification.
+  deterministic verification. The UI will prefer live replay artifacts produced
+  by this command when they exist.
 
 Capture screenshots, logs, or notes in the active plan when visual or runtime
 behavior matters.

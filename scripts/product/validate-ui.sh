@@ -67,7 +67,12 @@ for text in required_html:
     if text not in html:
         raise AssertionError(f"missing UI text: {text}")
 
-for token in ["data-primary-narrative", "activity-summary.json", "capture-summary.json"]:
+for token in [
+    "data-primary-narrative",
+    "activity-summary.json",
+    "capture-summary.json",
+    "live-capture-summary.json",
+]:
     if token not in app_js:
         raise AssertionError(f"missing app binding: {token}")
 

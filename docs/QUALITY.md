@@ -19,8 +19,9 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser screenshot automation is not implemented; the current UI validator is
   dependency-free and checks the shell plus JSON artifacts.
-- Browser live capture is not implemented; manual macOS app/window capture is
-  implemented as the first metadata-only sensor.
+- Continuous browser/app session capture is not implemented; manual macOS
+  app/window capture with browser tab enrichment exists as the first
+  metadata-only sensor.
 - Classifier quality is only local-fixture-tested; real evaluation data is
   pending.
 - No manual import path exists yet for real user activity.

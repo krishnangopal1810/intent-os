@@ -57,7 +57,9 @@ process in `.harness/runtime/app.env`, and writes runtime logs. `make observe`
 shows structured events plus the app log. `make diagnose` prints app state,
 structured events, UI validation evidence, and app logs in one place.
 `make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
-one live local metadata event, and replays it through the classifier.
+one live local metadata event, and replays it through the classifier. If privacy
+rules exclude every row, it still writes a valid empty replay summary so the UI
+and diagnostics remain inspectable.
 
 Future persistent runtime code should emit structured, line-oriented logs with
 stable fields for `component`, `event`, `mode`, `artifact_path`, `duration_ms`,
@@ -74,6 +76,8 @@ Current artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `live-capture-summary.txt`
+- `live-capture-summary.json`
 - `ui-validation.txt`
 - `ui-validation.json`
 - `ui-snapshot.html`
@@ -94,9 +98,11 @@ The first live sensor implementation should add:
   is missing
 
 The current manual macOS adapter already reports Accessibility permission help
-when System Events denies frontmost app/window metadata. Live browser automation
-permission handling is still pending.
+when System Events denies frontmost app/window metadata. Browser active-tab
+enrichment reports Automation permission help when the browser denies metadata
+access, but still lets the app/window capture path proceed.
 
 Adapter tests must remain deterministic. The macOS adapter is covered by
-`data/capture/macos_frontmost_snapshot.json` and fake runners in
-`tests/test_capture_macos.py`; future real adapters need equivalent fixtures.
+`data/capture/macos_frontmost_snapshot.json`; browser tab enrichment is covered
+by `data/capture/browser_active_tab_snapshot.json`. Future real adapters need
+equivalent fixtures.

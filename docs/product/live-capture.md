@@ -1,9 +1,10 @@
 # Live Activity Capture
 
 This spec defines the intended local capture architecture for IntentOS. The
-current implementation includes fake-sensor capture fixtures and a manual
-frontmost macOS app/window adapter. Future work must keep live capture
-metadata-first, permission-aware, and reversible.
+current implementation includes fake-sensor capture fixtures, a manual
+frontmost macOS app/window adapter, and best-effort active browser tab
+enrichment. Future work must keep live capture metadata-first,
+permission-aware, and reversible.
 
 ## Goal
 
@@ -82,6 +83,8 @@ transcripts, screenshots, or conversations.
   usage.
 - Password fields, payment forms, banking, tax, health, and authentication
   pages should default to metadata-only capture or exclusion.
+- Map, directions, and location-bearing navigation URLs are excluded by default
+  because browser URLs can encode precise location coordinates.
 - The user must be able to pause capture.
 
 ## First Live Slice
@@ -107,9 +110,12 @@ python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .har
 ```
 
 The adapter uses local `osascript`/System Events metadata to capture app name,
-bundle ID, process ID, and focused window title. It does not capture
-keystrokes, screenshots, OCR text, clipboard contents, or browser tab URL/title.
-It may require Accessibility permission for the terminal or Codex host app.
+bundle ID, process ID, and focused window title. When the frontmost app is a
+supported browser and Automation permission allows it, the capture path also
+adds active tab URL, title, and domain. It does not capture keystrokes,
+screenshots, OCR text, clipboard contents, page bodies, or transcripts.
+It may require Accessibility permission and browser Automation permission for
+the terminal or Codex host app.
 
 Replay the result with:
 
@@ -125,7 +131,10 @@ make observe-live
 
 `make observe-live` captures one live metadata sample, prints the latest
 `ActivityEvent`, replays it through the classifier, and writes
-`.harness/runtime/logs/live-capture.log`.
+`.harness/runtime/artifacts/live-capture-summary.json` plus
+`.harness/runtime/logs/live-capture.log`. The UI prefers the live summary when
+it exists and falls back to fixture replay otherwise. If privacy exclusions drop
+every row, the live summary is still written with an empty report.
 
 ## Harness Requirements
 
@@ -139,6 +148,7 @@ Future capture work must update:
 
 `make verify` must remain local and deterministic. Live sensor tests should use
 fixtures or fakes in CI, with manual capture smoke checks documented separately.
-The current macOS adapter fixture is
-`data/capture/macos_frontmost_snapshot.json`; future real adapters must add
+The current real-adapter fixtures are
+`data/capture/macos_frontmost_snapshot.json` and
+`data/capture/browser_active_tab_snapshot.json`; future real adapters must add
 equivalent fixtures before they are considered harness-ready.
