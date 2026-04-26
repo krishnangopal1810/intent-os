@@ -13,6 +13,8 @@ IntentOS has a local-first Python CLI foundation:
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture with best-effort
   browser active-tab enrichment.
+- Visible background metadata sampler during local UI runs, with status and
+  stop controls exposed through the harness.
 - Bounded live session timeline capture that repeatedly samples metadata,
   merges adjacent equivalent activity, and renders the timeline in the UI.
 - Local UI shell for inspecting current behavior summaries.
@@ -54,6 +56,8 @@ richer DOM automation are not implemented yet.
 - [NEXT_STEPS.md](NEXT_STEPS.md): recommended next product slices.
 - [HARNESS_AUDIT.md](HARNESS_AUDIT.md): status of this harness against the
   OpenAI Harness Engineering model.
+- [HARNESS_FEATURES.md](HARNESS_FEATURES.md): runnable, inspectable, and
+  fixture-backed contracts for the upcoming feature sequence.
 - [APP_RUNTIME.md](APP_RUNTIME.md): local app launch, UI validation,
   screenshots, logs, metrics, and runtime state.
 - [OPERATING_MODEL.md](OPERATING_MODEL.md): review, CI, PR, and cleanup loops
@@ -107,7 +111,10 @@ make update-ui-screenshot
 
 The current CLI runtime writes inspectable text and JSON artifacts under
 `.harness/runtime/artifacts/`, and `make dev` serves the local UI shell from
-`.harness/runtime/site/` in fixture-only mode.
+`.harness/runtime/site/`. The product artifact build is deterministic and
+fixture-backed; after the UI starts, the harness also starts a visible
+background metadata sampler and records its PID, mode, output path, status
+path, and log path in `.harness/runtime/app.env`.
 `make diagnose` prints app state, structured runtime events, validation
 evidence, and recent logs.
 `make observe-live` is a manual local-only sensor diagnostic and is not part of
@@ -117,9 +124,19 @@ also outside CI; deterministic session fixtures cover merge, privacy, replay,
 and UI timeline behavior.
 `make dev-live` is the explicit real macOS UI flow: it runs a fresh bounded
 `make observe-session`, preserves the live replay artifact, and then starts the
-UI with live session data preferred. It only reflects activity captured during
-that command window.
+UI with live session data preferred. It reflects only activity captured during
+that bounded command window for the session timeline, while the background
+sampler remains separately visible in harness status.
 `make validate-ui` also runs local headless browser render diagnostics when
 Chrome or Chromium exists.
 `make update-ui-screenshot` regenerates checked-in UI evidence when UI source,
 fixture, or report-output changes affect the rendered product.
+
+## Next Feature Readiness
+
+Use [HARNESS_FEATURES.md](HARNESS_FEATURES.md) before implementing roadmap
+items such as manual real-data import, browser history import, ChatGPT export
+parsing, daily narratives, ScreenCaptureKit/OCR fallback, local model
+second-pass classification, or richer DOM automation. Those contracts define
+the fixtures, artifacts, commands, logs, docs, and validation evidence each
+slice must add.

@@ -68,6 +68,11 @@ Acceptance criteria:
 - Update the UI only if imported report artifacts add user-visible behavior.
 - Preserve local-only processing and privacy exclusions.
 
+Harness support now exists in [HARNESS_FEATURES.md](HARNESS_FEATURES.md) and
+[product/imports.md](product/imports.md). The import slice should extend
+`scripts/product/verify.sh`, structured runtime events, and UI validation only
+for behavior it actually adds.
+
 ## Harness Upgrades To Keep Current
 
 - Keep the local UI shell current as product slices land. New user-visible
@@ -90,11 +95,11 @@ Acceptance criteria:
   adding a persistent service. Stable fields should include `component`,
   `event`, `mode`, `artifact_path`, `duration_ms`, `event_count`, and `status`.
 - Keep `make observe-live` as the manual local sensor diagnostic and expand it
-  when browser metadata capture lands.
+  as new metadata adapters land.
 - Add stricter architecture rules as modules grow. Promote repeated review
   comments into `scripts/harness/lint.py`.
-- Add cleanup/audit scripts that scan stale plans, stale docs, fixture drift,
-  and quality scorecard gaps.
+- Keep expanding cleanup/audit scripts that scan stale plans, stale docs,
+  fixture drift, and quality scorecard gaps.
 
 ## Then
 
@@ -105,6 +110,11 @@ Acceptance criteria:
 5. Local model second-pass classifier through Foundation Models, Core ML, or
    MLX once fixture evaluation justifies it.
 6. Richer DOM automation for the local UI shell once interactions exist.
+
+Each item above must satisfy the feature-specific harness contract in
+[HARNESS_FEATURES.md](HARNESS_FEATURES.md): deterministic fixtures, local
+runtime artifacts, structured logs, docs, verification, and UI evidence when
+visible behavior changes.
 
 ## Not Yet
 

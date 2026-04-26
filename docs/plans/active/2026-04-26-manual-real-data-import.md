@@ -67,13 +67,23 @@ Do not introduce a second event model. Keep importer modules below the same
 source-adapter -> event-boundary -> classifier -> reporting direction enforced
 by `scripts/harness/lint.py`.
 
+Use [../../HARNESS_FEATURES.md](../../HARNESS_FEATURES.md) and
+[../../product/imports.md](../../product/imports.md) as the harness and product
+contracts for this slice. Before handoff, the implementation must add
+deterministic import fixtures, product verification commands, structured
+runtime events, and UI validation or screenshot evidence for any visible import
+report behavior.
+
 ## Progress Log
 
 - 2026-04-26: Plan created after completing the bounded live capture session
   timeline.
-- 2026-04-26: Clarified runtime data modes before import work: `make dev` is
-  fixture-only and clears live artifacts, while `make dev-live` runs a fresh
-  bounded macOS session before serving the UI.
+- 2026-04-26: Clarified runtime data modes before import work:
+  `scripts/product/dev.sh` builds fixture artifacts and clears stale live
+  artifacts unless preservation is requested; `scripts/harness/dev.sh` serves
+  the UI and starts the visible background metadata sampler; `make dev-live`
+  runs a fresh bounded macOS session before serving the UI with that session
+  artifact preferred.
 
 ## Handoff Notes
 

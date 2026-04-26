@@ -149,6 +149,7 @@ def main() -> int:
     check_live_observation_harness(failures)
     check_ui_harness(failures)
     check_live_capture_contract(failures)
+    check_next_feature_harness_contract(failures)
     check_parallel_plan_contract(failures)
 
     if failures:
@@ -497,6 +498,79 @@ def check_live_capture_contract(failures: list[str]) -> None:
                 failures.append(
                     f"{relative_path} must mention {phrase!r} to preserve the "
                     "live-capture privacy and inference contract"
+                )
+
+
+def check_next_feature_harness_contract(failures: list[str]) -> None:
+    """Keep upcoming feature harness requirements explicit and indexed."""
+    required_docs = {
+        "docs/HARNESS_FEATURES.md": [
+            "Manual real-data import",
+            "Browser history import",
+            "ChatGPT export parser",
+            "Daily behavior narratives",
+            "ScreenCaptureKit and Vision OCR fallback",
+            "Local model second-pass classifier",
+            "Richer DOM automation",
+            "make verify",
+            "deterministic fixtures",
+            "structured runtime events",
+            "privacy exclusions",
+        ],
+        "docs/product/imports.md": [
+            "Manual CSV/JSON Import",
+            "Browser History Import",
+            "ChatGPT Export Parser",
+            "ActivityEvent",
+            "import-events.jsonl",
+            "import-validation.json",
+            "Privacy Rules",
+            "Verification",
+        ],
+        "docs/NEXT_STEPS.md": [
+            "Manual real-data import",
+            "HARNESS_FEATURES.md",
+            "product/imports.md",
+            "Browser history import",
+            "ChatGPT export parser",
+            "ScreenCaptureKit",
+            "Local model second-pass classifier",
+        ],
+        "docs/APP_RUNTIME.md": [
+            "Future Feature Runtime Contract",
+            "import-events.jsonl",
+            "import-validation.json",
+            "HARNESS_FEATURES.md",
+        ],
+    }
+
+    for relative_path, required_phrases in required_docs.items():
+        path = ROOT / relative_path
+        if not path.is_file():
+            failures.append(f"missing {relative_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in required_phrases:
+            if phrase not in text:
+                failures.append(
+                    f"{relative_path} must mention {phrase!r} for next-feature "
+                    "harness readiness"
+                )
+
+    import_plan = ROOT / "docs/plans/active/2026-04-26-manual-real-data-import.md"
+    if import_plan.is_file():
+        text = import_plan.read_text(encoding="utf-8")
+        for phrase in [
+            "HARNESS_FEATURES.md",
+            "product/imports.md",
+            "deterministic import fixtures",
+            "structured runtime events",
+            "product verification commands",
+        ]:
+            if phrase not in text:
+                failures.append(
+                    f"{import_plan.relative_to(ROOT)} must mention {phrase!r} "
+                    "before import implementation starts"
                 )
 
 

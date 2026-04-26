@@ -99,6 +99,11 @@ The current local-first slice keeps these concerns separate:
   generator for checked-in visual evidence.
 - `scripts/product/check-ui-screenshot.sh`: screenshot manifest freshness gate
   used by UI validation and `make verify`.
+- `docs/HARNESS_FEATURES.md`: harness contracts for upcoming import, browser
+  history, ChatGPT export, narrative, fallback-capture, model, and UI
+  automation slices.
+- `docs/product/imports.md`: local import path specification for manual
+  CSV/JSON records, browser history, and ChatGPT exports.
 - `web/`: static local UI shell that reads generated JSON artifacts.
 
 ## Dependency Rules
@@ -170,9 +175,12 @@ As modules grow, promote these expectations from docs into lints:
 
 - Add real user import paths on top of the `ActivityEvent` boundary before
   adding heavier sensors.
+- Keep each next feature aligned with `docs/HARNESS_FEATURES.md` so new
+  adapters, parsers, local models, and UI flows have deterministic fixtures and
+  verification before relying on live data.
 - Expand lint rules to enforce source adapter -> event -> classifier -> report
   direction when those modules exist.
-- Add cleanup/audit checks for stale plans, stale docs, fixture drift, and
+- Expand cleanup/audit checks for stale plans, stale docs, fixture drift, and
   quality scorecard gaps as the documentation surface grows.
 - Add a local model boundary only after fixture evaluation shows deterministic
   rules are insufficient.

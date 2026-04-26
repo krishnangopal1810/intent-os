@@ -14,7 +14,9 @@ deterministic fake-sensor replay loop, a local app shell for the UI,
 deterministic UI validation, checked-in screenshot evidence, structured runtime
 JSONL events, `make diagnose`, and a manual macOS metadata-only frontmost
 app/window adapter with best-effort browser tab enrichment plus bounded session
-timeline capture. It does not yet include rich DOM automation, rich
+timeline capture. It also defines next-feature harness contracts for imports,
+daily narratives, fallback capture, local models, and richer UI automation. It
+does not yet include rich DOM automation, rich
 metrics/traces, always-on session capture, or autonomous agent-to-agent review.
 
 ## Self-Sufficiency Verdict
@@ -25,9 +27,11 @@ macOS/browser metadata capture, bounded live session timeline capture, local UI
 inspection, optional headless browser render diagnostics, screenshot evidence,
 CI, PR review, and merge workflows all have repository-local commands and docs.
 
-The harness is not yet sufficient for later ScreenCaptureKit/OCR/local-model or
-always-on capture work. Those slices must first add fake adapters, privacy
-gates, metrics/traces where justified, and stricter architecture lint rules.
+The harness now names the required support for later ScreenCaptureKit/OCR,
+local-model, import, narrative, and UI automation work in
+`docs/HARNESS_FEATURES.md`. Those slices must still add their actual fake
+adapters, fixtures, privacy gates, product commands, metrics/traces where
+justified, and stricter architecture lint rules as they are implemented.
 
 ## Principle Coverage
 
@@ -38,8 +42,8 @@ gates, metrics/traces where justified, and stricter architecture lint rules.
 | Short `AGENTS.md` as map | Green | `AGENTS.md` is short and points to deeper docs. |
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
 | First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP, multi-app ActivityEvent foundation, live capture, UI shell, and session timeline. |
-| Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene and quality scorecard structure. |
-| App legibility | Green | `make dev` generates fixture-only MVP and session timeline artifacts, serves the local UI shell, records the URL and `INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`, `make dev-live` is the explicit capture-then-serve path for fresh macOS session data, `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics, and checked-in screenshot evidence is guarded by a source manifest. |
+| Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene, quality scorecard structure, and next-feature harness contracts. |
+| App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible background metadata sampler, and records the URL, data mode, capture mode, capture PID, status path, and log path in `.harness/runtime/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics; checked-in screenshot evidence is guarded by a source manifest. |
 | Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
 | Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS, browser active-tab, and session merge paths have deterministic fixture tests. |
@@ -77,6 +81,8 @@ permissions.
 
 - Expand browser automation in `make validate-ui` when the UI becomes
   interactive enough to require click, filter, and navigation checks.
+- Keep `docs/HARNESS_FEATURES.md` current as manual import, browser history,
+  ChatGPT export, narrative, ScreenCaptureKit/OCR, and local model slices land.
 - Keep deterministic capture fixtures for each real adapter. CI must exercise
   parser, normalization, privacy exclusion, and replay behavior without reading
   live user state.
@@ -86,5 +92,5 @@ permissions.
   as browser metadata adapters are added.
 - Expand architecture lints as the codebase gains layers, especially
   source-adapter -> event-boundary -> classifier -> reporting direction.
-- Expand cleanup/audit scripts so stale plans, stale docs, fixture drift, and
-  quality scorecard gaps are detected mechanically.
+- Keep expanding cleanup/audit scripts so stale plans, stale docs, fixture
+  drift, and quality scorecard gaps stay mechanically visible as the repo grows.

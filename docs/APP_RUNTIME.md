@@ -6,8 +6,9 @@ slices.
 
 ## Commands
 
-- `make dev`: generate fixture-only product artifacts and launch the local UI
-  shell for the current worktree.
+- `make dev`: generate fixture-backed product artifacts, launch the local UI
+  shell for the current worktree, and start the visible background metadata
+  sampler.
 - `make dev-live`: run a fresh bounded macOS live session, preserve its replay
   artifact, and launch the local UI shell against that live session summary.
 - `make app-status`: show runtime mode, process status when relevant, log
@@ -31,17 +32,23 @@ slices.
   legible to agents.
 - `make verify`: run harness checks plus product checks.
 
-The current product slice now has a static local UI shell. `make dev` is
-fixture-only: it clears live capture artifacts, runs the sample analysis,
-writes deterministic reports, normalizes fake capture observations, replays
-captured JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI
-on a per-run localhost port recorded in `.harness/runtime/app.env` with
-`INTENTOS_APP_DATA_MODE=fixture`. It does not capture current macOS activity and
-does not read historical app, browser, or Codex activity.
+The current product slice now has a static local UI shell. `make dev` first
+builds deterministic fixture-backed artifacts: it clears stale live capture
+artifacts unless preservation is requested, runs the sample analysis, writes
+deterministic reports, normalizes fake capture observations, replays captured
+JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI on a
+per-run localhost port recorded in `.harness/runtime/app.env` with
+`INTENTOS_APP_DATA_MODE=fixture`. After the UI starts, the harness starts a
+visible background metadata sampler and records its PID, interval, output path,
+status path, and log path in `.harness/runtime/app.env`. It captures only
+current frontmost app/window and browser metadata while the harness is running;
+it does not read historical app, browser, or Codex activity.
 
 `make dev-live` is the explicit live-data path: it runs the bounded
 `make observe-session` workflow first, preserves the fresh live session replay
 artifacts, then starts the UI with `INTENTOS_APP_DATA_MODE=live_session`.
+The bounded session artifact stays preferred in the UI even though the
+background sampler also starts and remains visible in runtime status.
 `make observe-live` and `make observe-session` exercise manual macOS
 metadata-only adapters outside CI and write replay artifacts under
 `.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
@@ -57,14 +64,16 @@ Expected artifacts after product code exists:
 - `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
   harness and product scripts.
 - `.harness/runtime/logs/live-capture.log`: manual live sensor diagnostic log
-  when `make observe-live` is run.
+  when `make observe-live` is run, and background sampler log when `make dev`
+  or `make dev-live` starts the sampler.
 - `.harness/runtime/logs/live-session-capture.log`: manual bounded session
   diagnostic log when `make observe-session` is run.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
   `live-capture-events.jsonl`, `live-capture-summary.txt`, and
-  `live-capture-summary.json`. Manual live sessions write
+  `live-capture-summary.json`; the background sampler also writes
+  `live-capture-status.json`. Manual live sessions write
   `live-session-capture-events.jsonl`, `live-session-capture-summary.txt`, and
   `live-session-capture-summary.json`.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
@@ -146,12 +155,15 @@ visible:
 
 For IntentOS today, the split is intentional:
 
-- `make dev`: fixture-only UI. It clears live artifacts before serving so stale
-  live data cannot masquerade as the current session.
+- `make dev`: fixture-backed UI plus background sampler. The product artifact
+  build clears stale live artifacts before serving, then the harness starts a
+  visible background live sensor so fresh current-session metadata is explicit
+  in app status.
 - `make observe-session`: manual live capture diagnostic only. It writes live
   artifacts but does not start or restart the UI.
 - `make dev-live`: live session UI. It captures a fresh bounded live session,
-  preserves the resulting live artifacts, and serves the UI against them.
+  preserves the resulting live artifacts, serves the UI against them, and keeps
+  the background sampler visible separately in app status.
 
 CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
 local macOS permissions and should not block `make verify`.
@@ -201,6 +213,7 @@ Current capture artifacts:
 - `live-capture-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
+- `live-capture-status.json`
 - `session-capture-events.jsonl`
 - `session-capture-summary.txt`
 - `session-capture-summary.json`
@@ -212,3 +225,13 @@ Current capture artifacts:
 - `ui-snapshot.html`
 - checked-in `docs/assets/screenshots/intent-os-ui.png`
 - checked-in `docs/assets/screenshots/intent-os-ui.json`
+
+## Future Feature Runtime Contract
+
+Upcoming features must follow [HARNESS_FEATURES.md](HARNESS_FEATURES.md). The
+manual import slice should add `import-events.jsonl`, `import-summary.txt`,
+`import-summary.json`, and `import-validation.json` under
+`.harness/runtime/artifacts/`. Later browser history, ChatGPT export, daily
+narrative, ScreenCaptureKit/OCR, and local model slices must use similarly
+stable artifact names, structured runtime events, deterministic fixtures, and
+permission-free `make verify` coverage.
