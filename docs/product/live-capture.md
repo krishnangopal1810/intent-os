@@ -3,8 +3,10 @@
 This spec defines the intended local capture architecture for IntentOS. The
 current implementation includes fake-sensor capture fixtures, a manual
 frontmost macOS app/window adapter, and best-effort active browser tab
-enrichment. Future work must keep live capture metadata-first,
-permission-aware, and reversible.
+enrichment. The local app runtime can also start a background metadata sampler
+that refreshes live replay artifacts for the UI. Future work must keep live
+capture metadata-first, permission-aware, visible in runtime status, and
+reversible.
 
 ## Goal
 
@@ -86,6 +88,8 @@ transcripts, screenshots, or conversations.
 - Map, directions, and location-bearing navigation URLs are excluded by default
   because browser URLs can encode precise location coordinates.
 - The user must be able to pause capture.
+- Background capture must be explicit in `make app-status`, write local logs,
+  and stop with `make app-stop`.
 
 ## Shipped Live Slices
 
@@ -171,6 +175,19 @@ Use `make dev-live` when the UI should show a fresh live session. It runs this
 bounded session command first, preserves the live replay artifact, and then
 starts the UI. The resulting UI reflects only the activity captured during that
 command window, not historical macOS usage.
+
+`make dev` starts the local UI and a background metadata sampler:
+
+```sh
+python3 -m intentos.capture_cli capture-live --interval-seconds 2 --output .harness/runtime/artifacts/live-capture-events.jsonl --summary-json .harness/runtime/artifacts/live-capture-summary.json --status-json .harness/runtime/artifacts/live-capture-status.json
+```
+
+The sampler appends privacy-filtered `ActivityEvent` rows, refreshes the replay
+summary after each sample, and writes status under
+`.harness/runtime/artifacts/live-capture-status.json`. It records whether the
+frontmost app is Codex, ChatGPT, or a browser. For supported browsers, it also
+records the browser app and active tab URL/title/domain when Automation
+permission allows it.
 
 ## Harness Requirements
 

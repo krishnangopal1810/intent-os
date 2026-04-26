@@ -47,10 +47,15 @@ The current local-first slice keeps these concerns separate:
 - `intentos/capture/privacy.py`: local privacy policy, exclusion, and redaction
   helpers.
 - `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
+- `intentos/capture/live.py`: continuous metadata-only live capture loop that
+  refreshes replay and status artifacts.
+- `intentos/capture/live_cli.py`: command wiring for the continuous live
+  capture loop.
 - `intentos/capture/macos.py`: manual macOS frontmost app/window metadata
   adapter using local System Events through `osascript`.
 - `intentos/capture/session.py`: bounded live-session sampling helpers and
   adjacent `ActivityEvent` merge behavior.
+- `intentos/capture/report_cli.py`: capture replay report formatting.
 - `intentos/capture_cli.py`: fake-sensor normalization and replay CLI.
 - `intentos/capture_replay.py`: JSONL replay through the existing behavior
   report.
@@ -74,6 +79,7 @@ The current local-first slice keeps these concerns separate:
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
 - `tests/test_activity_classification.py`: multi-app behavior tests.
 - `tests/test_capture_core.py`: fake capture normalization and JSONL tests.
+- `tests/test_capture_live.py`: continuous live-capture artifact refresh tests.
 - `tests/test_capture_browser.py`: browser metadata normalization tests.
 - `tests/test_capture_privacy.py`: exclusion and redaction policy tests.
 - `tests/test_capture_macos.py`: macOS adapter parsing and permission-error

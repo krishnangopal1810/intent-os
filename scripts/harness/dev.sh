@@ -10,6 +10,7 @@ ARTIFACT_DIR="$RUNTIME_DIR/artifacts"
 APP_ENV="$RUNTIME_DIR/app.env"
 PID_FILE="$RUNTIME_DIR/app.pid"
 DATA_MODE="${INTENTOS_DEV_DATA_MODE:-fixture}"
+CAPTURE_PID_FILE="$RUNTIME_DIR/capture.pid"
 
 mkdir -p "$LOG_DIR"
 
@@ -65,6 +66,14 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
+if [ -f "$CAPTURE_PID_FILE" ]; then
+  capture_pid="$(cat "$CAPTURE_PID_FILE")"
+  if [ -n "$capture_pid" ] && kill -0 "$capture_pid" >/dev/null 2>&1; then
+    kill "$capture_pid" >/dev/null 2>&1 || true
+  fi
+  rm -f "$CAPTURE_PID_FILE"
+fi
+
 if [ -x scripts/product/dev.sh ]; then
   export INTENTOS_RUNTIME_DIR="$RUNTIME_DIR"
   rm -f "$PID_FILE"
@@ -109,6 +118,27 @@ PY
     fi
     scripts/harness/runtime-log.py harness ui_started \
       mode=ui pid="$pid" port="$port" url="$url"
+
+    live_output="$ARTIFACT_DIR/live-capture-events.jsonl"
+    live_summary_json="$ARTIFACT_DIR/live-capture-summary.json"
+    live_summary_text="$ARTIFACT_DIR/live-capture-summary.txt"
+    live_status_json="$ARTIFACT_DIR/live-capture-status.json"
+    live_log="$LOG_DIR/live-capture.log"
+    live_interval="${INTENTOS_LIVE_CAPTURE_INTERVAL_SECONDS:-2}"
+    rm -f "$live_output" "$live_summary_json" "$live_summary_text" "$live_status_json"
+    : > "$live_log"
+    nohup python3 -m intentos.capture_cli capture-live \
+      --interval-seconds "$live_interval" \
+      --output "$live_output" \
+      --summary-json "$live_summary_json" \
+      --summary-text "$live_summary_text" \
+      --status-json "$live_status_json" \
+      >> "$live_log" 2>&1 &
+    capture_pid="$!"
+    echo "$capture_pid" > "$CAPTURE_PID_FILE"
+    scripts/harness/runtime-log.py harness live_capture_started \
+      mode=background_live_sensor pid="$capture_pid" artifact_path="$live_output"
+
     {
       echo "INTENTOS_APP_STATUS=running"
       echo "INTENTOS_APP_MODE=ui"
@@ -119,6 +149,12 @@ PY
       echo "INTENTOS_APP_LOG=$LOG_DIR/app.log"
       echo "INTENTOS_ARTIFACT_DIR=$ARTIFACT_DIR"
       echo "INTENTOS_SITE_DIR=$RUNTIME_DIR/site"
+      echo "INTENTOS_CAPTURE_MODE=background_live_sensor"
+      echo "INTENTOS_CAPTURE_PID=$capture_pid"
+      echo "INTENTOS_CAPTURE_INTERVAL_SECONDS=$live_interval"
+      echo "INTENTOS_CAPTURE_OUTPUT=$live_output"
+      echo "INTENTOS_CAPTURE_STATUS=$live_status_json"
+      echo "INTENTOS_CAPTURE_LOG=$live_log"
       echo "INTENTOS_APP_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     } > "$APP_ENV"
     echo "dev: started product UI runtime with pid $pid"

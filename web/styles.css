@@ -423,6 +423,14 @@ h2 {
   line-height: 1.22;
 }
 
+.event-surface {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .event-meta,
 .narrative {
   grid-column: 2;

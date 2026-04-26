@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from intentos.capture.core import parse_observation, observation_to_event
-from intentos.capture.jsonl import read_events_jsonl, write_events_jsonl
+from intentos.capture.jsonl import append_events_jsonl, read_events_jsonl, write_events_jsonl
 
 
 class CaptureCoreTest(unittest.TestCase):
@@ -64,6 +64,19 @@ class CaptureCoreTest(unittest.TestCase):
         self.assertEqual(len(loaded), len(events))
         self.assertEqual(loaded[0].source_app, "VS Code")
         self.assertEqual(loaded[-1].source_app, "Unknown App")
+
+    def test_jsonl_append_preserves_existing_events(self):
+        raw = json.loads(Path("data/capture/fake_macos_observations.json").read_text())
+        events = [observation_to_event(parse_observation(item, i)) for i, item in enumerate(raw[:2])]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "events.jsonl"
+            write_events_jsonl(events[:1], path)
+            count = append_events_jsonl(events[1:], path)
+            loaded = read_events_jsonl(path)
+
+        self.assertEqual(count, 1)
+        self.assertEqual([event.source_app for event in loaded], ["VS Code", "ChatGPT"])
 
 
 if __name__ == "__main__":

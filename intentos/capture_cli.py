@@ -15,6 +15,7 @@ from intentos.capture.browser import (
 )
 from intentos.capture.core import CaptureObservation, parse_observation, observation_to_event
 from intentos.capture.jsonl import write_events_jsonl
+from intentos.capture.live_cli import add_capture_live_parser, run_capture_live_command
 from intentos.capture.macos import (
     MacOSCaptureError,
     frontmost_app_snapshot,
@@ -26,6 +27,7 @@ from intentos.capture.privacy import (
     redact_metadata,
     should_exclude,
 )
+from intentos.capture.report_cli import print_activity_report
 from intentos.capture.session import capture_session_observations, merge_adjacent_events
 from intentos.capture_replay import replay_capture
 
@@ -97,6 +99,8 @@ def main() -> int:
         help="Local privacy policy JSON.",
     )
 
+    add_capture_live_parser(subparsers)
+
     replay = subparsers.add_parser(
         "replay", help="Replay ActivityEvent JSONL through the behavior report."
     )
@@ -160,6 +164,9 @@ def main() -> int:
             f"to {args.output}"
         )
         return 0
+
+    if args.command == "capture-live":
+        return run_capture_live_command(args)
 
     result = replay_capture(Path(args.input), allow_empty=args.allow_empty)
     if args.json:
@@ -299,20 +306,6 @@ def load_browser_tabs(path: Path | None):
         raise ValueError("browser tabs must be a JSON array")
     tabs = [parse_browser_tab(item, index) for index, item in enumerate(raw)]
     return {tab.browser_name.lower(): tab for tab in tabs}
-
-
-def print_activity_report(result: dict[str, object]) -> None:
-    summary = result["summary"]
-    print(summary["narrative"])
-    print()
-    for label, data in summary["labels"].items():
-        print(f"- {label}: {data['duration']} ({data['percentage']}%)")
-    print()
-    for item in result["items"]:
-        confidence = int(round(item["confidence"] * 100))
-        print(f"- {item['label']} ({confidence}%): {item['source_app']} - {item['title']}")
-        print(f"  {item['reason']}")
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

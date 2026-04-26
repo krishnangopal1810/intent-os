@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 LOG_FILE=".harness/runtime/logs/app.log"
+LIVE_CAPTURE_LOG=".harness/runtime/logs/live-capture.log"
 EVENT_LOG=".harness/runtime/logs/events.jsonl"
 
 if [ ! -f "$LOG_FILE" ]; then
@@ -21,3 +22,9 @@ fi
 
 echo "observe: recent app log"
 tail -n 120 "$LOG_FILE"
+
+if [ -f "$LIVE_CAPTURE_LOG" ]; then
+  echo
+  echo "observe: recent live capture log"
+  tail -n 120 "$LIVE_CAPTURE_LOG"
+fi
