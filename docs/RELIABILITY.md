@@ -15,6 +15,8 @@ artifacts.
 ## Verification Targets
 
 - `make harness-check` validates harness structure.
+- `make harness-lint` validates layer boundaries, taste constraints, generated
+  file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
 - `make dev`, `make app-status`, `make validate-ui`, and `make observe`
@@ -26,6 +28,8 @@ artifacts.
 - `python3 -m intentos.cli data/youtube/sample_watch_history.json --json`
 - `scripts/product/verify.sh`
 - `make verify`
+- `make cleanup-check`
+- `python3 -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90`
 
 ## Runtime Notes
 

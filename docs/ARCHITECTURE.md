@@ -28,7 +28,9 @@ The first slice keeps these concerns separate:
 - `intentos/youtube.py`: domain types, boundary validation, classification,
   aggregation, and report generation.
 - `intentos/cli.py`: command line interface.
+- `intentos/evaluate.py`: fixture-based classifier evaluation.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
+- `data/youtube/evaluation_set.json`: labeled local evaluation set.
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
@@ -52,3 +54,10 @@ The first slice keeps these concerns separate:
   out of scope until a UI exists.
 - The classifier preserves uncertainty with an `unknown` label when metadata is
   sparse or cue scores are too close.
+
+## Mechanical Enforcement
+
+`scripts/harness/lint.py` enforces the current layer map, import boundaries,
+basic file-size limits, generated-file hygiene, active-plan hygiene, quality
+scorecard rows, and labeled evaluation set coverage. Add new rules there when a
+review finding or repeated mistake should become agent-visible policy.

@@ -19,3 +19,6 @@ echo "+ $python_bin -m unittest discover -s tests"
 
 echo "+ $python_bin -m intentos.cli data/youtube/sample_watch_history.json"
 "$python_bin" -m intentos.cli data/youtube/sample_watch_history.json
+
+echo "+ $python_bin -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90"
+"$python_bin" -m intentos.evaluate data/youtube/evaluation_set.json --min-accuracy 90

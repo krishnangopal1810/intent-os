@@ -20,7 +20,9 @@ first execution plan are written.
 
 ```sh
 make harness-check
+make harness-lint
 make harness-status
+make cleanup-check
 make verify
 ```
 

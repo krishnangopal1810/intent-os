@@ -60,3 +60,4 @@ Entropy should be handled continuously:
 - Delete or revise stale docs.
 - Promote repeated manual review comments into automated checks.
 - Keep `AGENTS.md` short and move detail into indexed docs.
+- Run `make cleanup-check` before creating cleanup PRs.
