@@ -28,3 +28,12 @@ echo "+ $python_bin -m intentos.activity_cli data/activity/multi_app_events.json
 
 echo "+ $python_bin -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85"
 "$python_bin" -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85
+
+capture_jsonl=".harness/runtime/artifacts/capture-events.jsonl"
+mkdir -p "$(dirname "$capture_jsonl")"
+
+echo "+ $python_bin -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output $capture_jsonl"
+"$python_bin" -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output "$capture_jsonl"
+
+echo "+ $python_bin -m intentos.capture_cli replay $capture_jsonl"
+"$python_bin" -m intentos.capture_cli replay "$capture_jsonl"

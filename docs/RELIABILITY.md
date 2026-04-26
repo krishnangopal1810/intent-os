@@ -33,6 +33,8 @@ artifacts.
 - `python3 -m intentos.cli data/youtube/sample_watch_history.json --json`
 - `python3 -m intentos.activity_cli data/activity/multi_app_events.json`
 - `python3 -m intentos.activity_cli data/activity/multi_app_events.json --json`
+- `python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl`
+- `python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl`
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
@@ -51,15 +53,21 @@ Current artifacts:
 - `youtube-summary.json`
 - `activity-summary.txt`
 - `activity-summary.json`
+- `capture-events.jsonl`
+- `capture-summary.txt`
+- `capture-summary.json`
 
 ## Future Live Capture Reliability
 
-The first live capture implementation should add:
+The current fake-sensor capture implementation provides:
 
 - a bounded local JSONL output path for captured `ActivityEvent` records
 - replay verification from JSONL into classifier reports
-- clear failures when Accessibility permission or browser automation permission
-  is missing
 - fake sensor fixtures for CI
 - no dependency on Screen Recording, ScreenCaptureKit, Vision OCR, or model
   downloads in `make verify`
+
+The first live sensor implementation should add:
+
+- clear failures when Accessibility permission or browser automation permission
+  is missing

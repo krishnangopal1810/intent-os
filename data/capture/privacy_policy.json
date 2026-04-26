@@ -1,0 +1,27 @@
+{
+  "excluded_apps": [],
+  "excluded_bundle_ids": [],
+  "excluded_domains": [
+    "bank.example",
+    "health.example"
+  ],
+  "excluded_url_substrings": [
+    "/login",
+    "/password"
+  ],
+  "excluded_window_title_substrings": [
+    "one-time password",
+    "password"
+  ],
+  "sensitive_terms": [
+    "banking",
+    "payment form",
+    "health record",
+    "authentication"
+  ],
+  "private_browsing_terms": [
+    "private browsing",
+    "incognito"
+  ],
+  "visible_text_limit": 80
+}

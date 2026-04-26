@@ -36,15 +36,32 @@ The current local-first slice keeps these concerns separate:
 - `intentos/reporting.py`: generic aggregate behavior reporting.
 - `intentos/activity_cli.py`: multi-app activity CLI.
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
+- `intentos/capture/core.py`: metadata-only capture observation validation and
+  conversion to `ActivityEvent`.
+- `intentos/capture/browser.py`: browser tab URL/title/domain normalization.
+- `intentos/capture/privacy.py`: local privacy policy, exclusion, and redaction
+  helpers.
+- `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
+- `intentos/capture_cli.py`: fake-sensor normalization and replay CLI.
+- `intentos/capture_replay.py`: JSONL replay through the existing behavior
+  report.
 - `intentos/youtube.py`: domain types, boundary validation, classification,
   aggregation, and report generation for the YouTube-specific slice.
 - `intentos/cli.py`: YouTube command line interface.
 - `intentos/evaluate.py`: YouTube fixture-based classifier evaluation.
 - `data/activity/multi_app_events.json`: generic multi-app sample events.
 - `data/activity/evaluation_set.json`: labeled multi-app evaluation set.
+- `data/capture/fake_macos_observations.json`: deterministic fake app/window
+  capture observations.
+- `data/capture/fake_browser_tabs.json`: deterministic browser tab metadata.
+- `data/capture/privacy_policy.json`: local exclusion and text-bounding policy.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
 - `tests/test_activity_classification.py`: multi-app behavior tests.
+- `tests/test_capture_core.py`: fake capture normalization and JSONL tests.
+- `tests/test_capture_browser.py`: browser metadata normalization tests.
+- `tests/test_capture_privacy.py`: exclusion and redaction policy tests.
+- `tests/test_capture_replay.py`: capture replay tests.
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
@@ -92,9 +109,11 @@ pipeline.
   sparse or cue scores are too close.
 - Generic activity classification is now the preferred product path. YouTube is
   still supported as a concrete domain-specific path and fixture.
-- The first live capture slice should use `NSWorkspace`, Accessibility, and one
-  browser metadata adapter. ScreenCaptureKit, Vision OCR, and model inference
-  come later when metadata-only capture leaves meaningful gaps.
+- The first capture implementation uses fake metadata fixtures in CI. The first
+  live sensor slice should add `NSWorkspace`, Accessibility, and one browser
+  metadata adapter behind the same `ActivityEvent` boundary. ScreenCaptureKit,
+  Vision OCR, and model inference come later when metadata-only capture leaves
+  meaningful gaps.
 
 ## Mechanical Enforcement
 

@@ -30,6 +30,11 @@ The plan must define scope, acceptance criteria, verification, and a progress
 log. Keep the plan active until the work is implemented, verified, and handed
 off.
 
+For parallel work, create or use a package under `docs/plans/parallel/`. The
+package must include a shared tracker, one task file per agent, explicit
+owned-file lists, shared interfaces, and merge order. Agents should not edit
+outside their owned files unless the coordinator changes the tracker.
+
 ## 3. Design
 
 For new system boundaries or stack choices:

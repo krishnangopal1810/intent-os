@@ -55,6 +55,8 @@ Live capture and UI are not implemented yet.
 
 - [agent-workflow.md](agent-workflow.md): the end-to-end Codex build loop.
 - [plans/README.md](plans/README.md): execution plan workflow.
+- [plans/parallel/README.md](plans/parallel/README.md): multi-agent execution
+  packages and ownership rules.
 - [plans/templates/exec-plan.md](plans/templates/exec-plan.md): plan template.
 - [decisions/README.md](decisions/README.md): architecture decision records.
 - [references/README.md](references/README.md): external or copied reference

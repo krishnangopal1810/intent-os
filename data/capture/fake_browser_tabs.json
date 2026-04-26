@@ -1,0 +1,51 @@
+[
+  {
+    "browser_name": "Chrome",
+    "bundle_id": "com.google.Chrome",
+    "url": "https://www.linkedin.com/feed/",
+    "title": "LinkedIn feed scrolling",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Safari",
+    "bundle_id": "com.apple.Safari",
+    "url": "https://incometax.gov.in/iec/foportal/",
+    "title": "Income Tax e-Filing - submit return",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Arc",
+    "bundle_id": "company.thebrowser.Browser",
+    "url": "https://chatgpt.com/c/intent-os-live-capture",
+    "title": "ChatGPT - IntentOS live capture design",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Chrome Canary",
+    "bundle_id": "com.google.Chrome.canary",
+    "url": "https://youtube.com/watch?v=system-design",
+    "title": "System Design Deep Dive: Queues and Backpressure",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Safari Private",
+    "bundle_id": "com.apple.Safari",
+    "url": "https://example.com/private-search",
+    "title": "Private Browsing - Search",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Chrome Docs",
+    "bundle_id": "com.google.Chrome",
+    "url": "https://docs.google.com/document/d/example",
+    "title": "Draft product notes for IntentOS taxonomy",
+    "source": "fake_browser"
+  },
+  {
+    "browser_name": "Unknown Browser",
+    "bundle_id": "com.example.Browser",
+    "url": "https://example.com/untitled",
+    "title": "Untitled page",
+    "source": "fake_browser"
+  }
+]

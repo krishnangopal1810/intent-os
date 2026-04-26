@@ -18,9 +18,11 @@ when product, architecture, or workflow knowledge changes.
 6. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding code.
 7. Read the relevant active plan in [docs/plans/active](docs/plans/active)
    before implementation.
-8. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
+8. If work is parallelized, read the relevant tracker under
+   [docs/plans/parallel](docs/plans/parallel) before editing files.
+9. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
    app runtime behavior.
-9. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
+10. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
    reviewing, or merging changes.
 
 ## Working Rules
@@ -31,6 +33,8 @@ when product, architecture, or workflow knowledge changes.
   product brief, architecture doc, execution plan, or decision log.
 - Keep changes scoped to the active plan. If a task expands, update the plan
   before continuing.
+- In parallel work, edit only the files owned by your task file. Report
+  cross-owner needs instead of editing another agent's files.
 - Add or update verification whenever behavior changes.
 - Prefer boring, inspectable technology choices until the product requirements
   demand otherwise.
@@ -81,5 +85,6 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 - App runtime harness: [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md)
 - Agent operating model: [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md)
 - Execution plans: [docs/plans/README.md](docs/plans/README.md)
+- Parallel work packages: [docs/plans/parallel/README.md](docs/plans/parallel/README.md)
 - Decision records: [docs/decisions/README.md](docs/decisions/README.md)
 - External references: [docs/references/README.md](docs/references/README.md)
