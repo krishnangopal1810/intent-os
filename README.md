@@ -17,9 +17,12 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - CLI reports and JSON reports.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
   CI running `make verify`.
+- Live-capture and on-device inference specs for the next macOS slice.
 
-There is no live capture yet. Browser history import, macOS app/window capture,
-ChatGPT export parsing, and UI/browser validation are future slices.
+There is no live capture yet. The next planned slice is metadata-only macOS
+app/window/browser capture that writes local `ActivityEvent` JSONL. Screenshot
+capture, OCR, local model inference, and UI/browser validation remain future
+extensions after the metadata path is reliable.
 
 ## Start Here
 
@@ -28,6 +31,10 @@ ChatGPT export parsing, and UI/browser validation are future slices.
 - [docs/product/BRIEF.md](./docs/product/BRIEF.md): product source of truth.
 - [docs/product/TAXONOMY.md](./docs/product/TAXONOMY.md): behavior labels and
   classification rules of thumb.
+- [docs/product/live-capture.md](./docs/product/live-capture.md): macOS capture
+  strategy and privacy defaults.
+- [docs/product/on-device-inference.md](./docs/product/on-device-inference.md):
+  local model and rules-first inference strategy.
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md): current layers and dependency
   rules.
 - [docs/HARNESS_AUDIT.md](./docs/HARNESS_AUDIT.md): status against the OpenAI
@@ -72,4 +79,4 @@ smoke checks.
 ## Next Work
 
 See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). The recommended next slice is
-manual CSV/JSON import for real `ActivityEvent` data.
+the metadata-only macOS live activity capture prototype.

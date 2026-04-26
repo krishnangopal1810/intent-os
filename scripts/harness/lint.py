@@ -54,6 +54,7 @@ def main() -> int:
     check_no_stale_active_plans(failures)
     check_quality_scorecard(failures)
     check_evaluation_set(failures)
+    check_live_capture_contract(failures)
 
     if failures:
         for failure in failures:
@@ -216,6 +217,51 @@ def check_evaluation_set(failures: list[str]) -> None:
         },
         minimum=10,
     )
+
+
+def check_live_capture_contract(failures: list[str]) -> None:
+    """Keep privacy-sensitive live-capture policy visible to future agents."""
+    required_docs = {
+        "docs/product/live-capture.md": [
+            "NSWorkspace",
+            "Accessibility",
+            "browser adapters",
+            "ScreenCaptureKit",
+            "Vision OCR",
+            "No keylogging",
+            "Raw screenshots are disabled by default",
+            "ActivityEvent",
+        ],
+        "docs/product/on-device-inference.md": [
+            "rules first",
+            "Foundation Models",
+            "Core ML",
+            "MLX",
+            "local-only",
+            "confidence",
+            "evaluation",
+        ],
+        "docs/SECURITY.md": [
+            "No keylogging",
+            "Raw screenshots are disabled by default",
+            "Screen Recording",
+            "Accessibility permission",
+            "local-only",
+        ],
+    }
+
+    for relative_path, required_phrases in required_docs.items():
+        path = ROOT / relative_path
+        if not path.is_file():
+            failures.append(f"missing {relative_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in required_phrases:
+            if phrase not in text:
+                failures.append(
+                    f"{relative_path} must mention {phrase!r} to preserve the "
+                    "live-capture privacy and inference contract"
+                )
 
 
 def check_labeled_fixture(

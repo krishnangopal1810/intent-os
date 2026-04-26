@@ -12,12 +12,15 @@ when product, architecture, or workflow knowledge changes.
    decisions.
 4. Read [docs/product/TAXONOMY.md](docs/product/TAXONOMY.md) before changing
    classification behavior.
-5. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding code.
-6. Read the relevant active plan in [docs/plans/active](docs/plans/active)
+5. Read [docs/product/live-capture.md](docs/product/live-capture.md) and
+   [docs/product/on-device-inference.md](docs/product/on-device-inference.md)
+   before changing capture or local model behavior.
+6. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding code.
+7. Read the relevant active plan in [docs/plans/active](docs/plans/active)
    before implementation.
-7. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
+8. Read [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md) before building or changing
    app runtime behavior.
-8. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
+9. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
    reviewing, or merging changes.
 
 ## Working Rules
@@ -64,6 +67,9 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 
 - Product source of truth: [docs/product/BRIEF.md](docs/product/BRIEF.md)
 - Behavior taxonomy: [docs/product/TAXONOMY.md](docs/product/TAXONOMY.md)
+- Live capture spec: [docs/product/live-capture.md](docs/product/live-capture.md)
+- On-device inference spec:
+  [docs/product/on-device-inference.md](docs/product/on-device-inference.md)
 - Domain specs: [docs/product/domains/README.md](docs/product/domains/README.md)
 - Architecture source of truth: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - UX and design rules: [docs/DESIGN.md](docs/DESIGN.md)

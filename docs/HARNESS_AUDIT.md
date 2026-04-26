@@ -9,8 +9,9 @@ Engineering model described in:
 
 The harness now supports an agent-first local product loop: repository-local
 knowledge, execution plans, structural linting, product verification, runtime
-artifacts, PR workflow, and CI. It does not yet include UI/browser validation,
-rich observability, live capture adapters, or autonomous agent-to-agent review.
+artifacts, PR workflow, CI, and documented live-capture/privacy contracts. It
+does not yet include implemented UI/browser validation, rich observability, live
+capture adapters, or autonomous agent-to-agent review.
 
 ## Principle Coverage
 
@@ -25,6 +26,7 @@ rich observability, live capture adapters, or autonomous agent-to-agent review.
 | App legibility | Yellow | `make dev` generates MVP artifacts and exposes the summary through local logs; UI validation awaits a UI. |
 | Logs and observability legibility | Yellow | `make observe` exposes local runtime logs; metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
+| Capture/privacy policy enforcement | Yellow | `harness-lint` now checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. |
 | Agent review and CI remediation loops | Yellow | Operating model exists; GitHub review automation is not yet wired into repo scripts. |
 | Product verification gates | Green | `make verify` runs harness checks, harness linting, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, and labeled multi-app fixture evaluation. CI runs `make verify`. |
 | Recurring cleanup | Yellow | `make cleanup-check` catches several drift classes; no scheduled cleanup agent exists yet. |
@@ -36,10 +38,14 @@ structural/taste linting, product unit tests, YouTube CLI and evaluation checks,
 multi-app ActivityEvent CLI and evaluation checks, and cleanup-sensitive
 structural checks.
 
+The harness also now requires live-capture and on-device inference docs so
+future macOS sensor work starts from the privacy and architecture contract.
+
 ## Next Harness Upgrades
 
 - Expand architecture lints as the codebase gains more layers.
 - Add UI/browser validation if the first interface is graphical.
 - Add a scheduled cleanup agent once there is enough product surface area to
   drift.
-- Add adapter-specific validation once live import sources exist.
+- Add adapter-specific validation once live capture sources exist.
+- Add fake-sensor runtime mode when the first macOS adapter is implemented.
