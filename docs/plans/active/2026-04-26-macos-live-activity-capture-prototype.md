@@ -1,6 +1,6 @@
 # macOS Live Activity Capture Prototype
 
-Status: Proposed
+Status: In Progress
 
 ## Goal
 
@@ -10,6 +10,9 @@ one browser's active tab metadata.
 
 ## Scope
 
+- Use the parallel work package under
+  [../parallel/macos-live-capture/TRACKER.md](../parallel/macos-live-capture/TRACKER.md)
+  when splitting implementation across multiple Codex agents.
 - Add a macOS capture adapter boundary that normalizes raw observations into
   `ActivityEvent`.
 - Capture app name, bundle ID, process ID, focused window title, timestamps,
@@ -53,3 +56,9 @@ one browser's active tab metadata.
 - 2026-04-26: Planned as the next live-capture slice. Harness and docs now
   require the live-capture privacy and on-device inference contract before
   implementation begins.
+- 2026-04-26: Added a three-agent parallel work package with disjoint ownership
+  for capture core, browser/privacy policy, and replay/runtime integration.
+- 2026-04-26: Implemented all three parallel packages as a fake-sensor capture
+  loop: app/window observations plus browser metadata normalize to
+  `ActivityEvent` JSONL, privacy policy applies exclusions/redaction, and replay
+  uses existing classifier reports. Live macOS sensor APIs are still pending.

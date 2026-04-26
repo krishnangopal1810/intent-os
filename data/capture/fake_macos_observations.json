@@ -1,0 +1,75 @@
+[
+  {
+    "start_time": "2026-04-26T09:00:00Z",
+    "end_time": "2026-04-26T09:25:00Z",
+    "app_name": "VS Code",
+    "bundle_id": "com.microsoft.VSCode",
+    "process_id": 1101,
+    "window_title": "intentos/capture/core.py - implement capture model",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  },
+  {
+    "start_time": "2026-04-26T09:25:00Z",
+    "end_time": "2026-04-26T09:45:00Z",
+    "app_name": "ChatGPT",
+    "bundle_id": "com.openai.chat",
+    "process_id": 1102,
+    "window_title": "Explain macOS Accessibility permissions with examples",
+    "visible_text_excerpt": "Can you explain how Accessibility permission works for app window metadata?",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  },
+  {
+    "start_time": "2026-04-26T09:45:00Z",
+    "end_time": "2026-04-26T10:00:00Z",
+    "app_name": "Safari",
+    "bundle_id": "com.apple.Safari",
+    "process_id": 1103,
+    "window_title": "Income Tax e-Filing - submit return",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:00:00Z",
+    "end_time": "2026-04-26T10:10:00Z",
+    "app_name": "WhatsApp",
+    "bundle_id": "net.whatsapp.WhatsApp",
+    "process_id": 1104,
+    "window_title": "Family group - coordinate dinner plans",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:10:00Z",
+    "end_time": "2026-04-26T10:30:00Z",
+    "app_name": "Chrome",
+    "bundle_id": "com.google.Chrome",
+    "process_id": 1105,
+    "window_title": "LinkedIn feed scrolling",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  },
+  {
+    "start_time": "2026-04-26T10:30:00Z",
+    "end_time": "2026-04-26T10:35:00Z",
+    "app_name": "Unknown App",
+    "bundle_id": "com.example.Unknown",
+    "process_id": 1106,
+    "window_title": "Untitled window",
+    "source": "fake_macos",
+    "metadata": {
+      "capture_mode": "fake_sensor"
+    }
+  }
+]

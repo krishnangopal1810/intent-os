@@ -18,9 +18,10 @@ slices.
 - `make verify`: run harness checks plus product checks.
 
 The current product slice is CLI-first. `make dev` runs the sample analysis,
-writes reports, and keeps the generated summary visible through the runtime log.
-Future live capture runtime commands must expose the capture mode, permission
-state, output JSONL path, and latest classifier replay summary.
+writes reports, normalizes fake capture observations, replays captured JSONL,
+and keeps the generated summary visible through the runtime log. Future live
+capture runtime commands must expose the capture mode, permission state, output
+JSONL path, and latest classifier replay summary.
 
 ## Runtime State
 
@@ -31,8 +32,8 @@ Expected artifacts after product code exists:
   path, artifact path, and runtime mode.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
-  The current CLI slice writes YouTube and multi-app activity text/JSON
-  summaries.
+  The current CLI slice writes YouTube, multi-app activity, and fake capture
+  replay text/JSON summaries.
 
 ## Product Runtime Contract
 
@@ -88,3 +89,10 @@ must make these visible:
 
 CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
 local macOS permissions and should not block `make verify`.
+
+Current capture artifacts:
+
+- `capture-events.jsonl`
+- `capture-normalize.log`
+- `capture-summary.txt`
+- `capture-summary.json`

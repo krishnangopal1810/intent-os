@@ -18,10 +18,21 @@ EXPECTED_LAYERS = {
     "intentos/reporting.py",
     "intentos/activity_cli.py",
     "intentos/activity_evaluate.py",
+    "intentos/capture/__init__.py",
+    "intentos/capture/browser.py",
+    "intentos/capture/core.py",
+    "intentos/capture/jsonl.py",
+    "intentos/capture/privacy.py",
+    "intentos/capture_cli.py",
+    "intentos/capture_replay.py",
     "intentos/youtube.py",
     "intentos/cli.py",
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
+    "tests/test_capture_browser.py",
+    "tests/test_capture_core.py",
+    "tests/test_capture_privacy.py",
+    "tests/test_capture_replay.py",
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
@@ -35,11 +46,37 @@ ALLOWED_IMPORTS = {
     },
     "intentos/activity_cli.py": {"intentos.activity", "intentos.reporting"},
     "intentos/activity_evaluate.py": {"intentos.activity", "intentos.classifier"},
+    "intentos/capture/__init__.py": {
+        "intentos.capture.core",
+        "intentos.capture.jsonl",
+    },
+    "intentos/capture/browser.py": set(),
+    "intentos/capture/core.py": {"intentos.activity"},
+    "intentos/capture/jsonl.py": {"intentos.activity"},
+    "intentos/capture/privacy.py": set(),
+    "intentos/capture_replay.py": {"intentos.capture.jsonl", "intentos.reporting"},
+    "intentos/capture_cli.py": {
+        "intentos.capture.browser",
+        "intentos.capture.core",
+        "intentos.capture.jsonl",
+        "intentos.capture.privacy",
+        "intentos.capture_replay",
+    },
     "tests/test_activity_classification.py": {
         "intentos.activity",
         "intentos.activity_evaluate",
         "intentos.classifier",
         "intentos.reporting",
+    },
+    "tests/test_capture_browser.py": {"intentos.capture.browser"},
+    "tests/test_capture_core.py": {
+        "intentos.capture.core",
+        "intentos.capture.jsonl",
+    },
+    "tests/test_capture_privacy.py": {"intentos.capture.privacy"},
+    "tests/test_capture_replay.py": {
+        "intentos.capture_cli",
+        "intentos.capture_replay",
     },
     "tests/test_youtube_mvp.py": {"intentos.youtube"},
 }
@@ -55,6 +92,7 @@ def main() -> int:
     check_quality_scorecard(failures)
     check_evaluation_set(failures)
     check_live_capture_contract(failures)
+    check_parallel_plan_contract(failures)
 
     if failures:
         for failure in failures:
@@ -262,6 +300,84 @@ def check_live_capture_contract(failures: list[str]) -> None:
                     f"{relative_path} must mention {phrase!r} to preserve the "
                     "live-capture privacy and inference contract"
                 )
+
+
+def check_parallel_plan_contract(failures: list[str]) -> None:
+    """Validate multi-agent plans have a tracker and disjoint ownership."""
+    base = ROOT / "docs/plans/parallel/macos-live-capture"
+    tracker = base / "TRACKER.md"
+    task_files = [
+        base / "agent-1-capture-core.md",
+        base / "agent-2-browser-redaction.md",
+        base / "agent-3-replay-runtime.md",
+    ]
+
+    if not tracker.is_file():
+        failures.append("missing docs/plans/parallel/macos-live-capture/TRACKER.md")
+        return
+
+    tracker_text = tracker.read_text(encoding="utf-8")
+    for required in [
+        "Integration Contract",
+        "Merge Order",
+        "Shared Interfaces",
+        "Coordination Rules",
+        "Agent 1",
+        "Agent 2",
+        "Agent 3",
+    ]:
+        if required not in tracker_text:
+            failures.append(
+                "docs/plans/parallel/macos-live-capture/TRACKER.md must "
+                f"mention {required!r}"
+            )
+
+    ownership: dict[str, str] = {}
+    required_sections = [
+        "## Objective",
+        "## Owned Files",
+        "## Inputs",
+        "## Required Implementation",
+        "## Out of Scope",
+        "## Verification",
+        "## Handoff",
+    ]
+    for task in task_files:
+        if not task.is_file():
+            failures.append(f"missing {task.relative_to(ROOT)}")
+            continue
+        text = task.read_text(encoding="utf-8")
+        for section in required_sections:
+            if section not in text:
+                failures.append(f"{task.relative_to(ROOT)} is missing {section}")
+        owned = extract_owned_files(text)
+        if not owned:
+            failures.append(f"{task.relative_to(ROOT)} must list owned files")
+        for path in owned:
+            previous = ownership.get(path)
+            if previous:
+                failures.append(
+                    f"parallel ownership conflict: {path} is owned by both "
+                    f"{previous} and {task.relative_to(ROOT)}"
+                )
+            ownership[path] = str(task.relative_to(ROOT))
+
+
+def extract_owned_files(text: str) -> list[str]:
+    owned: list[str] = []
+    in_section = False
+    for line in text.splitlines():
+        if line == "## Owned Files":
+            in_section = True
+            continue
+        if in_section and line.startswith("## "):
+            break
+        if not in_section or not line.startswith("- `"):
+            continue
+        end = line.find("`", 3)
+        if end != -1:
+            owned.append(line[3:end])
+    return owned
 
 
 def check_labeled_fixture(

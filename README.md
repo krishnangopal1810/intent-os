@@ -15,6 +15,7 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - YouTube-specific fixture classification from the first MVP slice.
 - Deterministic local fixtures and labeled evaluation sets.
 - CLI reports and JSON reports.
+- Metadata-only fake-sensor capture normalization and replay.
 - Harness checks, architecture linting, cleanup checks, runtime artifacts, and
   CI running `make verify`.
 - Live-capture and on-device inference specs for the next macOS slice.
@@ -58,6 +59,8 @@ make observe
 Run the current product:
 
 ```sh
+python3 -m intentos.capture_cli normalize-observations data/capture/fake_macos_observations.json --browser-tabs data/capture/fake_browser_tabs.json --output .harness/runtime/artifacts/capture-events.jsonl
+python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl
 python3 -m intentos.activity_cli data/activity/multi_app_events.json
 python3 -m intentos.activity_evaluate data/activity/evaluation_set.json --min-accuracy 85
 python3 -m intentos.cli data/youtube/sample_watch_history.json

@@ -7,6 +7,8 @@ intent, scope, progress, and verification visible inside the repo.
 
 - `active/`: plans currently being implemented.
 - `completed/`: finished plans retained for history.
+- `parallel/`: multi-agent work packages with shared trackers and disjoint
+  owned-file lists.
 - `templates/`: reusable plan templates.
 
 ## Create a Plan
@@ -28,3 +30,20 @@ Each active plan must include:
 
 Keep progress entries short and factual. If the implementation changes the
 product or architecture direction, update the relevant docs too.
+
+## Parallel Work
+
+Use a parallel work package when a slice can be split into disjoint ownership
+areas. Each package should include a tracker plus one task file per agent.
+
+Current package:
+
+- [parallel/macos-live-capture/TRACKER.md](parallel/macos-live-capture/TRACKER.md)
+
+Rules:
+
+- Each agent gets a clear owned-file list.
+- Shared interfaces live in the tracker.
+- The coordinator owns tracker updates and final integration.
+- `make harness-lint` checks the macOS live-capture package for required task
+  sections and ownership conflicts.

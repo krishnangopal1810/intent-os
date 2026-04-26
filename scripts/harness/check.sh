@@ -35,6 +35,11 @@ required_files=(
   "docs/APP_RUNTIME.md"
   "docs/OPERATING_MODEL.md"
   "docs/plans/README.md"
+  "docs/plans/parallel/README.md"
+  "docs/plans/parallel/macos-live-capture/TRACKER.md"
+  "docs/plans/parallel/macos-live-capture/agent-1-capture-core.md"
+  "docs/plans/parallel/macos-live-capture/agent-2-browser-redaction.md"
+  "docs/plans/parallel/macos-live-capture/agent-3-replay-runtime.md"
   "docs/plans/templates/exec-plan.md"
   "docs/decisions/README.md"
   "docs/references/README.md"
@@ -44,6 +49,8 @@ required_files=(
 required_dirs=(
   "docs/plans/active"
   "docs/plans/completed"
+  "docs/plans/parallel"
+  "docs/plans/parallel/macos-live-capture"
   "scripts/harness"
 )
 
