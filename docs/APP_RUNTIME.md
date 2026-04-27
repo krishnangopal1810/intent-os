@@ -11,6 +11,15 @@ slices.
   timeline.
 - `make dev-live`: run a fresh bounded macOS live session, preserve its replay
   artifact, and launch the local UI shell against that live session summary.
+- `make beta-dev`: start the dogfood beta service, SQLite DB, service-backed
+  dashboard, and fake Chrome bridge in harness mode.
+- `make beta-status`: show beta service PID, DB path, capture state, pause
+  state, extension bridge state, last event time, row counts, and log paths.
+- `make beta-stop`: stop beta service, fake bridge, and beta UI processes.
+- `make validate-beta`: run deterministic beta API, persistence, correction,
+  privacy, delete-data, and UI smoke checks against a temp DB.
+- `make package-beta`: build the local unsigned Swift menu bar app bundle when
+  macOS Swift tools exist, or skip clearly when unavailable.
 - `make app-status`: show runtime mode, process status when relevant, log
   locations, and UI HTTP health.
 - `make app-stop`: stop the local app process started by the harness.
@@ -55,6 +64,14 @@ status.
 metadata-only adapters outside CI and write replay artifacts under
 `.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
 
+`make beta-dev` is the dogfood beta path. It builds the web shell, starts a
+local Python service bound to `127.0.0.1`, stores normalized activity in
+`.harness/runtime/beta/intentos.sqlite`, writes
+`.harness/runtime/site/beta-config.json`, starts a local dashboard, and posts
+fixture Chrome tab metadata through the same `/api/browser-event` endpoint used
+by the Chrome extension bridge. It does not require manual imports and does not
+read page bodies, cookies, screenshots, keystrokes, or cloud services.
+
 ## Runtime State
 
 Local runtime artifacts live under `.harness/runtime/` and are ignored by git.
@@ -62,6 +79,10 @@ Expected artifacts after product code exists:
 
 - `.harness/runtime/app.env`: runtime status, process ID when relevant, log
   path, artifact path, runtime mode, data mode, and UI URL.
+- `.harness/runtime/beta/app.env`: beta service/UI/fake-bridge PID, DB path,
+  service URL, dashboard URL, daily review artifact, and log paths.
+- `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
+  30-day retention.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
   harness and product scripts.
@@ -70,6 +91,9 @@ Expected artifacts after product code exists:
   or `make dev-live` starts the timeline.
 - `.harness/runtime/logs/live-session-capture.log`: manual bounded session
   diagnostic log when `make observe-session` is run.
+- `.harness/runtime/logs/beta-service.log`: local beta service logs.
+- `.harness/runtime/logs/beta-fake-bridge.log`: fake Chrome bridge posts used
+  in harness mode.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
@@ -79,6 +103,12 @@ Expected artifacts after product code exists:
   live sessions write
   `live-session-capture-events.jsonl`, `live-session-capture-summary.txt`, and
   `live-session-capture-summary.json`.
+- `.harness/runtime/artifacts/beta-validation.json`: deterministic beta
+  validation evidence.
+- `.harness/runtime/artifacts/beta-daily-review.json`: latest beta daily
+  review evidence from validation or beta dev.
+- `.harness/runtime/artifacts/IntentOSBeta.app`: local unsigned dogfood menu
+  bar bundle when `make package-beta` builds on macOS.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
 
 ## Product Runtime Contract
@@ -98,7 +128,10 @@ The implementation must also provide one of these verification paths:
 
 IntentOS currently provides `scripts/product/dev.sh`,
 `scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`,
-`scripts/product/verify.sh`, and `scripts/harness/dev-live.sh`.
+`scripts/product/validate-beta.sh`, `scripts/product/package-beta.sh`,
+`scripts/product/verify.sh`, `scripts/harness/beta-dev.sh`,
+`scripts/harness/beta-status.sh`, `scripts/harness/beta-stop.sh`, and
+`scripts/harness/dev-live.sh`.
 
 ## UI Validation Contract
 
@@ -123,6 +156,12 @@ Run `make update-ui-screenshot` after UI source, fixture, or report-output
 changes. CI does not need Chrome to validate the committed screenshot; the
 screenshot metadata records a source hash and `make verify` fails when the
 image is stale.
+
+`make validate-beta` covers service-backed UI mode. It writes a temporary
+`beta-config.json`, confirms the dashboard shell loads while service APIs are
+available, checks that correction controls are present, and verifies that a
+relabel operation changes the next daily-review response without changing raw
+events.
 
 ## Observability Contract
 

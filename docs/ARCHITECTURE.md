@@ -1,9 +1,12 @@
 # Architecture
 
 IntentOS currently ships a local-first Python CLI MVP for generic multi-app
-activity classification, plus the original YouTube-specific slice. The
-implementation uses only the Python standard library so a fresh checkout can run
-product verification without dependency installation.
+activity classification, plus the original YouTube-specific slice and a
+dogfood beta runtime. The beta adds a standard-library Python localhost
+service, SQLite persistence, a Chrome extension bridge shell, service-backed UI
+mode, and a Swift menu bar wrapper. The core product and verification path use
+only local runtime dependencies so a fresh checkout can run deterministic
+checks without network installation.
 
 ## Architecture Principles
 
@@ -17,11 +20,11 @@ product verification without dependency installation.
 ## Current Stack
 
 - Language: Python 3
-- Runtime: CLI plus local static UI shell
+- Runtime: CLI plus local static UI shell and local beta HTTP service
 - Dependencies: Python standard library only
 - Input: local JSON fixtures for YouTube and generic activity events
-- Output: CLI narratives, JSON reports, local UI shell, and checked-in UI
-  screenshot evidence
+- Output: CLI narratives, JSON reports, local UI shell, SQLite beta database,
+  service daily-review APIs, and checked-in UI screenshot evidence
 
 Live capture work emits raw observations into the generic `ActivityEvent`
 boundary. The current real adapter captures frontmost macOS app/window metadata
@@ -40,6 +43,20 @@ The current local-first slice keeps these concerns separate:
 - `intentos/reporting.py`: generic aggregate behavior reporting.
 - `intentos/activity_cli.py`: multi-app activity CLI.
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
+- `intentos/beta/store.py`: SQLite schema, retention, raw event persistence,
+  settings, runtime status, corrections, and delete-local-data behavior.
+- `intentos/beta/review.py`: service-backed daily review generation that reuses
+  the existing classifier/reporting pipeline and layers corrections over
+  derived labels.
+- `intentos/beta/extension.py`: Chrome extension bridge validation and privacy
+  filtering for bounded tab metadata.
+- `intentos/beta/recorder.py`: beta recorder rules for idle and long-gap
+  handling before persistence.
+- `intentos/beta/service.py`: local `127.0.0.1` HTTP APIs for status, events,
+  daily review, corrections, pause/resume, delete-local-data, and browser
+  events.
+- `intentos/beta_cli.py`: beta service, status, fixture seeding, fake bridge,
+  and daily-review command wiring.
 - `intentos/capture/core.py`: metadata-only capture observation validation and
   conversion to `ActivityEvent`.
 - `intentos/capture/browser.py`: browser tab URL/title/domain normalization
@@ -76,6 +93,8 @@ The current local-first slice keeps these concerns separate:
 - `data/capture/macos_frontmost_snapshot.json`: deterministic real-adapter
   stdout fixture for macOS frontmost app/window parsing.
 - `data/capture/privacy_policy.json`: local exclusion and text-bounding policy.
+- `data/beta/fake_chrome_events.json`: deterministic fake Chrome extension
+  bridge events for service, privacy, correction, and UI beta validation.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
 - `tests/test_activity_classification.py`: multi-app behavior tests.
@@ -90,6 +109,10 @@ The current local-first slice keeps these concerns separate:
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
+- `scripts/product/validate-beta.sh`: deterministic beta API, persistence,
+  correction, privacy, delete-data, and UI smoke validation.
+- `scripts/product/package-beta.sh`: local unsigned Swift menu bar app package
+  builder with graceful skip behavior when macOS Swift tools are unavailable.
 - `scripts/product/dev.sh`: local artifact server for inspecting CLI output.
 - `scripts/product/start-ui.sh`: local static UI server for generated runtime
   artifacts.
@@ -107,6 +130,9 @@ The current local-first slice keeps these concerns separate:
   browser history shapes, and ChatGPT exports; manual import is not the
   preferred user-facing product path.
 - `web/`: static local UI shell that reads generated JSON artifacts.
+- `extension/chrome/`: Chrome MV3 bridge shell for bounded tab metadata only.
+- `macos/IntentOSBeta/`: native menu bar wrapper source and Info.plist for the
+  local dogfood app bundle.
 
 ## Dependency Rules
 
@@ -117,6 +143,8 @@ The current local-first slice keeps these concerns separate:
   one obvious entry point.
 - Live capture adapters should normalize into `ActivityEvent`; they should not
   own classification rules.
+- Beta corrections must layer on top of raw `ActivityEvent` rows and derived
+  classifications; they must not overwrite raw persisted events.
 - Capture adapters should be metadata-first. ScreenCaptureKit and Vision OCR
   are fallbacks for low-confidence events, not default sensors.
 - Local model inference should be a second-pass classifier behind an explicit
@@ -127,6 +155,7 @@ The current local-first slice keeps these concerns separate:
 ```text
 fixtures or future source adapters
   -> ActivityEvent boundary validation
+  -> optional local SQLite persistence for beta runtime
   -> deterministic classifier
   -> optional local model second pass
   -> aggregate reporting

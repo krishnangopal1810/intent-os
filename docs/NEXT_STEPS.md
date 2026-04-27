@@ -3,7 +3,7 @@
 This document lists the next useful slices for IntentOS. Prefer turning one item
 at a time into an execution plan under `docs/plans/active/`.
 
-## Recently Completed Slice
+## Recently Completed Slices
 
 Automated background timeline.
 
@@ -36,30 +36,63 @@ Completed acceptance criteria:
   keylogging.
 - Refresh checked-in UI screenshot evidence with `make update-ui-screenshot`.
 
+Dogfood beta harness.
+
+Goal: make IntentOS usable by internal macOS dogfood users without manual
+imports: local service, SQLite retention, Chrome metadata bridge, daily review
+APIs, correction controls, pause/resume, delete-local-data, and native menu bar
+packaging.
+
+Why this mattered:
+
+- The user sees value from automated capture rather than export/import chores.
+- The dashboard can read live local service APIs while fixture mode remains
+  deterministic for verification.
+- Corrections let users fix trust-breaking labels and apply the fix to future
+  matching events without mutating raw activity.
+- The beta is inspectable through `make beta-status`, logs, DB row counts, and
+  validation artifacts.
+
+Completed acceptance criteria:
+
+- `make beta-dev`, `make beta-status`, `make beta-stop`, `make validate-beta`,
+  and `make package-beta` are available.
+- Chrome bridge events are privacy-filtered before SQLite persistence.
+- `make validate-beta` covers APIs, persistence, correction, pause/resume,
+  delete-local-data, privacy filtering, and service-backed UI loading.
+- The Swift wrapper builds locally as an unsigned dogfood app bundle when
+  macOS Swift tools are available.
+
+Browser extension capture now exists as a Chrome-first dogfood bridge shell and
+fake harness source. The next work is install/onboarding polish and richer
+bridge health, not manual browser-history import.
+
 ## Recommended Next Slice
 
-Browser extension capture.
+Dogfood onboarding and permission UX.
 
-Goal: enrich the automated background timeline with reliable browser context:
-tab changes, URL/title updates, single-page app state, YouTube metadata, and
-document titles without requiring the user to export browser history.
+Goal: make a trusted internal user understand what is being captured, grant the
+right permissions, recover from missing permissions, and verify that pause,
+resume, correction, and delete-local-data work without reading docs.
 
 Why this is next:
 
-- Browser activity is the highest-volume surface for target users.
-- Browser active-tab AppleScript is useful but brittle for SPA state, title
-  changes, and rich media metadata.
-- A browser extension can improve classification while preserving local-only,
-  permissioned capture.
+- The dogfood runtime is now runnable, but first-run trust and permissions will
+  decide whether users keep it installed.
+- The Chrome bridge and macOS capture paths need clear visible health states
+  when permissions are missing.
+- Corrections need to feel obvious and reversible before real feedback can
+  improve classifier quality.
 
 Acceptance criteria:
 
-- Add a scoped browser extension adapter plan before implementation.
-- Capture bounded tab metadata and page category hints, not page bodies.
-- Add deterministic fake extension fixtures for CI.
-- Preserve privacy exclusions for auth, private, banking, health, payment, tax,
-  and location-bearing URLs.
-- Replay extension events through the existing `ActivityEvent` path.
+- Menu bar app shows first-run local-only/privacy copy and diagnostics entry.
+- Missing Accessibility, browser Automation, or extension bridge state is
+  visible in the UI and `make beta-status`.
+- The user can pause/resume, correct one segment, and delete local data from the
+  app without terminal commands.
+- Add deterministic harness tests for first-run, permission-missing, and
+  recovery states.
 
 ## Harness Upgrades To Keep Current
 
@@ -79,9 +112,8 @@ Acceptance criteria:
   `data/capture/browser_active_tab_snapshot.json`; session behavior now has
   `data/capture/fake_session_observations.json`. Future ScreenCaptureKit, OCR,
   and model adapters need equivalent fixtures.
-- Add structured runtime logs for capture, classification, and reporting before
-  adding a persistent service. Stable fields should include `component`,
-  `event`, `mode`, `artifact_path`, `duration_ms`, `event_count`, and `status`.
+- Keep beta structured runtime logs current for service startup, browser bridge
+  events, corrections, pause/resume, delete-local-data, and retention cleanup.
 - Keep `make observe-live` as the manual local sensor diagnostic and expand it
   as new metadata adapters land.
 - Add stricter architecture rules as modules grow. Promote repeated review
@@ -91,18 +123,19 @@ Acceptance criteria:
 
 ## Then
 
-1. Calendar or planned-intent integration so IntentOS can compare what happened
+1. Real Chrome extension dogfood install flow and visible bridge health.
+2. Calendar or planned-intent integration so IntentOS can compare what happened
    against what the user meant to do.
-2. Accessibility visible-text excerpts for desktop apps where titles are too
+3. Accessibility visible-text excerpts for desktop apps where titles are too
    sparse.
-3. IDE, Git, and terminal metadata for engineers and builders.
-4. Communication and meeting metadata with strict body-free privacy defaults.
-5. Daily behavior narratives and intent-vs-outcome mismatch detection once the
+4. IDE, Git, and terminal metadata for engineers and builders.
+5. Communication and meeting metadata with strict body-free privacy defaults.
+6. Daily behavior narratives and intent-vs-outcome mismatch detection once the
    automated timeline has enough context.
-6. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
-7. Local model second-pass classifier through Foundation Models, Core ML, or
+7. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
+8. Local model second-pass classifier through Foundation Models, Core ML, or
    MLX once fixture evaluation justifies it.
-8. Richer DOM automation for the local UI shell once interactions exist.
+9. Richer DOM automation for the local UI shell once interactions exist.
 
 Each item above must satisfy the feature-specific harness contract in
 [HARNESS_FEATURES.md](HARNESS_FEATURES.md): deterministic fixtures, local
@@ -114,5 +147,5 @@ visible behavior changes.
 - Cloud inference.
 - Cloud storage of personal activity.
 - Blocking or scheduling actions.
-- Packaged always-on launch outside the current local harness.
+- Public packaged always-on launch outside the current dogfood harness.
 - Manual export/import as the primary user path.

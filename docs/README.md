@@ -16,6 +16,10 @@ IntentOS has a local-first Python CLI foundation:
 - Visible automated background timeline during local UI runs, with raw
   diagnostic samples, merged timeline artifacts, status, and stop controls
   exposed through the harness.
+- Dogfood beta runtime with a local Python service, SQLite persistence,
+  deterministic fake Chrome bridge, Chrome MV3 extension shell, service-backed
+  daily review UI, relabel corrections, pause/resume, delete-local-data, and
+  local Swift menu bar packaging.
 - Bounded live session timeline capture that repeatedly samples metadata,
   merges adjacent equivalent activity, and renders the timeline in the UI.
 - Local UI shell for inspecting current behavior summaries.
@@ -25,8 +29,8 @@ IntentOS has a local-first Python CLI foundation:
 - CI running `make verify`.
 - Specs for metadata-first macOS live capture and local on-device inference.
 
-Always-on session capture, screenshot fallback, OCR, local model inference, and
-richer DOM automation are not implemented yet.
+Always-on public distribution, screenshot fallback, OCR, local model inference,
+and richer DOM automation are not implemented yet.
 
 ## Product
 
@@ -107,6 +111,11 @@ Run:
 ```sh
 make dev
 make dev-live
+make beta-dev
+make beta-status
+make beta-stop
+make validate-beta
+make package-beta
 make app-status
 make diagnose
 make observe
@@ -138,6 +147,13 @@ sampler remains separately visible in harness status.
 Chrome or Chromium exists.
 `make update-ui-screenshot` regenerates checked-in UI evidence when UI source,
 fixture, or report-output changes affect the rendered product.
+
+The dogfood beta commands use the same local runtime root. `make beta-dev`
+starts `.harness/runtime/beta/intentos.sqlite`, a `127.0.0.1` beta service, a
+service-backed dashboard, and a fake Chrome bridge. `make beta-status` reads
+the beta DB and `.harness/runtime/beta/app.env`; `make validate-beta` writes
+`.harness/runtime/artifacts/beta-validation.json` and
+`.harness/runtime/artifacts/beta-daily-review.json`.
 
 ## Next Feature Readiness
 

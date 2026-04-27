@@ -2,8 +2,10 @@
 
 The current product processes local fixture data and local macOS metadata when
 manual live commands or the UI harness background timeline are running. It does
-not use cloud storage, cloud inference, raw screenshot capture, keylogging,
-browser extension APIs, or external network calls.
+not use cloud storage, cloud inference, raw screenshot capture, keylogging, page
+bodies, cookies, or external network calls. The dogfood beta adds a Chrome
+extension bridge that posts bounded tab metadata only to a local
+`127.0.0.1` service.
 
 ## Baseline Rules
 
@@ -30,6 +32,13 @@ browser extension APIs, or external network calls.
   `make observe-session`, or `make dev-live`; the `make dev` UI harness also
   starts a visible automated background timeline after deterministic artifacts
   are built.
+- Dogfood beta data is stored locally in SQLite at
+  `.harness/runtime/beta/intentos.sqlite` with a 30-day default retention
+  setting. Users can pause/resume capture and delete all local user data.
+- Chrome extension bridge events are limited to URL, title, domain, tab/window
+  IDs, active state, timestamp, source, and optional bounded page-kind metadata
+  for YouTube/document pages. The service rejects page bodies, cookies, tokens,
+  unsupported URLs, and privacy-excluded surfaces before persistence.
 - No secrets, tokens, accounts, personal browser history databases, retained
   screenshots, page bodies, transcripts, or clipboard contents are required for
   verification.
@@ -53,6 +62,10 @@ slice.
 When started through `make dev`, background timeline capture is explicit in
 `.harness/runtime/app.env`, `make app-status`, and
 `.harness/runtime/logs/live-capture.log`, and it stops with `make app-stop`.
+When started through `make beta-dev`, beta service and bridge state are explicit
+in `.harness/runtime/beta/app.env`, `make beta-status`, and
+`.harness/runtime/logs/beta-service.log`, and they stop with
+`make beta-stop`.
 
 If future work adds ScreenCaptureKit, it must use Screen Recording permission
 only for low-confidence fallback capture. Raw screenshots are disabled by
@@ -67,8 +80,8 @@ precise location coordinates inside otherwise ordinary browser metadata.
 
 ## Required Before Real Users
 
-- Authentication and authorization model
-- Data retention policy
+- Public authentication and authorization model
+- User-facing retention controls beyond the dogfood 30-day default
 - Secret management approach
 - Backup and recovery approach
 - Abuse and rate-limit strategy for public endpoints

@@ -80,6 +80,21 @@
 
         <section class="insights" aria-label="Review highlights" data-insights></section>
 
+        <section class="beta-queues" aria-label="Beta review queues" data-beta-review-queues hidden>
+          <article class="queue-panel">
+            <p class="eyebrow">Deep work</p>
+            <ol data-top-deep-work></ol>
+          </article>
+          <article class="queue-panel">
+            <p class="eyebrow">Reactive surfaces</p>
+            <ol data-top-reactive-surfaces></ol>
+          </article>
+          <article class="queue-panel">
+            <p class="eyebrow">Needs review</p>
+            <ol data-low-confidence-segments></ol>
+          </article>
+        </section>
+
         <section class="section-heading" aria-label="Report sections">
           <div>
             <p class="eyebrow">Evidence</p>
@@ -106,6 +121,7 @@
               </div>
               <span class="source-label" data-capture-source>Privacy filtered</span>
             </div>
+            <div class="correction-controls" data-correction-controls hidden></div>
             <ol class="event-list" data-capture-events></ol>
           </article>
 

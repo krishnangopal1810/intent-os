@@ -23,6 +23,9 @@ when explicitly asked, open, review, and merge a PR once checks pass.
 - Visible automated background timeline for local UI runs, with raw diagnostic
   samples, merged timeline artifacts, and status recorded in
   `.harness/runtime/app.env`.
+- Dogfood beta harness with a local Python service, SQLite persistence,
+  Chrome extension bridge fixture, service-backed daily review UI, correction
+  controls, pause/resume, delete-local-data, and local Swift menu bar packaging.
 - Short live capture session timeline support that repeatedly samples
   metadata, merges adjacent equivalent activity, and renders a timeline in the
   UI.
@@ -72,6 +75,11 @@ make cleanup-check
 make verify
 make dev
 make dev-live
+make beta-dev
+make beta-status
+make beta-stop
+make validate-beta
+make package-beta
 make app-status
 make diagnose
 make validate-ui
@@ -128,6 +136,19 @@ stays preferred in the UI, while the same automated background timeline remains
 visible in runtime status. It only captures activity during those command
 windows and may require Accessibility or browser Automation permissions.
 
+`make beta-dev` starts the dogfood beta harness: a local service bound to
+`127.0.0.1`, a SQLite database at `.harness/runtime/beta/intentos.sqlite`, the
+service-backed dashboard, and a fake Chrome bridge that posts bounded tab
+metadata with no manual exports or imports. The dashboard automatically uses
+service APIs when `.harness/runtime/site/beta-config.json` exists and otherwise
+falls back to fixture artifacts. Use `make beta-status` for service PID, DB,
+capture, extension, pause, row-count, and log diagnostics, and `make beta-stop`
+to stop the beta processes. `make validate-beta` runs deterministic API,
+persistence, privacy, correction, delete-data, and UI smoke checks against a
+temp DB. `make package-beta` builds the local unsigned Swift menu bar bundle
+under `.harness/runtime/artifacts/IntentOSBeta.app` when macOS Swift tools are
+available, and skips clearly otherwise.
+
 `make update-ui-screenshot` refreshes the checked-in UI screenshot at
 `docs/assets/screenshots/intent-os-ui.png`. `make verify` checks that screenshot
 manifest so UI source changes cannot leave stale visual evidence behind.
@@ -152,7 +173,7 @@ checks.
 ## Next Work
 
 See [docs/NEXT_STEPS.md](./docs/NEXT_STEPS.md). Recommended next work now moves
-toward real user import paths and richer behavior narratives on top of the
-session timeline. Future feature work should satisfy
+toward dogfood beta hardening, permission UX, and richer behavior narratives on
+top of the service-backed daily review. Future feature work should satisfy
 [docs/HARNESS_FEATURES.md](./docs/HARNESS_FEATURES.md) before it is considered
 complete.

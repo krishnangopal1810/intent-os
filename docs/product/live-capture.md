@@ -3,10 +3,11 @@
 This spec defines the intended local capture architecture for IntentOS. The
 current implementation includes fake-sensor capture fixtures, a manual
 frontmost macOS app/window adapter, best-effort active browser tab enrichment,
-and an automated background timeline for local UI runs. The background timeline
-keeps raw diagnostic samples separate from the merged user-facing activity
-timeline. Future work must keep live capture metadata-first, permission-aware,
-visible in runtime status, and reversible.
+an automated background timeline for local UI runs, and a dogfood beta recorder
+that persists accepted metadata to local SQLite. The background timeline keeps
+raw diagnostic samples separate from the merged user-facing activity timeline.
+Future work must keep live capture metadata-first, permission-aware, visible in
+runtime status, and reversible.
 
 ## Goal
 
@@ -109,6 +110,12 @@ manual sessions use the same merge behavior for local diagnostics. The CI path
 uses `data/capture/fake_session_observations.json` and fake live providers so
 parser, privacy, merge, replay, and UI behavior remain deterministic.
 
+The dogfood beta recorder adds local SQLite persistence on the same
+`ActivityEvent` boundary. It treats idle samples over five minutes as away time,
+records long timestamp gaps as status notes instead of inventing activity, and
+stores Chrome extension bridge events only after service-side privacy filtering.
+Corrections are derived overlays and never mutate raw events.
+
 ScreenCaptureKit and Vision OCR are deferred until metadata-only capture shows
 clear gaps. On-device model inference is a second-pass classifier, not a
 requirement for the first live slice.
@@ -198,6 +205,26 @@ output path, timeline output path, status path, and log path are recorded in
 `.harness/runtime/app.env`, and `make app-stop` stops it. It records frontmost
 app/window metadata and, for supported browsers, active tab URL/title/domain
 when Automation permission allows it.
+
+## Dogfood Beta Capture
+
+`make beta-dev` starts a local service-backed beta flow:
+
+```sh
+make beta-dev
+make beta-status
+make beta-stop
+```
+
+The beta service stores accepted events in
+`.harness/runtime/beta/intentos.sqlite`, exposes `/api/status`,
+`/api/daily-review`, `/api/events`, `/api/corrections`, `/api/pause`,
+`/api/resume`, `/api/delete-local-data`, and `/api/browser-event`, and uses a
+fake Chrome bridge in harness mode. The Chrome MV3 bridge shell captures only
+bounded tab metadata: URL, title, domain, tab/window id, active state,
+timestamp, source, and optional YouTube/document page-kind metadata. It does
+not send page bodies, cookies, tokens, screenshots, keystrokes, or clipboard
+contents.
 
 ## Harness Requirements
 

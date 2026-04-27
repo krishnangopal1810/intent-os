@@ -1,4 +1,4 @@
-.PHONY: app-status app-stop check-ui-screenshot cleanup-check dev dev-live diagnose harness-check harness-lint harness-status observe observe-live observe-session update-ui-screenshot validate-ui verify verify-harness new-plan
+.PHONY: app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot cleanup-check dev dev-live diagnose harness-check harness-lint harness-status observe observe-live observe-session package-beta update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -15,11 +15,26 @@ app-status:
 app-stop:
 	@scripts/harness/app-stop.sh
 
+beta-dev:
+	@scripts/harness/beta-dev.sh
+
+beta-status:
+	@scripts/harness/beta-status.sh
+
+beta-stop:
+	@scripts/harness/beta-stop.sh
+
 cleanup-check:
 	@scripts/harness/cleanup-check.sh
 
 validate-ui:
 	@scripts/harness/validate-ui.sh
+
+validate-beta:
+	@scripts/product/validate-beta.sh
+
+package-beta:
+	@scripts/product/package-beta.sh
 
 update-ui-screenshot:
 	@scripts/product/update-ui-screenshot.sh

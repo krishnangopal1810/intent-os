@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "IntentOS Beta Bridge",
+  "version": "0.1.0",
+  "description": "Posts bounded active-tab metadata to the local IntentOS beta service.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["http://127.0.0.1:*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://docs.google.com/*",
+        "https://notion.so/*",
+        "https://*.notion.site/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

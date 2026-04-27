@@ -14,17 +14,21 @@ deterministic fake-sensor replay loop, a local app shell for the UI,
 deterministic UI validation, checked-in screenshot evidence, structured runtime
 JSONL events, `make diagnose`, and a manual macOS metadata-only frontmost
 app/window adapter with best-effort browser tab enrichment plus bounded session
-timeline capture. It also defines next-feature harness contracts for imports,
-daily narratives, fallback capture, local models, and richer UI automation, and
-validates a harness-readable long-term architecture graph under
-`docs/architecture/`. It does not yet include rich DOM automation, rich
-metrics/traces, always-on session capture, or autonomous agent-to-agent review.
+timeline capture. It now also has a dogfood beta harness with local SQLite,
+localhost service APIs, fake Chrome bridge validation, service-backed UI
+corrections, beta diagnostics, and local Swift menu bar packaging. It also
+defines next-feature harness contracts for imports, daily narratives, fallback
+capture, local models, and richer UI automation, and validates a
+harness-readable long-term architecture graph under `docs/architecture/`. It
+does not yet include rich DOM automation, rich metrics/traces, public always-on
+distribution, or autonomous agent-to-agent review.
 
 ## Self-Sufficiency Verdict
 
 The harness is self-sufficient for the product surface shipped so far:
 fixture-backed classification, fake capture replay, one-shot manual live
-macOS/browser metadata capture, bounded live session timeline capture, local UI
+macOS/browser metadata capture, bounded live session timeline capture,
+dogfood beta service/UI validation, local menu bar packaging, local UI
 inspection, optional headless browser render diagnostics, screenshot evidence,
 CI, PR review, and merge workflows all have repository-local commands and docs.
 
@@ -44,13 +48,13 @@ justified, and stricter architecture lint rules as they are implemented.
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
 | First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP, multi-app ActivityEvent foundation, live capture, UI shell, and session timeline. |
 | Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, Markdown links, and the long-term architecture graph; `harness-lint` checks active-plan hygiene, quality scorecard structure, and next-feature harness contracts. |
-| App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible automated background timeline, and records the URL, data mode, capture mode, capture PID, raw output path, timeline path, status path, and log path in `.harness/runtime/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics; checked-in screenshot evidence is guarded by a source manifest. |
+| App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible automated background timeline, and records the URL, data mode, capture mode, capture PID, raw output path, timeline path, status path, and log path in `.harness/runtime/app.env`; `make beta-dev` starts the local beta service, SQLite DB, fake Chrome bridge, and service-backed dashboard with diagnostics in `.harness/runtime/beta/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` and `make validate-beta` check artifact and service-backed UI modes; checked-in screenshot evidence is guarded by a source manifest. |
 | Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
 | Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS, browser active-tab, and session merge paths have deterministic fixture tests. |
 | Multi-agent coordination | Yellow | A parallel macOS live-capture package defines a shared tracker, three disjoint task files, merge order, and harness ownership checks. |
 | Agent review and CI remediation loops | Yellow | Operating model exists; GitHub review automation is not yet wired into repo scripts. |
-| Product verification gates | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, capture replay, and UI validation. CI runs `make verify`. |
+| Product verification gates | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, YouTube evaluation, generic activity CLI smoke evaluation, capture replay, beta validation, and UI validation. CI runs `make verify`. |
 | Recurring cleanup | Yellow | `make cleanup-check` catches several drift classes; no scheduled cleanup agent exists yet. |
 
 ## Current Verification State
@@ -58,8 +62,8 @@ justified, and stricter architecture lint rules as they are implemented.
 `make verify` passes for the current product surface. It runs harness checks,
 structural/taste linting, product unit tests, YouTube CLI and evaluation checks,
 multi-app ActivityEvent CLI and evaluation checks, fake capture replay checks,
-session timeline replay checks, UI validation, and cleanup-sensitive structural
-checks.
+session timeline replay checks, beta service validation, UI validation, and
+cleanup-sensitive structural checks.
 
 The harness also requires live-capture and on-device inference docs so future
 macOS sensor work starts from the privacy and architecture contract. It
@@ -70,6 +74,9 @@ Manual live validation is intentionally separate from CI:
 
 ```sh
 make dev-live
+make beta-dev
+make beta-status
+make validate-beta
 make observe-live
 make observe-session
 ```

@@ -18,6 +18,13 @@ EXPECTED_LAYERS = {
     "intentos/reporting.py",
     "intentos/activity_cli.py",
     "intentos/activity_evaluate.py",
+    "intentos/beta/__init__.py",
+    "intentos/beta/extension.py",
+    "intentos/beta/recorder.py",
+    "intentos/beta/review.py",
+    "intentos/beta/service.py",
+    "intentos/beta/store.py",
+    "intentos/beta_cli.py",
     "intentos/capture/__init__.py",
     "intentos/capture/browser.py",
     "intentos/capture/core.py",
@@ -34,6 +41,9 @@ EXPECTED_LAYERS = {
     "intentos/cli.py",
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
+    "tests/test_beta_extension.py",
+    "tests/test_beta_service.py",
+    "tests/test_beta_store.py",
     "tests/test_capture_browser.py",
     "tests/test_capture_cli.py",
     "tests/test_capture_core.py",
@@ -55,6 +65,41 @@ ALLOWED_IMPORTS = {
     },
     "intentos/activity_cli.py": {"intentos.activity", "intentos.reporting"},
     "intentos/activity_evaluate.py": {"intentos.activity", "intentos.classifier"},
+    "intentos/beta/__init__.py": set(),
+    "intentos/beta/extension.py": {
+        "intentos.activity",
+        "intentos.capture.browser",
+        "intentos.capture.privacy",
+    },
+    "intentos/beta/recorder.py": {
+        "intentos.activity",
+        "intentos.beta",
+        "intentos.capture.core",
+        "intentos.capture.session",
+    },
+    "intentos/beta/review.py": {
+        "intentos.activity",
+        "intentos.beta",
+        "intentos.classifier",
+        "intentos.reporting",
+        "intentos.youtube",
+    },
+    "intentos/beta/service.py": {
+        "intentos.beta",
+        "intentos.beta.extension",
+        "intentos.capture.privacy",
+    },
+    "intentos/beta/store.py": {
+        "intentos.activity",
+        "intentos.classifier",
+        "intentos.reporting",
+    },
+    "intentos/beta_cli.py": {
+        "intentos.beta",
+        "intentos.beta.extension",
+        "intentos.beta.service",
+        "intentos.capture.privacy",
+    },
     "intentos/capture/__init__.py": {
         "intentos.capture.core",
         "intentos.capture.jsonl",
@@ -102,6 +147,18 @@ ALLOWED_IMPORTS = {
         "intentos.activity_evaluate",
         "intentos.classifier",
         "intentos.reporting",
+    },
+    "tests/test_beta_extension.py": {
+        "intentos.beta.extension",
+        "intentos.capture.privacy",
+    },
+    "tests/test_beta_service.py": {
+        "intentos.beta",
+        "intentos.beta.service",
+    },
+    "tests/test_beta_store.py": {
+        "intentos.activity",
+        "intentos.beta",
     },
     "tests/test_capture_browser.py": {"intentos.capture.browser"},
     "tests/test_capture_cli.py": {
@@ -151,6 +208,7 @@ def main() -> int:
     check_live_observation_harness(failures)
     check_ui_harness(failures)
     check_live_capture_contract(failures)
+    check_beta_harness_contract(failures)
     check_next_feature_harness_contract(failures)
     check_parallel_plan_contract(failures)
 
@@ -519,6 +577,55 @@ def check_live_capture_contract(failures: list[str]) -> None:
                     f"{relative_path} must mention {phrase!r} to preserve the "
                     "live-capture privacy and inference contract"
                 )
+
+
+def check_beta_harness_contract(failures: list[str]) -> None:
+    """Keep the dogfood beta runnable, inspectable, and local-only."""
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    for target in ["beta-dev:", "beta-status:", "beta-stop:", "validate-beta:", "package-beta:"]:
+        if target not in makefile:
+            failures.append(f"Makefile must expose {target}")
+
+    required_paths = [
+        "intentos/beta/store.py",
+        "intentos/beta/service.py",
+        "intentos/beta/extension.py",
+        "intentos/beta/recorder.py",
+        "intentos/beta/review.py",
+        "intentos/beta_cli.py",
+        "scripts/harness/beta-dev.sh",
+        "scripts/harness/beta-status.sh",
+        "scripts/harness/beta-stop.sh",
+        "scripts/product/validate-beta.sh",
+        "scripts/product/package-beta.sh",
+        "data/beta/fake_chrome_events.json",
+        "extension/chrome/manifest.json",
+        "macos/IntentOSBeta/IntentOSBeta.swift",
+    ]
+    for path in required_paths:
+        if not (ROOT / path).is_file():
+            failures.append(f"missing beta harness file {path}")
+
+    app_js = ROOT / "web/app.js"
+    if app_js.is_file():
+        text = app_js.read_text(encoding="utf-8")
+        for phrase in ["beta-config.json", "/api/daily-review", "/api/corrections"]:
+            if phrase not in text:
+                failures.append(f"web/app.js must support beta service mode phrase {phrase!r}")
+    app_html = ROOT / "web/index.html"
+    if app_html.is_file() and "data-correction-controls" not in app_html.read_text(encoding="utf-8"):
+        failures.append("web/index.html must expose beta correction controls")
+
+    docs = {
+        "docs/APP_RUNTIME.md": ["make beta-dev", "beta-validation.json"],
+        "docs/SECURITY.md": ["Chrome extension bridge", "delete all local user data"],
+        "docs/ARCHITECTURE.md": ["intentos/beta/store.py", "extension/chrome/"],
+    }
+    for relative_path, phrases in docs.items():
+        text = (ROOT / relative_path).read_text(encoding="utf-8")
+        for phrase in phrases:
+            if phrase not in text:
+                failures.append(f"{relative_path} must mention {phrase!r}")
 
 
 def check_next_feature_harness_contract(failures: list[str]) -> None:

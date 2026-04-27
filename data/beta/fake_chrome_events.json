@@ -1,0 +1,46 @@
+[
+  {
+    "browser_name": "Google Chrome",
+    "url": "https://chat.openai.com/c/intent-os-beta",
+    "title": "Implement beta harness - ChatGPT",
+    "timestamp": "2026-04-27T09:00:00Z",
+    "duration_seconds": 1800,
+    "tab_id": 12,
+    "window_id": 1,
+    "active": true,
+    "page_kind": "chat"
+  },
+  {
+    "browser_name": "Google Chrome",
+    "url": "https://www.youtube.com/watch?v=system-design",
+    "title": "System design deep dive tutorial",
+    "timestamp": "2026-04-27T10:00:00Z",
+    "duration_seconds": 1200,
+    "tab_id": 14,
+    "window_id": 1,
+    "active": true,
+    "page_kind": "youtube",
+    "media_title": "System design deep dive tutorial"
+  },
+  {
+    "browser_name": "Google Chrome",
+    "url": "https://www.linkedin.com/feed/",
+    "title": "LinkedIn feed scrolling",
+    "timestamp": "2026-04-27T10:30:00Z",
+    "duration_seconds": 600,
+    "tab_id": 15,
+    "window_id": 1,
+    "active": true,
+    "page_kind": "feed"
+  },
+  {
+    "browser_name": "Google Chrome",
+    "url": "https://bank.example/login",
+    "title": "Banking login",
+    "timestamp": "2026-04-27T11:00:00Z",
+    "duration_seconds": 120,
+    "tab_id": 16,
+    "window_id": 1,
+    "active": true
+  }
+]

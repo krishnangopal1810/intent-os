@@ -52,6 +52,7 @@ scripts/harness/runtime-log.py product report_written report=capture artifact_pa
 "$python_bin" -m intentos.capture_cli replay "$artifact_dir/session-capture-events.jsonl" --json > "$artifact_dir/session-capture-summary.json"
 scripts/harness/runtime-log.py product report_written report=session-capture artifact_path="$artifact_dir/session-capture-summary.json"
 cp web/index.html web/styles.css web/app.js "$site_dir/"
+rm -f "$site_dir/beta-config.json"
 scripts/harness/runtime-log.py product ui_shell_written artifact_path="$site_dir/index.html"
 
 echo "product-dev: wrote $artifact_dir/youtube-summary.txt"

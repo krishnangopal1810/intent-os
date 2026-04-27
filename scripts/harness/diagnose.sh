@@ -9,10 +9,15 @@ APP_ENV="$RUNTIME_DIR/app.env"
 EVENT_LOG="$RUNTIME_DIR/logs/events.jsonl"
 APP_LOG="$RUNTIME_DIR/logs/app.log"
 LIVE_CAPTURE_LOG="$RUNTIME_DIR/logs/live-capture.log"
+BETA_SERVICE_LOG="$RUNTIME_DIR/logs/beta-service.log"
 UI_VALIDATION="$RUNTIME_DIR/artifacts/ui-validation.txt"
 
 echo "diagnose: runtime state"
 scripts/harness/app-status.sh || true
+
+echo
+echo "diagnose: beta runtime state"
+scripts/harness/beta-status.sh || true
 
 echo
 echo "diagnose: recent structured events"
@@ -44,4 +49,12 @@ if [ -f "$APP_LOG" ]; then
   tail -n 80 "$APP_LOG"
 else
   echo "diagnose: no app log found at $APP_LOG"
+fi
+
+echo
+echo "diagnose: recent beta service log"
+if [ -f "$BETA_SERVICE_LOG" ]; then
+  tail -n 80 "$BETA_SERVICE_LOG"
+else
+  echo "diagnose: no beta service log found at $BETA_SERVICE_LOG"
 fi

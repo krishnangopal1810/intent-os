@@ -29,8 +29,9 @@ artifacts.
   file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
-- `make dev`, `make dev-live`, `make app-status`, `make validate-ui`,
-  `make observe`, and
+- `make dev`, `make dev-live`, `make beta-dev`, `make beta-status`,
+  `make beta-stop`, `make validate-beta`, `make package-beta`,
+  `make app-status`, `make validate-ui`, `make observe`, and
   `make diagnose` provide local runtime legibility for the current UI-backed
   product.
 - `make observe-live` provides manual local sensor diagnostics for the macOS
@@ -39,6 +40,9 @@ artifacts.
   repeated metadata sampler and timeline merge path.
 - `make validate-ui` validates the local UI shell, JSON artifact loading, and
   optional local browser render diagnostics.
+- `make validate-beta` validates beta APIs, SQLite persistence, Chrome bridge
+  privacy filtering, correction layering, pause/resume, delete-local-data, and
+  service-backed UI loading against a temp DB.
 - `make check-ui-screenshot` verifies that checked-in screenshot evidence is
   present and fresh for the current UI/report inputs.
 
@@ -53,9 +57,16 @@ artifacts.
 - `python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl`
 - `python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl`
 - `python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl`
+- `python3 -m intentos.beta_cli serve --db .harness/runtime/beta/intentos.sqlite --port 58917`
+- `python3 -m intentos.beta_cli fake-bridge --service-url http://127.0.0.1:58917/api/browser-event --once`
+- `python3 -m intentos.beta_cli daily-review --db .harness/runtime/beta/intentos.sqlite --date 2026-04-27 --output .harness/runtime/artifacts/beta-daily-review.json`
 - `make observe-live`
 - `make observe-session`
 - `make dev-live`
+- `make beta-dev`
+- `make beta-status`
+- `make validate-beta`
+- `make package-beta`
 - `scripts/product/verify.sh`
 - `make verify`
 - `make cleanup-check`
@@ -96,6 +107,13 @@ exclusions, merges adjacent equivalent activity, and replays the resulting
 timeline. It records structured runtime events for session start/completion,
 duration, interval, output path, and replay artifact.
 
+`make beta-dev` writes `.harness/runtime/beta/app.env`, starts the beta service
+and fake Chrome bridge, and serves the dashboard in service-backed mode. The
+service status reports DB path, retention, pause state, extension state, latest
+event time, row counts, and log paths. `make validate-beta` uses the same API
+surface with a temporary DB and writes `beta-validation.json` plus
+`beta-daily-review.json` as reproducible evidence.
+
 Future persistent runtime code should emit structured, line-oriented logs with
 stable fields for `component`, `event`, `mode`, `artifact_path`, `duration_ms`,
 `event_count`, and `status` so Codex can inspect capture, classification, and
@@ -127,6 +145,10 @@ Current artifacts:
 - `ui-render.png`
 - `ui-render-validation.json`
 - `ui-render-validation.txt`
+- `beta-validation.json`
+- `beta-daily-review.json`
+- `beta-package.json`
+- `IntentOSBeta.app`
 - `docs/assets/screenshots/intent-os-ui.png`
 - `docs/assets/screenshots/intent-os-ui.json`
 

@@ -29,6 +29,18 @@ async function loadJson(path) {
   return response.json();
 }
 
+async function loadOptionalJson(path) {
+  try {
+    return await loadJson(path);
+  } catch (error) {
+    return null;
+  }
+}
+
+function apiUrl(config, path) {
+  return `${config.serviceUrl}${path}`;
+}
+
 async function loadFirst(pathsToTry) {
   const errors = [];
   for (const path of pathsToTry) {
@@ -269,6 +281,10 @@ function renderBars(summary) {
 }
 
 function renderTimeline(items) {
+  return renderTimelineWithOptions(items, null);
+}
+
+function renderTimelineWithOptions(items, betaConfig) {
   const list = document.querySelector("[data-capture-events]");
   if (!items.length) {
     const row = document.createElement("li");
@@ -304,6 +320,83 @@ function renderTimeline(items) {
       const duration = item.duration || formatDuration(item.duration_seconds);
       meta.textContent = `${duration} - ${formatLabel(item.label)} - ${Math.round(item.confidence * 100)}%${samples}`;
       row.append(time, title, surface, meta);
+      if (betaConfig && item.segment_key) {
+        row.append(renderCorrectionControl(item, betaConfig));
+      }
+      return row;
+    }),
+  );
+}
+
+function renderCorrectionControl(item, betaConfig) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "event-correction";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", `Correct label for ${item.title}`);
+  Object.keys(labels).forEach((label) => {
+    const option = document.createElement("option");
+    option.value = label;
+    option.textContent = formatLabel(label);
+    select.append(option);
+  });
+  select.value = item.label;
+  const future = document.createElement("label");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = false;
+  future.append(checkbox, document.createTextNode("Apply to future"));
+  select.addEventListener("change", async () => {
+    await postCorrection(betaConfig, item, select.value, checkbox.checked);
+    await boot();
+  });
+  wrapper.append(select, future);
+  return wrapper;
+}
+
+async function postCorrection(betaConfig, item, correctedLabel, applyToFuture) {
+  const endpointNote = "POST /api/corrections";
+  const response = await fetch(apiUrl(betaConfig, "/api/corrections"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      segment: item,
+      corrected_label: correctedLabel,
+      apply_to_future: applyToFuture,
+      endpoint: endpointNote,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Correction failed: ${response.status}`);
+  }
+}
+
+function renderBetaQueues(review) {
+  const wrapper = document.querySelector("[data-beta-review-queues]");
+  const correctionMarker = document.querySelector("[data-correction-controls]");
+  if (!review) {
+    wrapper.hidden = true;
+    correctionMarker.hidden = true;
+    return;
+  }
+  wrapper.hidden = false;
+  correctionMarker.hidden = false;
+  renderQueue("[data-top-deep-work]", review.top_deep_work || []);
+  renderQueue("[data-top-reactive-surfaces]", review.top_reactive_surfaces || []);
+  renderQueue("[data-low-confidence-segments]", review.low_confidence_segments || []);
+}
+
+function renderQueue(selector, items) {
+  const list = document.querySelector(selector);
+  if (!items.length) {
+    const row = document.createElement("li");
+    row.textContent = "None";
+    list.replaceChildren(row);
+    return;
+  }
+  list.replaceChildren(
+    ...items.slice(0, 3).map((item) => {
+      const row = document.createElement("li");
+      row.textContent = `${formatLabel(item.label)} - ${item.title} (${item.duration || formatDuration(item.duration_seconds)})`;
       return row;
     }),
   );
@@ -348,6 +441,15 @@ function captureStatusText(isLiveCapture, status) {
 }
 
 async function boot() {
+  const betaConfig = await loadOptionalJson("./beta-config.json");
+  if (betaConfig?.serviceUrl) {
+    await bootBeta(betaConfig);
+    return;
+  }
+  await bootArtifacts();
+}
+
+async function bootArtifacts() {
   const [activity, captureResult, youtube] = await Promise.all([
     loadJson(paths.activity),
     loadFirst(paths.capture),
@@ -405,6 +507,48 @@ async function boot() {
   renderBars(primarySummary);
   renderTimeline(capture.items || []);
   renderYoutubeMeter(youtube.summary);
+  renderBetaQueues(null);
+}
+
+async function bootBeta(betaConfig) {
+  const date = betaConfig.date || new Date().toISOString().slice(0, 10);
+  const [review, youtube] = await Promise.all([
+    loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
+    loadOptionalJson(paths.youtube),
+  ]);
+  const fallbackYoutube = youtube || {
+    summary: {
+      narrative: "YouTube fixture report unavailable in beta service mode.",
+      learning_percentage: 0,
+      passive_consumption_percentage: 0,
+      unknown_percentage: 0,
+    },
+  };
+  const status = review.status || {};
+  const extensionState = status.extension?.state || "not connected";
+  const paused = status.pause?.paused ? "Paused" : "Running";
+
+  document.querySelector("[data-primary-total]").textContent =
+    review.summary.total_duration || formatDuration(review.summary.total_seconds || 0);
+  document.querySelector("[data-primary-narrative]").textContent =
+    summaryHeadline(review.summary);
+  document.querySelector("[data-youtube-narrative]").textContent =
+    formatNarrative(fallbackYoutube.summary.narrative);
+  document.querySelector("[data-status]").textContent =
+    `${paused} - Chrome bridge ${extensionState}`;
+  document.querySelector("[data-activity-source]").textContent =
+    "Local beta service";
+  document.querySelector("[data-capture-source]").textContent =
+    "SQLite daily timeline";
+
+  renderFocusMeter(review.summary);
+  renderScore(review.summary);
+  renderInsights(review.summary, review, fallbackYoutube);
+  renderStats(review.summary);
+  renderBars(review.summary);
+  renderTimelineWithOptions(review.items || [], betaConfig);
+  renderYoutubeMeter(fallbackYoutube.summary);
+  renderBetaQueues(review);
 }
 
 boot().catch((error) => {

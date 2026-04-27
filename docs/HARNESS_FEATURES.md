@@ -50,6 +50,7 @@ explicitly true.
 | Feature | Harness support required before completion |
 | --- | --- |
 | Manual real-data import | User-facing manual import is not the preferred roadmap because it adds friction. If retained for developer fixtures, document the CSV/JSON schema, add deterministic import fixtures, write import JSONL and report artifacts, log accepted/excluded/error row counts, and include conversion plus replay in `make verify`. |
+| Dogfood beta runtime | Use `make beta-dev`, `make beta-status`, `make beta-stop`, `make validate-beta`, and `make package-beta`; persist to local SQLite with retention; keep service APIs bound to `127.0.0.1`; add fixture Chrome bridge events; expose correction, pause/resume, delete-data, status, and UI smoke validation without manual imports. |
 | Browser history import | Use copied/exported local browser data or deterministic fixture databases, never live profile reads in CI; add fixtures for Chrome/Safari/Arc shapes, privacy exclusions for private/auth/location URLs, replay artifacts, and parser validation tests. |
 | ChatGPT export parser | Use local export fixtures, bound conversation evidence before classification, redact sensitive content, add parser/evaluation fixtures for coding, learning, admin, communication, and entertainment conversations, and verify fallback to `unknown`. |
 | Daily behavior narratives | Generate narratives from report artifacts rather than raw source data, add deterministic narrative fixtures, validate the UI rendering path, and refresh screenshot evidence if the dashboard changes. |
@@ -65,6 +66,10 @@ Use stable artifact names so the UI and diagnostics can discover new sources:
   `import-summary.txt`, `import-summary.json`, and `import-validation.json`.
 - Browser history imports: `browser-history-events.jsonl`,
   `browser-history-summary.json`, and `browser-history-validation.json`.
+- Dogfood beta: `.harness/runtime/beta/intentos.sqlite`,
+  `.harness/runtime/beta/app.env`, `beta-validation.json`,
+  `beta-daily-review.json`, `beta-package.json`, and
+  `IntentOSBeta.app`.
 - ChatGPT exports: `chatgpt-events.jsonl`, `chatgpt-summary.json`, and
   `chatgpt-validation.json`.
 - Daily narratives: `daily-narrative-summary.json` and UI validation evidence.

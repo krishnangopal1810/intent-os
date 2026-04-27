@@ -20,6 +20,13 @@ bounded live session timeline. The automated timeline keeps raw diagnostic
 samples separate from merged user-facing activity segments, without adding
 manual imports, screenshots, OCR, or model-backed classification.
 
+The dogfood beta slice adds a local service-backed product loop: a Python
+service stores normalized activity in SQLite for 30 days, accepts bounded Chrome
+tab metadata through a localhost extension bridge, serves daily review APIs,
+lets users correct labels locally, and can be launched through a native macOS
+menu bar wrapper. Manual imports remain fixture/parser-only; beta users should
+not have to export data to see value.
+
 ## Product Definition
 
 IntentOS is a personal behavior intelligence system. It runs on-device and
@@ -95,6 +102,32 @@ make observe-session
 These commands are intentionally manual and outside CI because they depend on
 local macOS Accessibility and browser Automation permissions.
 
+### Dogfood Beta Runtime
+
+The current beta target is a trusted internal macOS dogfood build:
+
+- local Python service bound to `127.0.0.1`
+- SQLite database under `.harness/runtime/beta/intentos.sqlite`
+- 30-day retention with startup cleanup
+- Chrome-first extension bridge for URL/title/domain/tab metadata
+- service-backed daily review UI with capture health, intent mix, merged
+  timeline, deep-work highlights, reactive surfaces, low-confidence segments,
+  and local correction controls
+- pause/resume and delete-local-data controls
+- local Swift menu bar wrapper that launches/stops the beta harness
+
+Run:
+
+```sh
+make beta-dev
+make beta-status
+make validate-beta
+make package-beta
+```
+
+The beta remains local-only: no cloud sync, telemetry, page bodies,
+keylogging, screenshots, OCR, or public distribution.
+
 ### Generic Multi-App Activity
 
 The current generic classifier handles local fixture events from surfaces such
@@ -147,14 +180,16 @@ The detailed MVP spec is
 - [imports.md](imports.md) remains useful for deterministic fixture and parser
   contracts, but manual import is no longer the preferred user-facing product
   path because it adds friction.
-- Live capture must not use keylogging, raw screenshot retention, cloud
-  inference, or always-on background capture in the current local slices.
+- Live capture and beta capture must not use keylogging, raw screenshot
+  retention, cloud inference, page bodies, cookies, or manual user exports as a
+  primary product path.
 
 ## Current Verification
 
 - `make verify` runs harness checks, structural linting, repository audit, unit
   tests, CLI smoke checks, YouTube evaluation, multi-app `ActivityEvent`
-  evaluation, capture replay, UI validation, and screenshot freshness checks.
+  evaluation, capture replay, beta validation, UI validation, and screenshot
+  freshness checks.
 - The multi-app evaluation set keeps generic behavior classification from
   regressing while future adapters are added.
 - The YouTube evaluation set preserves the first domain-specific slice as a
@@ -173,13 +208,14 @@ The detailed MVP spec is
 
 ## Non-Goals
 
-- Continuous full-device activity capture in the current local slices.
-- Browser extension distribution in the current local slices.
+- Public continuous full-device activity capture outside the local dogfood
+  beta.
+- Public browser extension distribution.
 - Cloud-hosted inference or cloud storage of personal activity.
 - Automatic blocking, scheduling, or workflow execution in the current local
   slices.
 - Generic productivity dashboards that only restate app usage.
-- Always-on live capture is not implemented.
+- Public always-on live capture is not implemented.
 - Screenshot capture and OCR are not part of the first live capture slice.
 
 ## Constraints

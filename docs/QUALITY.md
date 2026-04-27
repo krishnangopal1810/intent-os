@@ -6,12 +6,12 @@ Use this document to keep quality visible to future Codex runs.
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Product definition | Green | IntentOS brief, behavior taxonomy, YouTube slice, and multi-app `ActivityEvent` foundation are specified. |
-| Architecture | Yellow | Local-first Python CLI/UI stack, MVP boundaries, and capture adapter boundaries are documented and linted. |
-| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, UI validation, and labeled fixture evaluation. |
-| Security | Yellow | Local-only defaults, live-capture privacy rules, background timeline visibility, and manual macOS permission handling are documented; browser permission UX is pending. |
-| Reliability | Yellow | CLI verification, UI validation, screenshot evidence, and artifact runtime exist; richer observability is pending. |
-| UX | Yellow | A local UI shell exists for current reports with checked-in screenshot evidence; richer interaction design is pending. |
+| Product definition | Green | IntentOS brief, behavior taxonomy, YouTube slice, multi-app `ActivityEvent` foundation, and dogfood beta target are specified. |
+| Architecture | Yellow | Local-first Python CLI/UI stack, beta service/SQLite boundaries, MVP boundaries, and capture adapter boundaries are documented and linted. |
+| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, beta validation, UI validation, and labeled fixture evaluation. |
+| Security | Yellow | Local-only defaults, live-capture privacy rules, beta SQLite retention, Chrome bridge filtering, background timeline visibility, and manual macOS permission handling are documented; polished permission UX is pending. |
+| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, and artifact runtime exist; richer observability is pending. |
+| UX | Yellow | A local UI shell now supports service-backed daily review and correction controls; native dogfood menu bar packaging exists, but onboarding and permissions remain rough. |
 
 ## Known Gaps
 
@@ -19,10 +19,10 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
   richer DOM automation is still pending.
-- Packaged always-on browser/app capture is not implemented; current live
-  capture is limited to explicit manual commands and the visible `make dev`
-  background timeline, with deterministic fixture coverage for replay/session
-  behavior.
+- Dogfood beta packaging exists as a local unsigned menu bar app, but
+  notarization, onboarding, and public distribution are out of scope.
+- Browser/app capture for beta v1 is Chrome-first and metadata-only; richer
+  cross-browser adapters are pending.
 - Session timeline fixtures, merge tests, replay checks, and UI timeline
   validation are covered for the current bounded session slice.
 - Classifier quality is only local-fixture-tested; real evaluation data is
@@ -32,7 +32,8 @@ Use this document to keep quality visible to future Codex runs.
   changes.
 - Next-feature harness contracts now exist for automated sources, parser
   fixtures, daily narratives, fallback capture, local models, and richer UI
-  automation; implementation of those slices is still pending.
+  automation; dogfood beta implements the first Chrome bridge slice, while
+  richer narratives and model-backed inference are still pending.
 - On-device model inference is specified but not implemented.
 
 ## Cleanup Process
