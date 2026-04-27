@@ -63,11 +63,13 @@ ALLOWED_IMPORTS = {
     "intentos/capture/core.py": {"intentos.activity"},
     "intentos/capture/jsonl.py": {"intentos.activity"},
     "intentos/capture/live.py": {
+        "intentos.activity",
         "intentos.capture.browser",
         "intentos.capture.core",
         "intentos.capture.jsonl",
         "intentos.capture.macos",
         "intentos.capture.privacy",
+        "intentos.capture.session",
         "intentos.capture_replay",
     },
     "intentos/capture/live_cli.py": {
@@ -524,6 +526,7 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
     required_docs = {
         "docs/HARNESS_FEATURES.md": [
             "Manual real-data import",
+            "not the preferred roadmap",
             "Browser history import",
             "ChatGPT export parser",
             "Daily behavior narratives",
@@ -543,9 +546,9 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
             "privacy exclusions",
         ],
         "docs/product/imports.md": [
-            "Manual CSV/JSON Import",
-            "Browser History Import",
-            "ChatGPT Export Parser",
+            "Manual CSV/JSON Fixture Import",
+            "Browser History Fixtures",
+            "ChatGPT Parser Fixtures",
             "ActivityEvent",
             "import-events.jsonl",
             "import-validation.json",
@@ -553,18 +556,18 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
             "Verification",
         ],
         "docs/NEXT_STEPS.md": [
-            "Manual real-data import",
+            "Automated background timeline",
             "HARNESS_FEATURES.md",
-            "product/imports.md",
-            "Browser history import",
-            "ChatGPT export parser",
+            "Browser extension capture",
+            "Calendar or planned-intent integration",
+            "Accessibility visible-text excerpts",
             "ScreenCaptureKit",
             "Local model second-pass classifier",
         ],
         "docs/APP_RUNTIME.md": [
             "Future Feature Runtime Contract",
-            "import-events.jsonl",
-            "import-validation.json",
+            "automated background timeline",
+            "deterministic fixtures",
             "HARNESS_FEATURES.md",
             "Harness Impact",
         ],
@@ -583,20 +586,20 @@ def check_next_feature_harness_contract(failures: list[str]) -> None:
                     "harness readiness"
                 )
 
-    import_plan = ROOT / "docs/plans/active/2026-04-26-manual-real-data-import.md"
-    if import_plan.is_file():
-        text = import_plan.read_text(encoding="utf-8")
+    timeline_plan = ROOT / "docs/plans/active/2026-04-27-automated-background-timeline.md"
+    if timeline_plan.is_file():
+        text = timeline_plan.read_text(encoding="utf-8")
         for phrase in [
             "HARNESS_FEATURES.md",
-            "product/imports.md",
-            "deterministic import fixtures",
+            "live-capture-timeline-events.jsonl",
+            "deterministic tests",
             "structured runtime events",
-            "product verification commands",
+            "privacy",
         ]:
             if phrase not in text:
                 failures.append(
-                    f"{import_plan.relative_to(ROOT)} must mention {phrase!r} "
-                    "before import implementation starts"
+                    f"{timeline_plan.relative_to(ROOT)} must mention {phrase!r} "
+                    "before background timeline implementation starts"
                 )
 
 

@@ -18,10 +18,10 @@ Status terms:
 ```mermaid
 flowchart TD
   subgraph Sources["Capture and Import Sources"]
-    manual_import["Manual CSV/JSON import\nnext"]
-    browser_history["Browser history import\nplanned"]
-    chatgpt_export["ChatGPT export parser\nplanned"]
-    macos_metadata["macOS metadata capture\ncurrent plus richer adapters"]
+    manual_import["Manual CSV/JSON fixture import\nfuture"]
+    browser_history["Browser history fixtures\nplanned"]
+    chatgpt_export["ChatGPT parser fixtures\nplanned"]
+    macos_metadata["macOS background timeline\ncurrent plus richer adapters"]
     screencapturekit["ScreenCaptureKit fallback\nfuture manual diagnostic"]
     vision_ocr["Vision OCR fallback\nfuture local-only"]
     user_plans["User goals and plans\nfuture"]
@@ -133,9 +133,9 @@ flowchart TD
 
 | Phase | Capability | Architecture change | Harness requirement |
 | --- | --- | --- | --- |
-| 0. Current foundation | Fixture-backed classification, metadata capture, session timeline, local UI | Existing sources normalize into `ActivityEvent`, replay through deterministic rules, and render local reports. | Keep `make verify`, UI validation, screenshot evidence, capture fixtures, and live diagnostics passing. |
-| 1. Historical local data | Manual CSV/JSON import | Add an importer as a source adapter into `ActivityEvent`; reuse privacy, JSONL, replay, reporting, and UI artifacts. | Add import fixtures, `import-validation.json`, structured runtime events, smoke command, and verify coverage. |
-| 2. Richer historical context | Browser history and ChatGPT export parsing | Add source-specific parsers that bound evidence and classify historical sessions without always-on capture. | Use copied/exported fixtures, privacy exclusions, parser validation, replay artifacts, and UI evidence when visible. |
+| 0. Current foundation | Fixture-backed classification, metadata capture, automated background timeline, session timeline, local UI | Existing sources normalize into `ActivityEvent`, replay through deterministic rules, merge live samples into a user-facing timeline, and render local reports. | Keep `make verify`, UI validation, screenshot evidence, capture fixtures, and live diagnostics passing. |
+| 1. Automated context | Browser extension, calendar/planned intent, Accessibility excerpts, IDE/Git/terminal context | Add automated source adapters that deepen the current timeline without manual export/import friction. | Add fake adapters or fixtures, privacy exclusions, permission diagnostics, replay artifacts, and UI evidence when visible. |
+| 2. Parser fixtures | Browser history and ChatGPT parser fixtures | Add source-specific fixtures that bound evidence and expand evaluation without making manual import the user path. | Use copied/exported fixtures, privacy exclusions, parser validation, replay artifacts, and UI evidence when visible. |
 | 3. Behavior intelligence | Daily narratives, mismatch, recurring patterns | Add insight modules above report artifacts; avoid re-reading raw sensitive source payloads. | Add deterministic narrative fixtures, JSON summaries, UI validation, and quality notes. |
 | 4. Harder live gaps | ScreenCaptureKit, Vision OCR, local model second pass | Add fallback adapters and a local inference boundary only for low-confidence or sparse metadata cases. | Keep screenshots disabled by default, add fixture frames/OCR/model fakes, permission diagnostics, and model fallback reasons. |
 | 5. Control plane | Blocking, scheduling, automation, and agentic actions | Add explicit user-approved action adapters fed by insights and goals, not raw capture streams. | Require scoped plans, dry-run fixtures, audit logs, rollback behavior, and UI workflow validation before real actions. |

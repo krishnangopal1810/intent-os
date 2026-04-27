@@ -26,6 +26,13 @@ def add_capture_live_parser(subparsers) -> ArgumentParser:
         help="Optional replay summary JSON refreshed after each sample.",
     )
     capture_live.add_argument(
+        "--timeline-output",
+        help=(
+            "Optional merged ActivityEvent JSONL path used for the user-facing "
+            "timeline summary."
+        ),
+    )
+    capture_live.add_argument(
         "--summary-text",
         help="Optional replay summary text refreshed after each sample.",
     )
@@ -51,6 +58,7 @@ def run_capture_live_command(args: Namespace) -> int:
         output_path=Path(args.output),
         privacy_policy_path=Path(args.privacy_policy),
         interval_seconds=args.interval_seconds,
+        timeline_output_path=Path(args.timeline_output) if args.timeline_output else None,
         summary_json_path=Path(args.summary_json) if args.summary_json else None,
         summary_text_path=Path(args.summary_text) if args.summary_text else None,
         status_json_path=Path(args.status_json) if args.status_json else None,
@@ -62,6 +70,7 @@ def run_capture_live_command(args: Namespace) -> int:
         raise SystemExit(str(exc)) from exc
     print(
         "capture-cli: live capture stopped after "
-        f"{result['samples']} sample(s), {result['events']} event row(s)"
+        f"{result['samples']} sample(s), {result['events']} raw event row(s), "
+        f"{result['timeline_events']} timeline row(s)"
     )
     return 0

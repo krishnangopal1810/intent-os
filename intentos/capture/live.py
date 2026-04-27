@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from intentos.activity import ActivityEvent
 from intentos.capture.browser import (
     BrowserCaptureError,
     active_browser_tab,
@@ -22,6 +23,7 @@ from intentos.capture.macos import (
     utc_now,
 )
 from intentos.capture.privacy import load_privacy_policy, redact_metadata, should_exclude
+from intentos.capture.session import merge_adjacent_events
 from intentos.capture_replay import replay_capture
 
 
@@ -30,6 +32,7 @@ class LiveCaptureConfig:
     output_path: Path
     privacy_policy_path: Path
     interval_seconds: int = 5
+    timeline_output_path: Path | None = None
     summary_json_path: Path | None = None
     summary_text_path: Path | None = None
     status_json_path: Path | None = None
@@ -50,8 +53,10 @@ def run_live_capture(
 
     samples = 0
     events_written = 0
+    timeline_events: list[ActivityEvent] = []
     write_events_jsonl([], config.output_path)
-    write_status(config, "running", samples, events_written)
+    write_events_jsonl([], summary_source_path(config))
+    write_status(config, "running", samples, events_written, len(timeline_events))
     refresh_summary(config)
 
     try:
@@ -59,30 +64,65 @@ def run_live_capture(
             try:
                 events = capture_live_event(config, sleeper)
             except MacOSCaptureError:
-                write_status(config, "error", samples, events_written)
+                write_status(config, "error", samples, events_written, len(timeline_events))
                 raise
 
             samples += 1
             events_written += append_events_jsonl(events, config.output_path)
+            timeline_events = merge_adjacent_events(
+                [*timeline_events, *events],
+                max_gap_seconds=1,
+            )
+            write_events_jsonl(timeline_events, summary_source_path(config))
             refresh_summary(config)
-            write_status(config, "running", samples, events_written)
+            write_status(
+                config,
+                "running",
+                samples,
+                events_written,
+                len(timeline_events),
+                latest_event=timeline_events[-1] if timeline_events else None,
+            )
             print(
                 "capture-live: "
-                f"sample={samples} events={len(events)} total_events={events_written}",
+                f"sample={samples} events={len(events)} "
+                f"total_events={events_written} timeline_events={len(timeline_events)}",
                 flush=True,
             )
     except KeyboardInterrupt:
-        write_status(config, "stopped", samples, events_written)
-        return {"samples": samples, "events": events_written}
+        write_status(
+            config,
+            "stopped",
+            samples,
+            events_written,
+            len(timeline_events),
+            latest_event=timeline_events[-1] if timeline_events else None,
+        )
+        return {
+            "samples": samples,
+            "events": events_written,
+            "timeline_events": len(timeline_events),
+        }
 
-    write_status(config, "completed", samples, events_written)
-    return {"samples": samples, "events": events_written}
+    write_status(
+        config,
+        "completed",
+        samples,
+        events_written,
+        len(timeline_events),
+        latest_event=timeline_events[-1] if timeline_events else None,
+    )
+    return {
+        "samples": samples,
+        "events": events_written,
+        "timeline_events": len(timeline_events),
+    }
 
 
 def capture_live_event(
     config: LiveCaptureConfig,
     sleeper: Sleeper = time.sleep,
-) -> list[object]:
+) -> list[ActivityEvent]:
     start = utc_now()
     snapshot = frontmost_app_snapshot()
     browser = None
@@ -100,7 +140,7 @@ def normalize_live_observation(
     observation: CaptureObservation,
     browser,
     privacy_policy_path: Path,
-) -> list[object]:
+) -> list[ActivityEvent]:
     event = observation_to_event(observation)
     policy = load_privacy_policy(privacy_policy_path)
     metadata = {
@@ -146,7 +186,7 @@ def normalize_live_observation(
 
 
 def refresh_summary(config: LiveCaptureConfig) -> None:
-    result = replay_capture(config.output_path, allow_empty=True)
+    result = replay_capture(summary_source_path(config), allow_empty=True)
     if config.summary_json_path:
         write_json(config.summary_json_path, result)
     if config.summary_text_path:
@@ -154,29 +194,48 @@ def refresh_summary(config: LiveCaptureConfig) -> None:
         config.summary_text_path.write_text(format_report(result), encoding="utf-8")
 
 
+def summary_source_path(config: LiveCaptureConfig) -> Path:
+    return config.timeline_output_path or config.output_path
+
+
 def write_status(
     config: LiveCaptureConfig,
     state: str,
     samples: int,
     events: int,
+    timeline_events: int,
+    latest_event: ActivityEvent | None = None,
 ) -> None:
     if not config.status_json_path:
         return
     write_json(
         config.status_json_path,
         {
-            "capture_mode": "background_live_sensor",
+            "capture_mode": "background_timeline",
             "state": state,
             "interval_seconds": config.interval_seconds,
             "samples": samples,
             "events": events,
+            "timeline_events": timeline_events,
             "output_path": str(config.output_path),
+            "timeline_output_path": str(summary_source_path(config)),
             "summary_json_path": (
                 str(config.summary_json_path) if config.summary_json_path else None
             ),
+            "latest_event": event_status(latest_event) if latest_event else None,
             "updated_at": utc_now().isoformat().replace("+00:00", "Z"),
         },
     )
+
+
+def event_status(event: ActivityEvent) -> dict[str, object]:
+    return {
+        "source_app": event.source_app,
+        "surface": event.surface,
+        "title": event.title,
+        "started_at": event.started_at,
+        "duration_seconds": event.duration_seconds,
+    }
 
 
 def write_json(path: Path, payload: object) -> None:

@@ -13,8 +13,9 @@ IntentOS has a local-first Python CLI foundation:
 - Metadata-only fake-sensor capture normalization and replay.
 - Manual metadata-only macOS frontmost app/window capture with best-effort
   browser active-tab enrichment.
-- Visible background metadata sampler during local UI runs, with status and
-  stop controls exposed through the harness.
+- Visible automated background timeline during local UI runs, with raw
+  diagnostic samples, merged timeline artifacts, status, and stop controls
+  exposed through the harness.
 - Bounded live session timeline capture that repeatedly samples metadata,
   merges adjacent equivalent activity, and renders the timeline in the UI.
 - Local UI shell for inspecting current behavior summaries.
@@ -119,8 +120,8 @@ The current CLI runtime writes inspectable text and JSON artifacts under
 `.harness/runtime/artifacts/`, and `make dev` serves the local UI shell from
 `.harness/runtime/site/`. The product artifact build is deterministic and
 fixture-backed; after the UI starts, the harness also starts a visible
-background metadata sampler and records its PID, mode, output path, status
-path, and log path in `.harness/runtime/app.env`.
+automated background timeline and records its PID, mode, raw output path,
+merged timeline path, status path, and log path in `.harness/runtime/app.env`.
 `make diagnose` prints app state, structured runtime events, validation
 evidence, and recent logs.
 `make observe-live` is a manual local-only sensor diagnostic and is not part of
@@ -141,8 +142,8 @@ fixture, or report-output changes affect the rendered product.
 ## Next Feature Readiness
 
 Use [HARNESS_FEATURES.md](HARNESS_FEATURES.md) before implementing roadmap
-items such as manual real-data import, browser history import, ChatGPT export
-parsing, daily narratives, ScreenCaptureKit/OCR fallback, local model
-second-pass classification, or richer DOM automation. Those contracts define
-the fixtures, artifacts, commands, logs, docs, and validation evidence each
-slice must add.
+items such as browser extension capture, calendar or planned-intent context,
+Accessibility excerpts, browser history fixtures, ChatGPT parsing fixtures,
+daily narratives, ScreenCaptureKit/OCR fallback, local model second-pass
+classification, or richer DOM automation. Those contracts define the fixtures,
+artifacts, commands, logs, docs, and validation evidence each slice must add.

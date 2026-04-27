@@ -93,12 +93,18 @@ def snapshot_to_session_observation(
     )
 
 
-def merge_adjacent_events(events: Iterable[ActivityEvent]) -> list[ActivityEvent]:
+def merge_adjacent_events(
+    events: Iterable[ActivityEvent],
+    max_gap_seconds: int = 0,
+) -> list[ActivityEvent]:
+    if max_gap_seconds < 0:
+        raise ValueError("max_gap_seconds must be zero or positive")
+
     merged: list[ActivityEvent] = []
     for event in events:
         event = with_sample_count(event, 1)
         if merged and equivalent_event(merged[-1], event) and time_contiguous(
-            merged[-1], event
+            merged[-1], event, max_gap_seconds=max_gap_seconds
         ):
             merged[-1] = merge_pair(merged[-1], event)
         else:
@@ -130,8 +136,13 @@ def comparable_metadata(event: ActivityEvent) -> tuple[object, ...]:
     )
 
 
-def time_contiguous(left: ActivityEvent, right: ActivityEvent) -> bool:
-    return event_end(left) == parse_timestamp(right.started_at, "event started_at")
+def time_contiguous(
+    left: ActivityEvent,
+    right: ActivityEvent,
+    max_gap_seconds: int = 0,
+) -> bool:
+    gap = parse_timestamp(right.started_at, "event started_at") - event_end(left)
+    return timedelta(seconds=0) <= gap <= timedelta(seconds=max_gap_seconds)
 
 
 def event_end(event: ActivityEvent) -> datetime:

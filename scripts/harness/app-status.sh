@@ -36,7 +36,7 @@ echo "pid=$pid"
 if [ -f "$APP_ENV" ]; then
   cat "$APP_ENV"
   capture_required=false
-  if grep -q '^INTENTOS_CAPTURE_MODE=background_live_sensor$' "$APP_ENV"; then
+  if grep -Eq '^INTENTOS_CAPTURE_MODE=(background_live_sensor|background_timeline)$' "$APP_ENV"; then
     capture_required=true
   fi
   if [ -f "$CAPTURE_PID_FILE" ]; then

@@ -120,16 +120,18 @@ PY
       mode=ui pid="$pid" port="$port" url="$url"
 
     live_output="$ARTIFACT_DIR/live-capture-events.jsonl"
+    live_timeline_output="$ARTIFACT_DIR/live-capture-timeline-events.jsonl"
     live_summary_json="$ARTIFACT_DIR/live-capture-summary.json"
     live_summary_text="$ARTIFACT_DIR/live-capture-summary.txt"
     live_status_json="$ARTIFACT_DIR/live-capture-status.json"
     live_log="$LOG_DIR/live-capture.log"
     live_interval="${INTENTOS_LIVE_CAPTURE_INTERVAL_SECONDS:-2}"
-    rm -f "$live_output" "$live_summary_json" "$live_summary_text" "$live_status_json"
+    rm -f "$live_output" "$live_timeline_output" "$live_summary_json" "$live_summary_text" "$live_status_json"
     : > "$live_log"
     nohup python3 -m intentos.capture_cli capture-live \
       --interval-seconds "$live_interval" \
       --output "$live_output" \
+      --timeline-output "$live_timeline_output" \
       --summary-json "$live_summary_json" \
       --summary-text "$live_summary_text" \
       --status-json "$live_status_json" \
@@ -137,7 +139,7 @@ PY
     capture_pid="$!"
     echo "$capture_pid" > "$CAPTURE_PID_FILE"
     scripts/harness/runtime-log.py harness live_capture_started \
-      mode=background_live_sensor pid="$capture_pid" artifact_path="$live_output"
+      mode=background_timeline pid="$capture_pid" artifact_path="$live_timeline_output" raw_artifact_path="$live_output"
 
     {
       echo "INTENTOS_APP_STATUS=running"
@@ -149,10 +151,11 @@ PY
       echo "INTENTOS_APP_LOG=$LOG_DIR/app.log"
       echo "INTENTOS_ARTIFACT_DIR=$ARTIFACT_DIR"
       echo "INTENTOS_SITE_DIR=$RUNTIME_DIR/site"
-      echo "INTENTOS_CAPTURE_MODE=background_live_sensor"
+      echo "INTENTOS_CAPTURE_MODE=background_timeline"
       echo "INTENTOS_CAPTURE_PID=$capture_pid"
       echo "INTENTOS_CAPTURE_INTERVAL_SECONDS=$live_interval"
       echo "INTENTOS_CAPTURE_OUTPUT=$live_output"
+      echo "INTENTOS_CAPTURE_TIMELINE_OUTPUT=$live_timeline_output"
       echo "INTENTOS_CAPTURE_STATUS=$live_status_json"
       echo "INTENTOS_CAPTURE_LOG=$live_log"
       echo "INTENTOS_APP_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

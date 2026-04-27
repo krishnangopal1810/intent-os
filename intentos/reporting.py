@@ -90,6 +90,7 @@ def session_to_dict(session: list[ClassifiedEvent]) -> dict[str, object]:
     first = session[0]
     duration_seconds = sum(item.event.duration_seconds for item in session)
     confidence = sum(item.classification.confidence for item in session) / len(session)
+    sample_count = sum(event_sample_count(item.event) for item in session)
     return {
         "source_app": first.event.source_app,
         "surface": first.event.surface,
@@ -97,13 +98,20 @@ def session_to_dict(session: list[ClassifiedEvent]) -> dict[str, object]:
         "started_at": first.event.started_at,
         "duration_seconds": duration_seconds,
         "duration": format_duration(duration_seconds),
-        "sample_count": len(session),
+        "sample_count": sample_count,
         "url": first.event.url,
         "label": first.classification.label.value,
         "confidence": round(confidence, 2),
         "reason": first.classification.reason,
         "metadata": first.event.metadata or {},
     }
+
+
+def event_sample_count(event: ActivityEvent) -> int:
+    value = (event.metadata or {}).get("sample_count", 1)
+    if isinstance(value, int) and value > 0:
+        return value
+    return 1
 
 
 def activity_narrative(totals: dict[BehaviorLabel, int]) -> str:

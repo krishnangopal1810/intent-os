@@ -5,73 +5,61 @@ at a time into an execution plan under `docs/plans/active/`.
 
 ## Recently Completed Slice
 
-Live capture session timeline.
+Automated background timeline.
 
-Goal: sample real app/window/browser metadata repeatedly over a short manual
-session, merge adjacent samples, normalize them into local `ActivityEvent`
-JSONL, and show the resulting timeline in the UI.
+Goal: make the existing live sampler feel like a user-first timeline: starting
+the local app automatically captures current app/window/browser metadata, keeps
+raw diagnostic samples separate, merges adjacent equivalent activity into stable
+segments, and refreshes the UI from that merged timeline with no manual exports
+or imports.
 
 Why this mattered:
 
-- The first real macOS app/window adapter and best-effort browser tab
-  enrichment now exist for one-shot manual capture.
-- A short timeline is the next step toward behavior summaries that feel real.
-- It gives the product a real capture loop without screenshots, OCR, or model
-  complexity.
-- It validates the `ActivityEvent` abstraction against live app/window/browser
-  data.
-- It keeps privacy local by default.
+- The user should not have to export, clean, or import data before seeing value.
+- The previous background sampler appended repeated raw polling rows; the UI
+  now gets merged activity segments.
+- The status path now exposes raw row count, merged timeline row count, output
+  paths, interval, state, and latest event.
+- It keeps raw diagnostic evidence available without making duplicate samples
+  the user-facing experience.
 
 Completed acceptance criteria:
 
-- Add a manual short-session capture command that samples every few seconds.
-- Merge adjacent samples with the same app/surface/title.
-- Replay the session JSONL through the existing classifier and reports.
-- Add fixture or fake-based tests so CI does not require macOS permissions.
-- Preserve no keylogging and no raw screenshot retention.
-- Update the UI to show the session timeline.
+- `make dev` starts a visible automated background timeline after the UI starts.
+- Raw live rows are written to `live-capture-events.jsonl`, while merged
+  timeline rows are written to `live-capture-timeline-events.jsonl`.
+- `live-capture-summary.json` is refreshed from the merged timeline.
+- App status exposes capture mode, raw row count, timeline row count, output
+  paths, interval, state, and latest event.
+- Deterministic tests cover the timeline path without macOS permissions.
+- Preserve local-only processing, privacy exclusions, no screenshots, and no
+  keylogging.
 - Refresh checked-in UI screenshot evidence with `make update-ui-screenshot`.
-
-Harness self-sufficiency for this slice:
-
-- Sufficient now: `ActivityEvent` boundary, one-shot macOS/browser capture,
-  privacy exclusions, JSONL replay, UI artifact loading, live replay preference,
-  checked-in screenshot evidence, `make observe-live`, `make validate-ui`, and
-  `make verify`.
-- Added with the slice: deterministic session fixtures, session merge tests, a
-  documented session diagnostic command, structured runtime events for session
-  capture, UI timeline validation, and updated screenshot evidence.
 
 ## Recommended Next Slice
 
-Manual real-data import.
+Browser extension capture.
 
-Goal: let a user import local CSV/JSON activity data into the existing
-`ActivityEvent` boundary, classify it through the current report path, and show
-the resulting daily behavior summary in the UI.
+Goal: enrich the automated background timeline with reliable browser context:
+tab changes, URL/title updates, single-page app state, YouTube metadata, and
+document titles without requiring the user to export browser history.
 
 Why this is next:
 
-- The session timeline proves the event/report/UI path for real time windows.
-- Import gives the product enough historical data to produce meaningful daily
-  behavior narratives without requiring always-on capture.
-- It expands evaluation fixtures with more realistic user examples before
-  adding OCR or local models.
+- Browser activity is the highest-volume surface for target users.
+- Browser active-tab AppleScript is useful but brittle for SPA state, title
+  changes, and rich media metadata.
+- A browser extension can improve classification while preserving local-only,
+  permissioned capture.
 
 Acceptance criteria:
 
-- Document a small CSV/JSON import schema that maps into `ActivityEvent`.
-- Add an import command that validates input and writes local JSONL or report
-  artifacts under `.harness/runtime/artifacts/`.
-- Add deterministic import fixtures and tests for validation errors,
-  classification, and replay.
-- Update the UI only if imported report artifacts add user-visible behavior.
-- Preserve local-only processing and privacy exclusions.
-
-Harness support now exists in [HARNESS_FEATURES.md](HARNESS_FEATURES.md) and
-[product/imports.md](product/imports.md). The import slice should extend
-`scripts/product/verify.sh`, structured runtime events, and UI validation only
-for behavior it actually adds.
+- Add a scoped browser extension adapter plan before implementation.
+- Capture bounded tab metadata and page category hints, not page bodies.
+- Add deterministic fake extension fixtures for CI.
+- Preserve privacy exclusions for auth, private, banking, health, payment, tax,
+  and location-bearing URLs.
+- Replay extension events through the existing `ActivityEvent` path.
 
 ## Harness Upgrades To Keep Current
 
@@ -103,13 +91,18 @@ for behavior it actually adds.
 
 ## Then
 
-1. Browser history import for local Chrome/Safari/Arc exports or copied DBs.
-2. ChatGPT export parser for classifying conversation intent.
-3. UI for daily behavior narratives once data import and evaluation stabilize.
-4. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
-5. Local model second-pass classifier through Foundation Models, Core ML, or
+1. Calendar or planned-intent integration so IntentOS can compare what happened
+   against what the user meant to do.
+2. Accessibility visible-text excerpts for desktop apps where titles are too
+   sparse.
+3. IDE, Git, and terminal metadata for engineers and builders.
+4. Communication and meeting metadata with strict body-free privacy defaults.
+5. Daily behavior narratives and intent-vs-outcome mismatch detection once the
+   automated timeline has enough context.
+6. ScreenCaptureKit fallback plus Vision OCR for low-confidence events.
+7. Local model second-pass classifier through Foundation Models, Core ML, or
    MLX once fixture evaluation justifies it.
-6. Richer DOM automation for the local UI shell once interactions exist.
+8. Richer DOM automation for the local UI shell once interactions exist.
 
 Each item above must satisfy the feature-specific harness contract in
 [HARNESS_FEATURES.md](HARNESS_FEATURES.md): deterministic fixtures, local
@@ -121,4 +114,5 @@ visible behavior changes.
 - Cloud inference.
 - Cloud storage of personal activity.
 - Blocking or scheduling actions.
-- Always-on background capture.
+- Packaged always-on launch outside the current local harness.
+- Manual export/import as the primary user path.

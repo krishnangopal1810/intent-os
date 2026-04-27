@@ -46,5 +46,5 @@ Rules:
 - Shared interfaces live in the tracker.
 - The coordinator owns tracker updates and final integration.
 - `make harness-lint` checks the macOS live-capture package for required task
-  sections and ownership conflicts. Create a new parallel package when the
-  active manual import plan is split across multiple agents.
+  sections and ownership conflicts. Create a new parallel package when an
+  active automated source plan is split across multiple agents.

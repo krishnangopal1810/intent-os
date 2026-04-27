@@ -1,7 +1,7 @@
 # Security
 
 The current product processes local fixture data and local macOS metadata when
-manual live commands or the UI harness background sampler are running. It does
+manual live commands or the UI harness background timeline are running. It does
 not use cloud storage, cloud inference, raw screenshot capture, keylogging,
 browser extension APIs, or external network calls.
 
@@ -28,20 +28,21 @@ browser extension APIs, or external network calls.
   git.
 - Manual bounded live capture is explicit through `make observe-live`,
   `make observe-session`, or `make dev-live`; the `make dev` UI harness also
-  starts a visible background metadata sampler after deterministic artifacts are
-  built.
+  starts a visible automated background timeline after deterministic artifacts
+  are built.
 - No secrets, tokens, accounts, personal browser history databases, retained
   screenshots, page bodies, transcripts, or clipboard contents are required for
   verification.
 
 ## Import Policy
 
-Manual CSV/JSON imports, browser history imports, and ChatGPT export parsing
-must stay local-only. They must validate records at the boundary, apply privacy
-exclusions and redaction before persistence, and avoid writing cookies, tokens,
-full page bodies, full conversations, or browser profile databases into runtime
-artifacts. CI must use deterministic fixtures or copied test databases, never
-live user profiles.
+Manual CSV/JSON imports are no longer the preferred user-facing path because
+they add friction, but any fixture or parser import work must stay local-only.
+Browser history fixtures and ChatGPT parser fixtures must validate records at
+the boundary, apply privacy exclusions and redaction before persistence, and
+avoid writing cookies, tokens, full page bodies, full conversations, or browser
+profile databases into runtime artifacts. CI must use deterministic fixtures or
+copied test databases, never live user profiles.
 
 ## Live Capture Policy
 
@@ -49,7 +50,7 @@ The shipped live capture path is metadata-first. It may request Accessibility
 permission for focused-window metadata and browser Automation permission for
 active-tab title/URL. Screen Recording is not required for the current live
 slice.
-When started through `make dev`, background capture is explicit in
+When started through `make dev`, background timeline capture is explicit in
 `.harness/runtime/app.env`, `make app-status`, and
 `.harness/runtime/logs/live-capture.log`, and it stops with `make app-stop`.
 

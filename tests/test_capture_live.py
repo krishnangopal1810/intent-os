@@ -8,7 +8,7 @@ import intentos.capture.live as live
 from intentos.capture.browser import BrowserTab
 from intentos.capture.jsonl import read_events_jsonl
 from intentos.capture.live import LiveCaptureConfig
-from intentos.capture.macos import MacOSAppSnapshot
+from intentos.capture.macos import MacOSAppSnapshot, MacOSCaptureError
 
 
 class CaptureLiveTest(unittest.TestCase):
@@ -40,9 +40,11 @@ class CaptureLiveTest(unittest.TestCase):
             )
 
         def fake_utc_now():
-            nonlocal now
-            now = now + timedelta(seconds=1)
             return now
+
+        def fake_sleep(seconds):
+            nonlocal now
+            now = now + timedelta(seconds=seconds)
 
         try:
             live.frontmost_app_snapshot = fake_frontmost
@@ -54,13 +56,15 @@ class CaptureLiveTest(unittest.TestCase):
                     output_path=root / "events.jsonl",
                     privacy_policy_path=Path("data/capture/privacy_policy.json"),
                     interval_seconds=1,
+                    timeline_output_path=root / "timeline.jsonl",
                     summary_json_path=root / "summary.json",
                     summary_text_path=root / "summary.txt",
                     status_json_path=root / "status.json",
                     max_samples=2,
                 )
-                result = live.run_live_capture(config, sleeper=lambda seconds: None)
+                result = live.run_live_capture(config, sleeper=fake_sleep)
                 events = read_events_jsonl(config.output_path)
+                timeline = read_events_jsonl(config.timeline_output_path)
                 summary = json.loads(config.summary_json_path.read_text())
                 status = json.loads(config.status_json_path.read_text())
         finally:
@@ -68,15 +72,55 @@ class CaptureLiveTest(unittest.TestCase):
             live.active_browser_tab = original_active_tab
             live.utc_now = original_utc_now
 
-        self.assertEqual(result, {"samples": 2, "events": 2})
+        self.assertEqual(result, {"samples": 2, "events": 2, "timeline_events": 1})
         self.assertEqual(len(events), 2)
+        self.assertEqual(len(timeline), 1)
+        self.assertEqual(timeline[0].duration_seconds, 2)
+        self.assertEqual(timeline[0].metadata["sample_count"], 2)
         self.assertEqual(events[0].source_app, "Google Chrome")
         self.assertEqual(events[0].url, "https://chatgpt.com/c/intent-os")
+        self.assertEqual(summary["items"][0]["duration_seconds"], 2)
+        self.assertEqual(summary["items"][0]["sample_count"], 2)
         self.assertEqual(summary["items"][0]["source_app"], "Google Chrome")
-        self.assertEqual(status["capture_mode"], "background_live_sensor")
+        self.assertEqual(status["capture_mode"], "background_timeline")
         self.assertEqual(status["state"], "completed")
+        self.assertEqual(status["events"], 2)
+        self.assertEqual(status["timeline_events"], 1)
+        self.assertEqual(status["timeline_output_path"], str(config.timeline_output_path))
+        self.assertEqual(status["latest_event"]["source_app"], "Google Chrome")
         self.assertEqual(calls.count("frontmost"), 2)
         self.assertEqual(calls.count("browser"), 2)
+
+    def test_live_capture_error_status_preserves_capture_error(self):
+        original_capture_live_event = live.capture_live_event
+
+        def fake_capture_live_event(config, sleeper):
+            raise MacOSCaptureError("missing Accessibility permission")
+
+        try:
+            live.capture_live_event = fake_capture_live_event
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config = LiveCaptureConfig(
+                    output_path=root / "events.jsonl",
+                    privacy_policy_path=Path("data/capture/privacy_policy.json"),
+                    interval_seconds=1,
+                    timeline_output_path=root / "timeline.jsonl",
+                    status_json_path=root / "status.json",
+                    max_samples=1,
+                )
+                with self.assertRaisesRegex(
+                    MacOSCaptureError,
+                    "missing Accessibility permission",
+                ):
+                    live.run_live_capture(config, sleeper=lambda seconds: None)
+                status = json.loads(config.status_json_path.read_text())
+        finally:
+            live.capture_live_event = original_capture_live_event
+
+        self.assertEqual(status["state"], "error")
+        self.assertEqual(status["events"], 0)
+        self.assertEqual(status["timeline_events"], 0)
 
 
 if __name__ == "__main__":

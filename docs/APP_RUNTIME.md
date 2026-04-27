@@ -7,8 +7,8 @@ slices.
 ## Commands
 
 - `make dev`: generate fixture-backed product artifacts, launch the local UI
-  shell for the current worktree, and start the visible background metadata
-  sampler.
+  shell for the current worktree, and start the visible automated background
+  timeline.
 - `make dev-live`: run a fresh bounded macOS live session, preserve its replay
   artifact, and launch the local UI shell against that live session summary.
 - `make app-status`: show runtime mode, process status when relevant, log
@@ -39,16 +39,18 @@ deterministic reports, normalizes fake capture observations, replays captured
 JSONL, copies `web/` into `.harness/runtime/site/`, and serves the UI on a
 per-run localhost port recorded in `.harness/runtime/app.env` with
 `INTENTOS_APP_DATA_MODE=fixture`. After the UI starts, the harness starts a
-visible background metadata sampler and records its PID, interval, output path,
-status path, and log path in `.harness/runtime/app.env`. It captures only
-current frontmost app/window and browser metadata while the harness is running;
-it does not read historical app, browser, or Codex activity.
+visible automated background timeline and records its PID, interval, raw output
+path, merged timeline path, status path, and log path in
+`.harness/runtime/app.env`. It captures only current frontmost app/window and
+browser metadata while the harness is running; it does not read historical app,
+browser, or Codex activity.
 
 `make dev-live` is the explicit live-data path: it runs the bounded
 `make observe-session` workflow first, preserves the fresh live session replay
 artifacts, then starts the UI with `INTENTOS_APP_DATA_MODE=live_session`.
 The bounded session artifact stays preferred in the UI even though the
-background sampler also starts and remains visible in runtime status.
+automated background timeline also starts and remains visible in runtime
+status.
 `make observe-live` and `make observe-session` exercise manual macOS
 metadata-only adapters outside CI and write replay artifacts under
 `.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
@@ -64,16 +66,17 @@ Expected artifacts after product code exists:
 - `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
   harness and product scripts.
 - `.harness/runtime/logs/live-capture.log`: manual live sensor diagnostic log
-  when `make observe-live` is run, and background sampler log when `make dev`
-  or `make dev-live` starts the sampler.
+  when `make observe-live` is run, and background timeline log when `make dev`
+  or `make dev-live` starts the timeline.
 - `.harness/runtime/logs/live-session-capture.log`: manual bounded session
   diagnostic log when `make observe-session` is run.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
   `live-capture-events.jsonl`, `live-capture-summary.txt`, and
-  `live-capture-summary.json`; the background sampler also writes
-  `live-capture-status.json`. Manual live sessions write
+  `live-capture-summary.json`; the background timeline also writes
+  `live-capture-timeline-events.jsonl` and `live-capture-status.json`. Manual
+  live sessions write
   `live-session-capture-events.jsonl`, `live-session-capture-summary.txt`, and
   `live-session-capture-summary.json`.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
@@ -145,25 +148,28 @@ recent app log.
 When a live capture slice exists, fixture and live commands must make these
 visible:
 
-- capture mode: fixture, fake sensor, manual live sensor, or replay
+- capture mode: fixture, fake sensor, manual live sensor, background timeline,
+  or replay
 - permission state for Accessibility permission, browser automation, and future
   Screen Recording
-- output path for local `ActivityEvent` JSONL
+- output path for raw local `ActivityEvent` JSONL
+- timeline output path for merged user-facing `ActivityEvent` JSONL
 - redaction/exclusion policy loaded by the runtime
 - latest classification summary from replay, including
   `live-capture-summary.json` for UI consumption
 
 For IntentOS today, the split is intentional:
 
-- `make dev`: fixture-backed UI plus background sampler. The product artifact
-  build clears stale live artifacts before serving, then the harness starts a
-  visible background live sensor so fresh current-session metadata is explicit
-  in app status.
+- `make dev`: fixture-backed UI plus automated background timeline. The product
+  artifact build clears stale live artifacts before serving, then the harness
+  starts a visible background timeline so fresh current-session metadata is
+  explicit in app status. Raw diagnostic rows stay separate from the merged
+  timeline summary shown in the UI.
 - `make observe-session`: manual live capture diagnostic only. It writes live
   artifacts but does not start or restart the UI.
 - `make dev-live`: live session UI. It captures a fresh bounded live session,
   preserves the resulting live artifacts, serves the UI against them, and keeps
-  the background sampler visible separately in app status.
+  the automated background timeline visible separately in app status.
 
 CI must use fixture or fake-sensor mode. Manual live-sensor mode may require
 local macOS permissions and should not block `make verify`.
@@ -211,6 +217,7 @@ Current capture artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `live-capture-timeline-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
 - `live-capture-status.json`
@@ -228,13 +235,13 @@ Current capture artifacts:
 
 ## Future Feature Runtime Contract
 
-Upcoming features must follow [HARNESS_FEATURES.md](HARNESS_FEATURES.md). The
-manual import slice should add `import-events.jsonl`, `import-summary.txt`,
-`import-summary.json`, and `import-validation.json` under
-`.harness/runtime/artifacts/`. Later browser history, ChatGPT export, daily
-narrative, ScreenCaptureKit/OCR, and local model slices must use similarly
-stable artifact names, structured runtime events, deterministic fixtures, and
-permission-free `make verify` coverage.
+Upcoming features must follow [HARNESS_FEATURES.md](HARNESS_FEATURES.md).
+Manual import artifacts are useful for developer fixtures, but they are not the
+preferred user-facing path. Automated sources such as browser extension
+metadata, calendar or planned-intent context, Accessibility excerpts, IDE/Git
+context, daily narratives, ScreenCaptureKit/OCR, and local model slices must
+use stable artifact names, structured runtime events, deterministic fixtures,
+and permission-free `make verify` coverage.
 
 Before implementation starts, the active execution plan must include a
 `## Harness Impact` section that names the runtime commands, artifacts,

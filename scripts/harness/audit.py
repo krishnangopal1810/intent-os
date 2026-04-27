@@ -58,26 +58,26 @@ def check_stale_docs(failures: list[str]) -> None:
         "Live multi-app capture is not implemented": "manual macOS frontmost capture now exists",
         "`make dev` is fixture-only": (
             "make dev builds fixture artifacts and then starts the visible "
-            "background metadata sampler"
+            "automated background timeline"
         ),
         "make dev is fixture-only": (
             "make dev builds fixture artifacts and then starts the visible "
-            "background metadata sampler"
+            "automated background timeline"
         ),
         "It does not capture current macOS activity": (
-            "make dev starts the visible background metadata sampler after "
+            "make dev starts the visible automated background timeline after "
             "fixture artifacts are built"
         ),
         "The planned live capture slice is metadata-first": (
             "metadata-first live capture has shipped through manual commands "
-            "and the visible background sampler"
+            "and the visible automated background timeline"
         ),
         "The current product processes local fixture data only": (
-            "manual live commands and the make dev background sampler can "
+            "manual live commands and the make dev background timeline can "
             "process local macOS metadata"
         ),
         "live macOS capture, or external network calls": (
-            "manual live commands and the make dev background sampler can "
+            "manual live commands and the make dev background timeline can "
             "process local macOS metadata"
         ),
         "No product UI has been specified yet": "the local UI shell now exists",
@@ -123,6 +123,7 @@ def check_stale_docs(failures: list[str]) -> None:
         ],
         "docs/HARNESS_FEATURES.md": [
             "Manual real-data import",
+            "not the preferred roadmap",
             "Browser history import",
             "ChatGPT export parser",
             "Universal Use-Case Classes",
@@ -132,9 +133,9 @@ def check_stale_docs(failures: list[str]) -> None:
             "Completion Checklist",
         ],
         "docs/NEXT_STEPS.md": [
-            "Manual real-data import",
+            "Automated background timeline",
             "HARNESS_FEATURES.md",
-            "product/imports.md",
+            "Browser extension capture",
             "Harness Upgrades To Keep Current",
             "stale plans",
             "fixture drift",
@@ -150,9 +151,9 @@ def check_stale_docs(failures: list[str]) -> None:
         ],
         "docs/DESIGN.md": ["IntentOS UI shell", "daily behavior review"],
         "docs/product/imports.md": [
-            "Manual CSV/JSON Import",
-            "Browser History Import",
-            "ChatGPT Export Parser",
+            "Manual CSV/JSON Fixture Import",
+            "Browser History Fixtures",
+            "ChatGPT Parser Fixtures",
             "Privacy Rules",
         ],
     }

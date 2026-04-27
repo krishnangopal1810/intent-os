@@ -1,20 +1,23 @@
-# Local Import Paths
+# Local Import and Parser Fixture Paths
 
-This spec covers local user-data import features that should land before
-heavier sensors, OCR, or model-backed classification. All import paths must
-normalize into `ActivityEvent` and reuse the existing classifier, reporting,
-privacy policy, JSONL persistence, and UI artifact flow.
+This spec now covers local import and parser fixture paths, not the preferred
+user-facing product flow. Manual user imports add friction, so automated local
+capture remains the main product direction. Fixture imports are still useful
+for deterministic verification, parser development, privacy tests, and
+classifier evaluation. All paths must normalize into `ActivityEvent` and reuse
+the existing classifier, reporting, privacy policy, JSONL persistence, and UI
+artifact flow.
 
 ## Goals
 
-- Let a user classify historical activity without always-on capture.
 - Expand realistic evaluation examples before adding OCR or local models.
+- Keep parser and privacy behavior deterministic in CI.
 - Keep all parsing, validation, classification, and reporting local.
 
-## Manual CSV/JSON Import
+## Manual CSV/JSON Fixture Import
 
-The first import slice should accept a small documented CSV or JSON schema with
-these fields:
+If a developer fixture import is added, it should accept a small documented CSV
+or JSON schema with these fields:
 
 - `started_at`: ISO-8601 timestamp.
 - `duration_seconds`: positive integer seconds.
@@ -39,21 +42,23 @@ Expected harness artifacts:
 - `.harness/runtime/artifacts/import-summary.json`
 - `.harness/runtime/artifacts/import-validation.json`
 
-## Browser History Import
+## Browser History Fixtures
 
-Browser history import is a later slice. It should read local copied/exported
-history data, not live browser profiles in CI. Fixture coverage must include
-Chrome, Safari, and Arc-shaped records or copied databases, plus excluded
-private/authentication/location-bearing URLs.
+Browser history parsing should use automated browser extension capture for the
+real user path when possible. Fixture coverage can still use local
+copied/exported history shapes, not live browser profiles in CI. Fixtures must
+include Chrome, Safari, and Arc-shaped records or copied databases, plus
+excluded private/authentication/location-bearing URLs.
 
 The importer should produce `ActivityEvent` rows with bounded title, URL,
 domain, browser name, and source provenance. It must not retain full page
 bodies, cookies, session tokens, or profile databases in runtime artifacts.
 
-## ChatGPT Export Parser
+## ChatGPT Parser Fixtures
 
-The ChatGPT export parser should use local exported files or deterministic
-fixtures. It should classify conversation intent from bounded metadata and
+The preferred user path should eventually capture bounded ChatGPT metadata
+automatically. Parser tests can use local exported files or deterministic
+fixtures. They should classify conversation intent from bounded metadata and
 short redacted excerpts, not full conversations by default.
 
 Fixture coverage should include coding, learning, admin drafting,

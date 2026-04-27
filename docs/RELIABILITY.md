@@ -18,9 +18,9 @@ artifacts.
   require macOS permissions.
 - Manual sensor smoke tests should record enough runtime evidence for Codex to
   inspect logs and generated `ActivityEvent` JSONL.
-- Upcoming import, narrative, fallback-capture, model, and UI automation slices
-  should satisfy `docs/HARNESS_FEATURES.md` before depending on manual
-  inspection.
+- Upcoming automated source, narrative, fallback-capture, model, and UI
+  automation slices should satisfy `docs/HARNESS_FEATURES.md` before depending
+  on manual inspection.
 
 ## Verification Targets
 
@@ -72,18 +72,18 @@ deterministic text and JSON reports under `.harness/runtime/artifacts/`, serves
 the local UI shell, records its URL, process, and
 `INTENTOS_APP_DATA_MODE=fixture` in `.harness/runtime/app.env`, and writes
 runtime logs. After the UI starts, the harness starts a visible background
-metadata sampler and records its capture mode, PID, output path, status path,
-and log path in `.harness/runtime/app.env`. It captures only current frontmost
-app/window and browser metadata while the harness is running, and it does not
-read historical activity.
+timeline and records its capture mode, PID, raw output path, merged timeline
+path, status path, and log path in `.harness/runtime/app.env`. It captures only
+current frontmost app/window and browser metadata while the harness is running,
+and it does not read historical activity.
 
 `make dev-live` is the explicit real macOS UI path. It runs a fresh bounded
 `make observe-session`, preserves the live replay artifact, starts the UI, and
 records `INTENTOS_APP_DATA_MODE=live_session`. The UI then prefers activity
-captured during that bounded live command window, while the background sampler
-remains separately visible in runtime status. `make observe` shows structured
-events plus the app log. `make diagnose` prints app state, structured events,
-UI validation evidence, and app logs in one place.
+captured during that bounded live command window, while the automated
+background timeline remains separately visible in runtime status. `make observe`
+shows structured events plus the app log. `make diagnose` prints app
+state, structured events, UI validation evidence, and app logs in one place.
 
 `make observe-live` writes `.harness/runtime/logs/live-capture.log`, captures
 one live local metadata event, and replays it through the classifier. If privacy
@@ -111,6 +111,7 @@ Current artifacts:
 - `capture-summary.txt`
 - `capture-summary.json`
 - `live-capture-events.jsonl`
+- `live-capture-timeline-events.jsonl`
 - `live-capture-summary.txt`
 - `live-capture-summary.json`
 - `live-capture-status.json`
@@ -146,6 +147,14 @@ The bounded live session implementation now provides:
 - manual permission guidance when Accessibility or browser Automation is
   missing
 
+The automated background timeline now provides:
+
+- raw diagnostic sample artifacts plus merged user-facing timeline artifacts
+- live summaries generated from merged activity segments rather than repeated
+  polling rows
+- status JSON for raw row counts, merged timeline row counts, output paths, and
+  latest activity
+
 The current manual macOS adapter already reports Accessibility permission help
 when System Events denies frontmost app/window metadata. Browser active-tab
 enrichment reports Automation permission help when the browser denies metadata
@@ -159,9 +168,10 @@ equivalent fixtures.
 
 ## Future Feature Reliability
 
-Manual real-data import, browser history import, ChatGPT export parsing, daily
-behavior narratives, ScreenCaptureKit/OCR fallback, local model classification,
-and richer DOM automation must add deterministic fixtures, runtime artifacts,
-structured logs, and product verification hooks as defined in
-`docs/HARNESS_FEATURES.md`. Permission-dependent or user-data-dependent paths
-must have fixture-backed equivalents in `make verify`.
+Automated browser context, calendar or planned-intent context, Accessibility
+excerpts, IDE/Git/terminal context, daily behavior narratives,
+ScreenCaptureKit/OCR fallback, local model classification, and richer DOM
+automation must add deterministic fixtures, runtime artifacts, structured logs,
+and product verification hooks as defined in `docs/HARNESS_FEATURES.md`.
+Permission-dependent or user-data-dependent paths must have fixture-backed
+equivalents in `make verify`.

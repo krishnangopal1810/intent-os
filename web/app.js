@@ -2,8 +2,8 @@ const paths = {
   activity: "../artifacts/activity-summary.json",
   capture: [
     "../artifacts/live-session-capture-summary.json",
-    "../artifacts/session-capture-summary.json",
     "../artifacts/live-capture-summary.json",
+    "../artifacts/session-capture-summary.json",
     "../artifacts/capture-summary.json",
   ],
   captureStatus: "../artifacts/live-capture-status.json",
@@ -338,12 +338,13 @@ function captureStatusText(isLiveCapture, status) {
     return "Fixture reports loaded";
   }
   if (!status) {
-    return "Live capture starting";
+    return "Timeline starting";
   }
   if (status.state === "running") {
-    return `Live capture running - ${status.events} event${status.events === 1 ? "" : "s"}`;
+    const segments = status.timeline_events ?? status.events ?? 0;
+    return `Timeline running - ${segments} segment${segments === 1 ? "" : "s"}`;
   }
-  return `Live capture ${status.state}`;
+  return `Timeline ${status.state}`;
 }
 
 async function boot() {
@@ -357,12 +358,12 @@ async function boot() {
   const isSession = captureResult.path.includes("session-capture");
   const isLiveCapture = captureResult.path.includes("live-capture");
   const captureSource = isLiveSession
-    ? "Live session timeline"
-    : isSession
-      ? "Fixture session timeline"
-      : isLiveCapture
-        ? "Live capture replay"
-        : "Fixture replay";
+      ? "Live session timeline"
+      : isSession
+        ? "Fixture session timeline"
+        : isLiveCapture
+          ? "Live background timeline"
+          : "Fixture replay";
   const primarySummary = isLiveSession || isLiveCapture
     ? capture.summary
     : activity.summary;
@@ -387,7 +388,7 @@ async function boot() {
   const statusText = isLiveCapture
     ? captureStatusText(isLiveCapture, status)
     : isLiveSession
-      ? "Live capture loaded"
+      ? "Live session loaded"
       : "Fixture reports loaded";
   const captureLabel =
     isLiveCapture && status

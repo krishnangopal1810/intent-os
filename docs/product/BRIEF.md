@@ -14,11 +14,11 @@ YouTube MVP remains as a concrete domain slice and regression fixture.
 
 The current live product slice captures metadata-only macOS app/window samples,
 enriches supported browser active-tab metadata when local Automation permission
-allows it, and replays the result into the UI. It now supports both one-shot
-manual capture, a visible background sampler during local UI runs, and a
-bounded live session timeline that repeatedly samples this metadata, merges
-adjacent equivalent activity, and renders a timeline without adding
-screenshots, OCR, or model-backed classification.
+allows it, and replays the result into the UI. It now supports one-shot manual
+capture, a visible automated background timeline during local UI runs, and a
+bounded live session timeline. The automated timeline keeps raw diagnostic
+samples separate from merged user-facing activity segments, without adding
+manual imports, screenshots, OCR, or model-backed classification.
 
 ## Product Definition
 
@@ -79,7 +79,8 @@ The current live capture slice supports manual local smoke loops:
 - frontmost macOS app/window metadata through local System Events
 - best-effort browser active tab URL/title/domain enrichment
 - local privacy exclusions and redaction before JSONL persistence
-- visible background live sampler status during `make dev` UI runs
+- visible automated background timeline status during `make dev` UI runs
+- raw live sample artifacts plus merged timeline artifacts for the UI
 - adjacent equivalent session sample merging
 - replay through the generic `ActivityEvent` classifier
 - UI preference for session timeline replay artifacts
@@ -143,9 +144,9 @@ The detailed MVP spec is
 - [on-device-inference.md](on-device-inference.md) defines the rules-first
   inference ladder and where Apple Foundation Models, Core ML, or MLX may fit
   after deterministic fixture evaluation shows a need.
-- [imports.md](imports.md) defines the local CSV/JSON, browser history, and
-  ChatGPT export import direction that should land before heavier sensors or
-  model-backed classification.
+- [imports.md](imports.md) remains useful for deterministic fixture and parser
+  contracts, but manual import is no longer the preferred user-facing product
+  path because it adds friction.
 - Live capture must not use keylogging, raw screenshot retention, cloud
   inference, or always-on background capture in the current local slices.
 
@@ -221,8 +222,9 @@ understands intent, optimizes time, and executes actions on behalf of the user.
 
 ## Open Questions
 
-- Which manual CSV/JSON fields should be required for the first real user-data
-  import path?
+- Which automated source should follow the background timeline first: browser
+  extension metadata, calendar/planned-intent context, Accessibility excerpts,
+  or IDE/Git/terminal context?
 - How should labeled evaluation fixtures be expanded with real personal
   examples?
 - What local model should eventually replace or augment deterministic rules?

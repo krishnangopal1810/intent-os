@@ -44,7 +44,7 @@ justified, and stricter architecture lint rules as they are implemented.
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
 | First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP, multi-app ActivityEvent foundation, live capture, UI shell, and session timeline. |
 | Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, Markdown links, and the long-term architecture graph; `harness-lint` checks active-plan hygiene, quality scorecard structure, and next-feature harness contracts. |
-| App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible background metadata sampler, and records the URL, data mode, capture mode, capture PID, status path, and log path in `.harness/runtime/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics; checked-in screenshot evidence is guarded by a source manifest. |
+| App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible automated background timeline, and records the URL, data mode, capture mode, capture PID, raw output path, timeline path, status path, and log path in `.harness/runtime/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics; checked-in screenshot evidence is guarded by a source manifest. |
 | Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
 | Capture/privacy policy enforcement | Yellow | `harness-lint` checks that live-capture, on-device inference, and security docs preserve metadata-first capture, no-keylogging, local-only, and screenshot fallback policies. Manual macOS, browser active-tab, and session merge paths have deterministic fixture tests. |
@@ -82,8 +82,8 @@ permissions.
 
 - Expand browser automation in `make validate-ui` when the UI becomes
   interactive enough to require click, filter, and navigation checks.
-- Keep `docs/HARNESS_FEATURES.md` current as manual import, browser history,
-  ChatGPT export, narrative, ScreenCaptureKit/OCR, and local model slices land.
+- Keep `docs/HARNESS_FEATURES.md` current as automated source, parser fixture,
+  narrative, ScreenCaptureKit/OCR, and local model slices land.
 - Keep deterministic capture fixtures for each real adapter. CI must exercise
   parser, normalization, privacy exclusion, and replay behavior without reading
   live user state.

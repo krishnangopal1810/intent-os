@@ -26,9 +26,9 @@ product verification without dependency installation.
 Live capture work emits raw observations into the generic `ActivityEvent`
 boundary. The current real adapter captures frontmost macOS app/window metadata
 manually and enriches active browser tab metadata when local Automation
-permission allows it. Sessionization is handled above the adapter layer by
-repeatedly sampling metadata, applying privacy policy, and merging adjacent
-equivalent `ActivityEvent` rows.
+permission allows it. Sessionization and background timeline shaping are
+handled above the adapter layer by repeatedly sampling metadata, applying
+privacy policy, and merging adjacent equivalent `ActivityEvent` rows.
 
 ## Current Layers
 
@@ -47,8 +47,9 @@ The current local-first slice keeps these concerns separate:
 - `intentos/capture/privacy.py`: local privacy policy, exclusion, and redaction
   helpers.
 - `intentos/capture/jsonl.py`: captured `ActivityEvent` JSONL persistence.
-- `intentos/capture/live.py`: continuous metadata-only live capture loop that
-  refreshes replay and status artifacts.
+- `intentos/capture/live.py`: continuous metadata-only background timeline loop
+  that writes raw samples, merged timeline events, replay summaries, and status
+  artifacts.
 - `intentos/capture/live_cli.py`: command wiring for the continuous live
   capture loop.
 - `intentos/capture/macos.py`: manual macOS frontmost app/window metadata
@@ -79,7 +80,8 @@ The current local-first slice keeps these concerns separate:
 - `data/youtube/evaluation_set.json`: labeled local evaluation set.
 - `tests/test_activity_classification.py`: multi-app behavior tests.
 - `tests/test_capture_core.py`: fake capture normalization and JSONL tests.
-- `tests/test_capture_live.py`: continuous live-capture artifact refresh tests.
+- `tests/test_capture_live.py`: continuous background timeline artifact refresh
+  tests.
 - `tests/test_capture_browser.py`: browser metadata normalization tests.
 - `tests/test_capture_privacy.py`: exclusion and redaction policy tests.
 - `tests/test_capture_macos.py`: macOS adapter parsing and permission-error
@@ -99,11 +101,11 @@ The current local-first slice keeps these concerns separate:
   generator for checked-in visual evidence.
 - `scripts/product/check-ui-screenshot.sh`: screenshot manifest freshness gate
   used by UI validation and `make verify`.
-- `docs/HARNESS_FEATURES.md`: harness contracts for upcoming import, browser
-  history, ChatGPT export, narrative, fallback-capture, model, and UI
-  automation slices.
-- `docs/product/imports.md`: local import path specification for manual
-  CSV/JSON records, browser history, and ChatGPT exports.
+- `docs/HARNESS_FEATURES.md`: harness contracts for upcoming automated source,
+  parser-fixture, narrative, fallback-capture, model, and UI automation slices.
+- `docs/product/imports.md`: fixture/parser contract for local records,
+  browser history shapes, and ChatGPT exports; manual import is not the
+  preferred user-facing product path.
 - `web/`: static local UI shell that reads generated JSON artifacts.
 
 ## Dependency Rules

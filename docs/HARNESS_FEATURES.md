@@ -49,7 +49,7 @@ explicitly true.
 
 | Feature | Harness support required before completion |
 | --- | --- |
-| Manual real-data import | Document the CSV/JSON schema, add deterministic import fixtures, add an import smoke command, write import JSONL and report artifacts, log accepted/excluded/error row counts, and include import conversion plus replay in `make verify`. |
+| Manual real-data import | User-facing manual import is not the preferred roadmap because it adds friction. If retained for developer fixtures, document the CSV/JSON schema, add deterministic import fixtures, write import JSONL and report artifacts, log accepted/excluded/error row counts, and include conversion plus replay in `make verify`. |
 | Browser history import | Use copied/exported local browser data or deterministic fixture databases, never live profile reads in CI; add fixtures for Chrome/Safari/Arc shapes, privacy exclusions for private/auth/location URLs, replay artifacts, and parser validation tests. |
 | ChatGPT export parser | Use local export fixtures, bound conversation evidence before classification, redact sensitive content, add parser/evaluation fixtures for coding, learning, admin, communication, and entertainment conversations, and verify fallback to `unknown`. |
 | Daily behavior narratives | Generate narratives from report artifacts rather than raw source data, add deterministic narrative fixtures, validate the UI rendering path, and refresh screenshot evidence if the dashboard changes. |
@@ -61,8 +61,8 @@ explicitly true.
 
 Use stable artifact names so the UI and diagnostics can discover new sources:
 
-- Manual imports: `import-events.jsonl`, `import-summary.txt`,
-  `import-summary.json`, and `import-validation.json`.
+- Manual imports, for developer fixtures only: `import-events.jsonl`,
+  `import-summary.txt`, `import-summary.json`, and `import-validation.json`.
 - Browser history imports: `browser-history-events.jsonl`,
   `browser-history-summary.json`, and `browser-history-validation.json`.
 - ChatGPT exports: `chatgpt-events.jsonl`, `chatgpt-summary.json`, and

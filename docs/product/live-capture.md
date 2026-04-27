@@ -2,11 +2,11 @@
 
 This spec defines the intended local capture architecture for IntentOS. The
 current implementation includes fake-sensor capture fixtures, a manual
-frontmost macOS app/window adapter, and best-effort active browser tab
-enrichment. The local app runtime can also start a background metadata sampler
-that refreshes live replay artifacts for the UI. Future work must keep live
-capture metadata-first, permission-aware, visible in runtime status, and
-reversible.
+frontmost macOS app/window adapter, best-effort active browser tab enrichment,
+and an automated background timeline for local UI runs. The background timeline
+keeps raw diagnostic samples separate from the merged user-facing activity
+timeline. Future work must keep live capture metadata-first, permission-aware,
+visible in runtime status, and reversible.
 
 ## Goal
 
@@ -101,11 +101,13 @@ The first live slice shipped as a one-shot manual capture path:
 4. Replay command that classifies captured JSONL with the existing classifier.
 5. Fixture tests for sampler output normalization and redaction.
 
-The session timeline slice is built on top of the one-shot path. It samples
-metadata repeatedly during a bounded manual session, merges adjacent equivalent
-activity, replays the session JSONL, and shows the timeline in the UI. The CI
-path uses `data/capture/fake_session_observations.json` so parser, privacy,
-merge, replay, and UI behavior remain deterministic.
+The automated background timeline and session timeline slices are built on top
+of the one-shot path. Background capture starts with the local UI, writes raw
+diagnostic samples, merges adjacent equivalent activity into a user-facing
+timeline artifact, and refreshes the live summary from that timeline. Bounded
+manual sessions use the same merge behavior for local diagnostics. The CI path
+uses `data/capture/fake_session_observations.json` and fake live providers so
+parser, privacy, merge, replay, and UI behavior remain deterministic.
 
 ScreenCaptureKit and Vision OCR are deferred until metadata-only capture shows
 clear gaps. On-device model inference is a second-pass classifier, not a
@@ -144,9 +146,9 @@ make observe-live
 `.harness/runtime/artifacts/live-capture-summary.json` plus
 `.harness/runtime/logs/live-capture.log`. The deterministic product artifact
 build clears stale live capture artifacts unless preservation is requested; the
-`make dev` harness then starts a background sampler that writes fresh
-`live-capture-*` artifacts. If privacy exclusions drop every row, the live
-summary is still written with an empty report.
+`make dev` harness then starts the automated background timeline and writes
+fresh `live-capture-*` artifacts. If privacy exclusions drop every row, the
+live summary is still written with an empty report.
 
 ## Current Session Timeline
 
@@ -178,22 +180,24 @@ captured during that bounded command window, not historical macOS usage. The UI
 prefers `live-session-capture-summary.json` over continuous live-capture
 artifacts when both exist.
 
-## Current Background Sampler
+## Current Background Timeline
 
 `make dev` starts the local UI and then starts a visible background metadata
 sampler:
 
 ```sh
-python3 -m intentos.capture_cli capture-live --interval-seconds 2 --output .harness/runtime/artifacts/live-capture-events.jsonl --summary-json .harness/runtime/artifacts/live-capture-summary.json --summary-text .harness/runtime/artifacts/live-capture-summary.txt --status-json .harness/runtime/artifacts/live-capture-status.json
+python3 -m intentos.capture_cli capture-live --interval-seconds 2 --output .harness/runtime/artifacts/live-capture-events.jsonl --timeline-output .harness/runtime/artifacts/live-capture-timeline-events.jsonl --summary-json .harness/runtime/artifacts/live-capture-summary.json --summary-text .harness/runtime/artifacts/live-capture-summary.txt --status-json .harness/runtime/artifacts/live-capture-status.json
 ```
 
-The sampler appends privacy-filtered `ActivityEvent` rows, refreshes the replay
-summary after each sample, and writes status under
-`.harness/runtime/artifacts/live-capture-status.json`. Its PID, interval,
-output path, status path, and log path are recorded in
-`.harness/runtime/app.env`, and `make app-stop` stops it. It records
-frontmost app/window metadata and, for supported browsers, active tab
-URL/title/domain when Automation permission allows it.
+The sampler appends privacy-filtered raw `ActivityEvent` rows to
+`live-capture-events.jsonl`, merges adjacent equivalent rows into
+`live-capture-timeline-events.jsonl`, refreshes `live-capture-summary.json` from
+the merged timeline after each sample, and writes status under
+`.harness/runtime/artifacts/live-capture-status.json`. Its PID, interval, raw
+output path, timeline output path, status path, and log path are recorded in
+`.harness/runtime/app.env`, and `make app-stop` stops it. It records frontmost
+app/window metadata and, for supported browsers, active tab URL/title/domain
+when Automation permission allows it.
 
 ## Harness Requirements
 

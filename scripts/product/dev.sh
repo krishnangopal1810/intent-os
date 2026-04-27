@@ -14,6 +14,7 @@ scripts/harness/runtime-log.py product artifact_build_start mode=fixture
 if [ "$preserve_live_artifacts" != "1" ]; then
   rm -f \
     "$artifact_dir/live-capture-events.jsonl" \
+    "$artifact_dir/live-capture-timeline-events.jsonl" \
     "$artifact_dir/live-capture-summary.txt" \
     "$artifact_dir/live-capture-summary.json" \
     "$artifact_dir/live-session-capture-events.jsonl" \

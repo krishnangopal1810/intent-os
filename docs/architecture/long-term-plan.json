@@ -13,7 +13,7 @@
       "id": "phase_0_current_foundation",
       "label": "Current foundation",
       "status": "current",
-      "capability": "Fixture-backed classification, metadata capture, session timeline, and local UI.",
+      "capability": "Fixture-backed classification, metadata capture, automated background timeline, session timeline, and local UI.",
       "harness_gates": [
         "make verify",
         "make validate-ui",
@@ -22,22 +22,22 @@
       ]
     },
     {
-      "id": "phase_1_manual_import",
-      "label": "Historical local data",
-      "status": "next",
-      "capability": "Manual CSV/JSON import into ActivityEvent.",
+      "id": "phase_1_automated_context",
+      "label": "Automated context",
+      "status": "planned",
+      "capability": "Browser extension, calendar or planned-intent context, Accessibility excerpts, and IDE/Git/terminal adapters.",
       "harness_gates": [
-        "import fixtures",
-        "import-validation.json",
-        "structured runtime events",
-        "product verify smoke command"
+        "fake adapters or fixtures",
+        "privacy exclusion tests",
+        "permission diagnostics",
+        "replay artifacts"
       ]
     },
     {
       "id": "phase_2_richer_history",
-      "label": "Richer historical context",
+      "label": "Parser fixtures",
       "status": "planned",
-      "capability": "Browser history import and ChatGPT export parsing.",
+      "capability": "Browser history and ChatGPT parser fixtures for evaluation, not manual user import as the product path.",
       "harness_gates": [
         "copied or exported local fixtures",
         "privacy exclusion tests",
@@ -122,14 +122,14 @@
   "nodes": [
     {
       "id": "manual_import",
-      "label": "Manual CSV/JSON Import",
+      "label": "Manual CSV/JSON Fixture Import",
       "layer": "sources",
-      "phase": "phase_1_manual_import",
-      "status": "next",
+      "phase": "phase_2_richer_history",
+      "status": "future",
       "docs": [
         "docs/product/imports.md",
         "docs/HARNESS_FEATURES.md",
-        "docs/plans/active/2026-04-26-manual-real-data-import.md"
+        "docs/plans/completed/2026-04-26-manual-real-data-import-superseded.md"
       ],
       "artifacts": [
         "import-events.jsonl",
@@ -142,12 +142,13 @@
         "validation error fixtures",
         "privacy exclusion fixtures",
         "structured runtime events",
-        "make verify coverage"
+        "make verify coverage",
+        "not a preferred user-facing path"
       ]
     },
     {
       "id": "browser_history_import",
-      "label": "Browser History Import",
+      "label": "Browser History Fixtures",
       "layer": "sources",
       "phase": "phase_2_richer_history",
       "status": "planned",
@@ -169,7 +170,7 @@
     },
     {
       "id": "chatgpt_export_parser",
-      "label": "ChatGPT Export Parser",
+      "label": "ChatGPT Parser Fixtures",
       "layer": "sources",
       "phase": "phase_2_richer_history",
       "status": "planned",
@@ -191,7 +192,7 @@
     },
     {
       "id": "macos_metadata_capture",
-      "label": "macOS Metadata Capture",
+      "label": "macOS Background Timeline Capture",
       "layer": "sources",
       "phase": "phase_0_current_foundation",
       "status": "current",
@@ -202,6 +203,7 @@
       ],
       "artifacts": [
         "live-capture-events.jsonl",
+        "live-capture-timeline-events.jsonl",
         "live-capture-summary.json",
         "live-capture-status.json",
         "live-session-capture-events.jsonl",
@@ -211,6 +213,7 @@
         "fake macOS observation fixtures",
         "frontmost app/window snapshot fixture",
         "browser active-tab snapshot fixture",
+        "merged background timeline artifact",
         "manual observe-live outside CI",
         "manual observe-session outside CI"
       ]
@@ -796,7 +799,7 @@
     {
       "from": "manual_import",
       "to": "privacy_policy",
-      "contract": "Imported rows are excluded or redacted before JSONL is written."
+      "contract": "Fixture import rows are excluded or redacted before JSONL is written."
     },
     {
       "from": "browser_history_import",
@@ -846,7 +849,7 @@
     {
       "from": "sessionization",
       "to": "local_event_artifacts",
-      "contract": "Merged and imported timelines are persisted as replayable local JSONL."
+      "contract": "Merged timelines and parser fixtures are persisted as replayable local JSONL."
     },
     {
       "from": "local_event_artifacts",
@@ -941,12 +944,12 @@
     {
       "from": "harness_fixtures",
       "to": "manual_import",
-      "contract": "Manual import cannot ship without deterministic import fixtures."
+      "contract": "Manual import remains fixture-oriented and cannot ship without deterministic import fixtures."
     },
     {
       "from": "harness_fixtures",
       "to": "browser_history_import",
-      "contract": "Browser history import cannot use live profile reads in CI."
+      "contract": "Browser history fixtures cannot use live profile reads in CI."
     },
     {
       "from": "harness_fixtures",
