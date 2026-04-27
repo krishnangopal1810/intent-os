@@ -51,6 +51,8 @@ metadata path is reliable.
   local model and rules-first inference strategy.
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md): current layers and dependency
   rules.
+- [docs/architecture/long-term-plan.md](./docs/architecture/long-term-plan.md):
+  long-term architecture diagram and harness-readable roadmap graph.
 - [docs/HARNESS_AUDIT.md](./docs/HARNESS_AUDIT.md): status against the OpenAI
   Harness Engineering model.
 - [docs/HARNESS_FEATURES.md](./docs/HARNESS_FEATURES.md): harness contracts

@@ -28,6 +28,8 @@ required_files=(
   "docs/product/on-device-inference.md"
   "docs/product/spec-template.md"
   "docs/ARCHITECTURE.md"
+  "docs/architecture/long-term-plan.md"
+  "docs/architecture/long-term-plan.json"
   "docs/DESIGN.md"
   "docs/SECURITY.md"
   "docs/RELIABILITY.md"
@@ -46,9 +48,11 @@ required_files=(
   "docs/decisions/README.md"
   "docs/references/README.md"
   "docs/references/mac-local-capture-and-inference.md"
+  "scripts/harness/check-architecture-plan.py"
 )
 
 required_dirs=(
+  "docs/architecture"
   "docs/plans/active"
   "docs/plans/completed"
   "docs/plans/parallel"
@@ -100,6 +104,7 @@ check_markdown_links() {
 }
 
 check_markdown_links
+python3 scripts/harness/check-architecture-plan.py
 
 plan_count=0
 while IFS= read -r -d '' plan; do

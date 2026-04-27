@@ -136,6 +136,23 @@ The YouTube-specific path remains available as a domain fixture and regression
 suite, but new product surfaces should prefer the generic `ActivityEvent`
 pipeline.
 
+## Long-Term Architecture
+
+The long-term architecture diagram lives in
+[architecture/long-term-plan.md](architecture/long-term-plan.md). It maps the
+planned end state across local capture/import sources, privacy controls,
+`ActivityEvent` normalization, rules-first classification, optional local model
+second-pass inference, behavior narratives, UI/CLI surfaces, diagnostics, and
+future action controls.
+
+The machine-readable source is
+[architecture/long-term-plan.json](architecture/long-term-plan.json). The
+harness validates that graph through
+`scripts/harness/check-architecture-plan.py`, which is called by
+`make harness-check` and therefore by `make verify`. Future feature plans
+should update the graph when they add, remove, or change a roadmap node,
+artifact contract, or verification gate.
+
 ## Current Decisions
 
 - The MVP uses deterministic, inspectable classification rules instead of a

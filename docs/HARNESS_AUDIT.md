@@ -15,8 +15,9 @@ deterministic UI validation, checked-in screenshot evidence, structured runtime
 JSONL events, `make diagnose`, and a manual macOS metadata-only frontmost
 app/window adapter with best-effort browser tab enrichment plus bounded session
 timeline capture. It also defines next-feature harness contracts for imports,
-daily narratives, fallback capture, local models, and richer UI automation. It
-does not yet include rich DOM automation, rich
+daily narratives, fallback capture, local models, and richer UI automation, and
+validates a harness-readable long-term architecture graph under
+`docs/architecture/`. It does not yet include rich DOM automation, rich
 metrics/traces, always-on session capture, or autonomous agent-to-agent review.
 
 ## Self-Sufficiency Verdict
@@ -42,7 +43,7 @@ justified, and stricter architecture lint rules as they are implemented.
 | Short `AGENTS.md` as map | Green | `AGENTS.md` is short and points to deeper docs. |
 | Repository knowledge as system of record | Green | Product, architecture, quality, reliability, security, decisions, references, and plans live in `docs/`. |
 | First-class execution plans | Green | Active, completed, and parallel plan directories exist; completed plans document the YouTube MVP, multi-app ActivityEvent foundation, live capture, UI shell, and session timeline. |
-| Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, and Markdown links; `harness-lint` checks active-plan hygiene, quality scorecard structure, and next-feature harness contracts. |
+| Mechanical doc checks | Green | `harness-check` validates required files, active plan headings, Markdown links, and the long-term architecture graph; `harness-lint` checks active-plan hygiene, quality scorecard structure, and next-feature harness contracts. |
 | App legibility | Green | `make dev` generates fixture-backed MVP and session timeline artifacts, serves the local UI shell, starts the visible background metadata sampler, and records the URL, data mode, capture mode, capture PID, status path, and log path in `.harness/runtime/app.env`; `make dev-live` is the explicit capture-then-serve path for fresh bounded macOS session data; `make validate-ui` checks the shell against local artifacts with optional headless browser screenshot and DOM-probe diagnostics; checked-in screenshot evidence is guarded by a source manifest. |
 | Logs and observability legibility | Yellow | `make observe` exposes structured runtime events and app logs; `make diagnose` summarizes app state, validation evidence, and logs. Rich metrics and traces are deferred until runtime complexity justifies them. |
 | Architecture and taste enforcement | Yellow | `harness-lint` enforces the current Python layer map, import boundaries, file-size limit, generated-file hygiene, and evaluation fixture coverage. |
