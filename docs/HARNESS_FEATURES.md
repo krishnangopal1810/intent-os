@@ -19,7 +19,8 @@ Every next feature must preserve these baseline rules:
 - Apply privacy exclusions and redaction before user-derived records are
   persisted into runtime artifacts.
 - Update `docs/APP_RUNTIME.md`, `docs/ARCHITECTURE.md`,
-  `docs/RELIABILITY.md`, `docs/QUALITY.md`, and the active execution plan when
+  `docs/RELIABILITY.md`, `docs/QUALITY.md`, the long-term architecture graph in
+  `docs/architecture/long-term-plan.json`, and the active execution plan when
   commands, artifacts, permissions, or verification behavior change.
 - Refresh checked-in UI screenshot evidence when rendered UI behavior changes.
 - Add or update the active plan's `## Harness Impact` section before

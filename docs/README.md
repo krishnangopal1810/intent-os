@@ -47,6 +47,10 @@ richer DOM automation are not implemented yet.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): system shape, layers, dependency rules,
   and known tradeoffs.
+- [architecture/long-term-plan.md](architecture/long-term-plan.md): long-term
+  architecture diagram backed by a harness-readable graph.
+- [architecture/long-term-plan.json](architecture/long-term-plan.json):
+  machine-readable roadmap graph validated by `make harness-check`.
 - [DESIGN.md](DESIGN.md): UX principles, visual rules, and interaction quality
   bar for the local UI shell.
 - [SECURITY.md](SECURITY.md): security baseline and data handling rules.
@@ -88,10 +92,12 @@ make verify
 ```
 
 `harness-check` validates the harness structure and links. `harness-lint`
-enforces the current layer map, generated-file hygiene, active-plan hygiene,
-quality scorecard shape, and evaluation fixture coverage. `cleanup-check` also
-runs the repository audit for stale plans, stale docs, fixture drift, and
-quality scorecard gaps. `verify` runs the full product and harness gate.
+also validates the long-term architecture graph under `docs/architecture/`.
+`harness-lint` enforces the current layer map, generated-file hygiene,
+active-plan hygiene, quality scorecard shape, and evaluation fixture coverage.
+`cleanup-check` also runs the repository audit for stale plans, stale docs,
+fixture drift, and quality scorecard gaps. `verify` runs the full product and
+harness gate.
 
 ## Runtime Inspection
 

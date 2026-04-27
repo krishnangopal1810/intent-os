@@ -1,0 +1,1036 @@
+{
+  "schema_version": 1,
+  "name": "IntentOS Long-Term Architecture Plan",
+  "purpose": "Machine-readable roadmap graph for docs, harness checks, and future execution plans.",
+  "status_terms": {
+    "current": "Implemented and covered by make verify.",
+    "next": "Active or recommended next implementation slice.",
+    "planned": "Specified with harness contracts, not yet implemented.",
+    "future": "Long-term product direction that needs a scoped plan before code."
+  },
+  "phases": [
+    {
+      "id": "phase_0_current_foundation",
+      "label": "Current foundation",
+      "status": "current",
+      "capability": "Fixture-backed classification, metadata capture, session timeline, and local UI.",
+      "harness_gates": [
+        "make verify",
+        "make validate-ui",
+        "make observe-live",
+        "make observe-session"
+      ]
+    },
+    {
+      "id": "phase_1_manual_import",
+      "label": "Historical local data",
+      "status": "next",
+      "capability": "Manual CSV/JSON import into ActivityEvent.",
+      "harness_gates": [
+        "import fixtures",
+        "import-validation.json",
+        "structured runtime events",
+        "product verify smoke command"
+      ]
+    },
+    {
+      "id": "phase_2_richer_history",
+      "label": "Richer historical context",
+      "status": "planned",
+      "capability": "Browser history import and ChatGPT export parsing.",
+      "harness_gates": [
+        "copied or exported local fixtures",
+        "privacy exclusion tests",
+        "parser validation artifacts",
+        "replay artifacts"
+      ]
+    },
+    {
+      "id": "phase_3_behavior_intelligence",
+      "label": "Behavior intelligence",
+      "status": "planned",
+      "capability": "Daily narratives, intent mismatch, recurring patterns, and anomalies.",
+      "harness_gates": [
+        "deterministic narrative fixtures",
+        "daily-narrative-summary.json",
+        "UI validation evidence"
+      ]
+    },
+    {
+      "id": "phase_4_fallbacks_and_models",
+      "label": "Harder live gaps",
+      "status": "planned",
+      "capability": "ScreenCaptureKit fallback, Vision OCR fallback, and local model second pass.",
+      "harness_gates": [
+        "fallback frame fixtures",
+        "OCR fixtures",
+        "fake or tiny model path in CI",
+        "permission diagnostics",
+        "fallback reasons"
+      ]
+    },
+    {
+      "id": "phase_5_control_plane",
+      "label": "Control plane",
+      "status": "future",
+      "capability": "Blocking, scheduling, workflow automation, and explicit user-approved actions.",
+      "harness_gates": [
+        "dry-run fixtures",
+        "action audit logs",
+        "rollback behavior",
+        "interactive UI validation"
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": "sources",
+      "label": "Capture and Import Sources",
+      "contract": "Read local user data through the narrowest available surface and emit bounded observations or records."
+    },
+    {
+      "id": "policy",
+      "label": "Local Policy and Evidence Controls",
+      "contract": "Apply permissions, pause state, privacy exclusions, redaction, retention, and evidence provenance before persisted artifacts exist."
+    },
+    {
+      "id": "event_pipeline",
+      "label": "Event Boundary and Local Storage",
+      "contract": "Normalize every source into ActivityEvent, merge adjacent equivalent activity above adapters, and persist replayable local artifacts."
+    },
+    {
+      "id": "inference",
+      "label": "Classification and Inference",
+      "contract": "Keep deterministic rules as the inspectable baseline; use local models only as optional second-pass classifiers."
+    },
+    {
+      "id": "intelligence",
+      "label": "Behavior Intelligence",
+      "contract": "Build narratives, mismatch detection, recurring patterns, and anomalies from classified report artifacts."
+    },
+    {
+      "id": "surfaces",
+      "label": "Product Surfaces",
+      "contract": "Expose behavior, evidence, confidence, and operational state through CLI, UI, diagnostics, and future action controls."
+    },
+    {
+      "id": "harness",
+      "label": "Harness and Verification",
+      "contract": "Keep every shipped slice runnable, inspectable, fixture-backed, documented, and covered by deterministic checks."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "manual_import",
+      "label": "Manual CSV/JSON Import",
+      "layer": "sources",
+      "phase": "phase_1_manual_import",
+      "status": "next",
+      "docs": [
+        "docs/product/imports.md",
+        "docs/HARNESS_FEATURES.md",
+        "docs/plans/active/2026-04-26-manual-real-data-import.md"
+      ],
+      "artifacts": [
+        "import-events.jsonl",
+        "import-summary.txt",
+        "import-summary.json",
+        "import-validation.json"
+      ],
+      "harness_contracts": [
+        "deterministic CSV and JSON fixtures",
+        "validation error fixtures",
+        "privacy exclusion fixtures",
+        "structured runtime events",
+        "make verify coverage"
+      ]
+    },
+    {
+      "id": "browser_history_import",
+      "label": "Browser History Import",
+      "layer": "sources",
+      "phase": "phase_2_richer_history",
+      "status": "planned",
+      "docs": [
+        "docs/product/imports.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        "browser-history-events.jsonl",
+        "browser-history-summary.json",
+        "browser-history-validation.json"
+      ],
+      "harness_contracts": [
+        "copied or exported local history fixtures",
+        "Chrome, Safari, and Arc-shaped examples",
+        "private/auth/location URL exclusions",
+        "permission-free CI"
+      ]
+    },
+    {
+      "id": "chatgpt_export_parser",
+      "label": "ChatGPT Export Parser",
+      "layer": "sources",
+      "phase": "phase_2_richer_history",
+      "status": "planned",
+      "docs": [
+        "docs/product/imports.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        "chatgpt-events.jsonl",
+        "chatgpt-summary.json",
+        "chatgpt-validation.json"
+      ],
+      "harness_contracts": [
+        "local export fixtures",
+        "bounded redacted excerpts",
+        "coding, learning, admin, communication, entertainment, and unknown examples",
+        "parser validation tests"
+      ]
+    },
+    {
+      "id": "macos_metadata_capture",
+      "label": "macOS Metadata Capture",
+      "layer": "sources",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/product/live-capture.md",
+        "docs/APP_RUNTIME.md",
+        "docs/SECURITY.md"
+      ],
+      "artifacts": [
+        "live-capture-events.jsonl",
+        "live-capture-summary.json",
+        "live-capture-status.json",
+        "live-session-capture-events.jsonl",
+        "live-session-capture-summary.json"
+      ],
+      "harness_contracts": [
+        "fake macOS observation fixtures",
+        "frontmost app/window snapshot fixture",
+        "browser active-tab snapshot fixture",
+        "manual observe-live outside CI",
+        "manual observe-session outside CI"
+      ]
+    },
+    {
+      "id": "screencapturekit_fallback",
+      "label": "ScreenCaptureKit Fallback",
+      "layer": "sources",
+      "phase": "phase_4_fallbacks_and_models",
+      "status": "planned",
+      "docs": [
+        "docs/product/live-capture.md",
+        "docs/HARNESS_FEATURES.md",
+        "docs/SECURITY.md"
+      ],
+      "artifacts": [
+        "screencapturekit-events.jsonl",
+        "screencapturekit-summary.json",
+        "screencapturekit-permission-status.json"
+      ],
+      "harness_contracts": [
+        "raw screenshots disabled by default",
+        "manual Screen Recording diagnostic only",
+        "deterministic frame fixtures in CI",
+        "no retained raw frames outside explicit debug mode"
+      ]
+    },
+    {
+      "id": "vision_ocr_fallback",
+      "label": "Vision OCR Fallback",
+      "layer": "sources",
+      "phase": "phase_4_fallbacks_and_models",
+      "status": "planned",
+      "docs": [
+        "docs/product/live-capture.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        "ocr-events.jsonl",
+        "ocr-summary.json"
+      ],
+      "harness_contracts": [
+        "OCR text fixtures",
+        "bounded text excerpts",
+        "redaction before persistence",
+        "fallback reason logging"
+      ]
+    },
+    {
+      "id": "user_goals",
+      "label": "User Goals and Plans",
+      "layer": "sources",
+      "phase": "phase_5_control_plane",
+      "status": "future",
+      "docs": [
+        "docs/product/BRIEF.md",
+        "docs/NEXT_STEPS.md"
+      ],
+      "artifacts": [],
+      "harness_contracts": [
+        "scoped plan before implementation",
+        "local-only goal storage",
+        "explicit user approval for action loops"
+      ]
+    },
+    {
+      "id": "permissions_controls",
+      "label": "Permissions, Pause, and Retention Controls",
+      "layer": "policy",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/product/live-capture.md",
+        "docs/APP_RUNTIME.md",
+        "docs/SECURITY.md"
+      ],
+      "artifacts": [
+        "live-capture-status.json",
+        "app.env"
+      ],
+      "harness_contracts": [
+        "permission state visible in runtime status",
+        "capture can stop through make app-stop",
+        "manual permission-dependent commands stay outside CI"
+      ]
+    },
+    {
+      "id": "privacy_policy",
+      "label": "Privacy Policy",
+      "layer": "policy",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/SECURITY.md",
+        "docs/product/live-capture.md",
+        "docs/product/imports.md"
+      ],
+      "artifacts": [
+        "data/capture/privacy_policy.json"
+      ],
+      "harness_contracts": [
+        "apply exclusions before persistence",
+        "redact bounded titles and URLs",
+        "test sensitive apps, domains, URLs, and titles"
+      ]
+    },
+    {
+      "id": "evidence_provenance",
+      "label": "Evidence Provenance",
+      "layer": "policy",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/product/live-capture.md",
+        "docs/product/on-device-inference.md"
+      ],
+      "artifacts": [
+        "structured runtime events",
+        "summary JSON evidence fields"
+      ],
+      "harness_contracts": [
+        "record source adapter",
+        "record mode",
+        "record confidence and fallback reasons as classifiers grow"
+      ]
+    },
+    {
+      "id": "raw_observations",
+      "label": "Raw Observations",
+      "layer": "event_pipeline",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/product/live-capture.md"
+      ],
+      "artifacts": [
+        "deterministic observation fixtures"
+      ],
+      "harness_contracts": [
+        "adapters emit observations but do not classify behavior",
+        "fixtures cover parser output",
+        "raw sensitive payloads are not retained"
+      ]
+    },
+    {
+      "id": "activity_event_boundary",
+      "label": "ActivityEvent Boundary",
+      "layer": "event_pipeline",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/product/BRIEF.md",
+        "docs/product/imports.md",
+        "docs/product/live-capture.md"
+      ],
+      "artifacts": [
+        "ActivityEvent JSONL"
+      ],
+      "harness_contracts": [
+        "boundary validation tests",
+        "no second event model for new sources",
+        "every source normalizes before replay"
+      ]
+    },
+    {
+      "id": "sessionization",
+      "label": "Sessionization",
+      "layer": "event_pipeline",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/product/live-capture.md"
+      ],
+      "artifacts": [
+        "session-capture-events.jsonl",
+        "live-session-capture-events.jsonl"
+      ],
+      "harness_contracts": [
+        "merge adjacent equivalent activity above adapters",
+        "fixture-backed session replay tests",
+        "UI timeline validation"
+      ]
+    },
+    {
+      "id": "local_event_artifacts",
+      "label": "Local Event Artifacts",
+      "layer": "event_pipeline",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/APP_RUNTIME.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        ".harness/runtime/artifacts/*.json",
+        ".harness/runtime/artifacts/*.jsonl",
+        ".harness/runtime/logs/events.jsonl"
+      ],
+      "harness_contracts": [
+        "stable artifact names",
+        "structured runtime events",
+        "diagnose output exposes recent evidence"
+      ]
+    },
+    {
+      "id": "deterministic_classifier",
+      "label": "Deterministic Classifier",
+      "layer": "inference",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/product/TAXONOMY.md",
+        "docs/product/on-device-inference.md"
+      ],
+      "artifacts": [
+        "activity-summary.json",
+        "capture-summary.json",
+        "session-capture-summary.json"
+      ],
+      "harness_contracts": [
+        "labeled evaluation sets",
+        "thresholded evaluation command",
+        "inspectable labels, confidence, and reasons"
+      ]
+    },
+    {
+      "id": "local_model_second_pass",
+      "label": "Local Model Second-Pass Classifier",
+      "layer": "inference",
+      "phase": "phase_4_fallbacks_and_models",
+      "status": "planned",
+      "docs": [
+        "docs/product/on-device-inference.md",
+        "docs/HARNESS_FEATURES.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "artifacts": [
+        "model-runtime identifier in report artifacts",
+        "model fallback reason"
+      ],
+      "harness_contracts": [
+        "rules remain fallback",
+        "fake or tiny model path in CI",
+        "no model download in make verify",
+        "unknown on unavailable or low confidence output"
+      ]
+    },
+    {
+      "id": "unknown_fail_closed",
+      "label": "Unknown and Fail-Closed Path",
+      "layer": "inference",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/product/TAXONOMY.md",
+        "docs/product/on-device-inference.md"
+      ],
+      "artifacts": [
+        "unknown-labeled evaluation examples"
+      ],
+      "harness_contracts": [
+        "ambiguous examples preserve unknown",
+        "model and OCR failures do not force misleading labels"
+      ]
+    },
+    {
+      "id": "evaluation_sets",
+      "label": "Labeled Evaluation Sets",
+      "layer": "inference",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/QUALITY.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        "data/activity/evaluation_set.json",
+        "data/youtube/evaluation_set.json"
+      ],
+      "harness_contracts": [
+        "minimum label coverage",
+        "accuracy thresholds",
+        "fixture expansion for new source types"
+      ]
+    },
+    {
+      "id": "aggregate_reports",
+      "label": "Aggregate Behavior Reports",
+      "layer": "intelligence",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/APP_RUNTIME.md"
+      ],
+      "artifacts": [
+        "activity-summary.json",
+        "capture-summary.json",
+        "session-capture-summary.json",
+        "live-session-capture-summary.json"
+      ],
+      "harness_contracts": [
+        "reports consume classifier output",
+        "reports do not depend on raw adapters",
+        "CLI and UI load stable JSON"
+      ]
+    },
+    {
+      "id": "daily_narratives",
+      "label": "Daily Behavior Narratives",
+      "layer": "intelligence",
+      "phase": "phase_3_behavior_intelligence",
+      "status": "planned",
+      "docs": [
+        "docs/HARNESS_FEATURES.md",
+        "docs/NEXT_STEPS.md",
+        "docs/product/BRIEF.md"
+      ],
+      "artifacts": [
+        "daily-narrative-summary.json"
+      ],
+      "harness_contracts": [
+        "generate from report artifacts",
+        "deterministic narrative fixtures",
+        "UI validation evidence"
+      ]
+    },
+    {
+      "id": "intent_mismatch_detection",
+      "label": "Intent vs Outcome Mismatch",
+      "layer": "intelligence",
+      "phase": "phase_3_behavior_intelligence",
+      "status": "planned",
+      "docs": [
+        "docs/product/BRIEF.md",
+        "docs/NEXT_STEPS.md"
+      ],
+      "artifacts": [
+        "future mismatch summary"
+      ],
+      "harness_contracts": [
+        "requires explicit user intent or plans",
+        "deterministic examples before product claims",
+        "evidence fields visible in UI"
+      ]
+    },
+    {
+      "id": "recurring_patterns",
+      "label": "Recurring Patterns and Anomalies",
+      "layer": "intelligence",
+      "phase": "phase_3_behavior_intelligence",
+      "status": "planned",
+      "docs": [
+        "docs/product/BRIEF.md",
+        "docs/NEXT_STEPS.md"
+      ],
+      "artifacts": [
+        "future pattern summary"
+      ],
+      "harness_contracts": [
+        "use aggregate history",
+        "fixture-backed examples",
+        "avoid raw sensitive payload storage"
+      ]
+    },
+    {
+      "id": "cli_reports",
+      "label": "CLI Reports",
+      "layer": "surfaces",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "README.md"
+      ],
+      "artifacts": [
+        "text summaries"
+      ],
+      "harness_contracts": [
+        "CLI smoke commands in product verify",
+        "stable JSON paired with user-readable text"
+      ]
+    },
+    {
+      "id": "local_ui",
+      "label": "Local UI Shell",
+      "layer": "surfaces",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/APP_RUNTIME.md",
+        "docs/DESIGN.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "artifacts": [
+        "ui-validation.json",
+        "ui-render.png",
+        "docs/assets/screenshots/intent-os-ui.png"
+      ],
+      "harness_contracts": [
+        "validate-ui loads product artifacts",
+        "headless render check when browser exists",
+        "screenshot freshness gate"
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "label": "Runtime Diagnostics",
+      "layer": "surfaces",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/APP_RUNTIME.md",
+        "docs/RELIABILITY.md",
+        "docs/HARNESS_AUDIT.md"
+      ],
+      "artifacts": [
+        "app.env",
+        "events.jsonl",
+        "app.log",
+        "diagnose output"
+      ],
+      "harness_contracts": [
+        "make app-status",
+        "make observe",
+        "make diagnose",
+        "structured event fields"
+      ]
+    },
+    {
+      "id": "execution_actions",
+      "label": "Action Controls",
+      "layer": "surfaces",
+      "phase": "phase_5_control_plane",
+      "status": "future",
+      "docs": [
+        "docs/product/BRIEF.md",
+        "docs/NEXT_STEPS.md",
+        "docs/SECURITY.md"
+      ],
+      "artifacts": [
+        "future action audit log"
+      ],
+      "harness_contracts": [
+        "explicit user approval",
+        "dry-run fixtures",
+        "rollback behavior",
+        "no hidden automation"
+      ]
+    },
+    {
+      "id": "harness_fixtures",
+      "label": "Deterministic Fixtures and Fakes",
+      "layer": "harness",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/HARNESS_FEATURES.md",
+        "docs/QUALITY.md",
+        "docs/APP_RUNTIME.md"
+      ],
+      "artifacts": [
+        "data/activity/*.json",
+        "data/capture/*.json",
+        "data/youtube/*.json"
+      ],
+      "harness_contracts": [
+        "permission-free CI",
+        "fixtures for every parser, adapter, model, and fallback",
+        "fixture drift remains visible"
+      ]
+    },
+    {
+      "id": "runtime_artifacts_and_events",
+      "label": "Runtime Artifacts and Structured Events",
+      "layer": "harness",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/APP_RUNTIME.md",
+        "docs/RELIABILITY.md",
+        "docs/HARNESS_FEATURES.md"
+      ],
+      "artifacts": [
+        ".harness/runtime/artifacts/",
+        ".harness/runtime/logs/events.jsonl"
+      ],
+      "harness_contracts": [
+        "stable fields include component, event, mode, artifact_path, duration_ms, event_count, status",
+        "runtime artifacts ignored by git",
+        "diagnostics expose recent evidence"
+      ]
+    },
+    {
+      "id": "make_verify",
+      "label": "make verify",
+      "layer": "harness",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "README.md",
+        "docs/README.md",
+        "docs/APP_RUNTIME.md"
+      ],
+      "artifacts": [
+        "verification output"
+      ],
+      "harness_contracts": [
+        "runs harness-check",
+        "runs harness-lint",
+        "runs audit",
+        "runs product verification",
+        "deterministic and network-free"
+      ]
+    },
+    {
+      "id": "ui_validation",
+      "label": "UI Validation and Screenshot Evidence",
+      "layer": "harness",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/APP_RUNTIME.md",
+        "docs/DESIGN.md"
+      ],
+      "artifacts": [
+        "ui-validation.txt",
+        "ui-validation.json",
+        "ui-snapshot.html",
+        "ui-render-validation.txt",
+        "docs/assets/screenshots/intent-os-ui.json"
+      ],
+      "harness_contracts": [
+        "blank render check",
+        "horizontal overflow check when browser exists",
+        "clipped text check when browser exists",
+        "screenshot source manifest"
+      ]
+    },
+    {
+      "id": "architecture_graph_check",
+      "label": "Architecture Graph Check",
+      "layer": "harness",
+      "phase": "phase_0_current_foundation",
+      "status": "current",
+      "docs": [
+        "docs/architecture/long-term-plan.md",
+        "docs/architecture/long-term-plan.json",
+        "scripts/harness/check-architecture-plan.py"
+      ],
+      "artifacts": [
+        "long-term-plan.json"
+      ],
+      "harness_contracts": [
+        "validate graph schema",
+        "validate required roadmap nodes",
+        "validate edge endpoints",
+        "validate linked docs exist"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "permissions_controls",
+      "to": "macos_metadata_capture",
+      "contract": "Live metadata capture reports permission state and remains stoppable."
+    },
+    {
+      "from": "permissions_controls",
+      "to": "screencapturekit_fallback",
+      "contract": "Screen Recording is manual diagnostic-only unless a future plan says otherwise."
+    },
+    {
+      "from": "permissions_controls",
+      "to": "privacy_policy",
+      "contract": "Pause, exclusions, and retention policy apply before persistence."
+    },
+    {
+      "from": "manual_import",
+      "to": "privacy_policy",
+      "contract": "Imported rows are excluded or redacted before JSONL is written."
+    },
+    {
+      "from": "browser_history_import",
+      "to": "privacy_policy",
+      "contract": "Private, auth, location, and sensitive URLs are excluded or reduced."
+    },
+    {
+      "from": "chatgpt_export_parser",
+      "to": "privacy_policy",
+      "contract": "Conversation evidence is bounded and redacted before persistence."
+    },
+    {
+      "from": "macos_metadata_capture",
+      "to": "raw_observations",
+      "contract": "Adapters emit app, window, browser URL, title, and domain observations."
+    },
+    {
+      "from": "screencapturekit_fallback",
+      "to": "raw_observations",
+      "contract": "Fallback frames are converted into bounded observations without retaining raw frames by default."
+    },
+    {
+      "from": "vision_ocr_fallback",
+      "to": "raw_observations",
+      "contract": "OCR emits bounded text excerpts with fallback reason metadata."
+    },
+    {
+      "from": "raw_observations",
+      "to": "privacy_policy",
+      "contract": "Raw observations pass through privacy policy before ActivityEvent persistence."
+    },
+    {
+      "from": "privacy_policy",
+      "to": "activity_event_boundary",
+      "contract": "Only privacy-filtered records enter the shared event boundary."
+    },
+    {
+      "from": "evidence_provenance",
+      "to": "activity_event_boundary",
+      "contract": "Events carry enough source context for confidence and reason reporting."
+    },
+    {
+      "from": "activity_event_boundary",
+      "to": "sessionization",
+      "contract": "Session merging operates on normalized ActivityEvent rows."
+    },
+    {
+      "from": "sessionization",
+      "to": "local_event_artifacts",
+      "contract": "Merged and imported timelines are persisted as replayable local JSONL."
+    },
+    {
+      "from": "local_event_artifacts",
+      "to": "deterministic_classifier",
+      "contract": "Replay feeds stable ActivityEvent JSONL into rules-first classification."
+    },
+    {
+      "from": "deterministic_classifier",
+      "to": "local_model_second_pass",
+      "contract": "Optional local models only refine or explain low-confidence classified evidence."
+    },
+    {
+      "from": "deterministic_classifier",
+      "to": "unknown_fail_closed",
+      "contract": "Sparse or ambiguous rules output preserves unknown."
+    },
+    {
+      "from": "local_model_second_pass",
+      "to": "unknown_fail_closed",
+      "contract": "Unavailable or low-confidence model output falls back to unknown or rules output."
+    },
+    {
+      "from": "deterministic_classifier",
+      "to": "aggregate_reports",
+      "contract": "Reports consume classifier output, not raw adapters."
+    },
+    {
+      "from": "local_model_second_pass",
+      "to": "aggregate_reports",
+      "contract": "Reports include model/runtime identifiers and fallback reasons when models run."
+    },
+    {
+      "from": "evaluation_sets",
+      "to": "deterministic_classifier",
+      "contract": "Rule changes must pass labeled evaluation thresholds."
+    },
+    {
+      "from": "evaluation_sets",
+      "to": "local_model_second_pass",
+      "contract": "Model-backed changes add labeled examples and deterministic CI fakes."
+    },
+    {
+      "from": "aggregate_reports",
+      "to": "daily_narratives",
+      "contract": "Narratives are generated from report artifacts."
+    },
+    {
+      "from": "aggregate_reports",
+      "to": "cli_reports",
+      "contract": "CLI output remains a smoke-testable product surface."
+    },
+    {
+      "from": "aggregate_reports",
+      "to": "local_ui",
+      "contract": "The UI reads stable JSON report artifacts."
+    },
+    {
+      "from": "daily_narratives",
+      "to": "local_ui",
+      "contract": "Visible narrative changes require UI validation evidence."
+    },
+    {
+      "from": "daily_narratives",
+      "to": "intent_mismatch_detection",
+      "contract": "Narratives can expose differences between planned and actual behavior."
+    },
+    {
+      "from": "user_goals",
+      "to": "intent_mismatch_detection",
+      "contract": "Mismatch detection requires explicit user intent or plan inputs."
+    },
+    {
+      "from": "intent_mismatch_detection",
+      "to": "recurring_patterns",
+      "contract": "Repeated mismatch examples can become pattern or anomaly signals."
+    },
+    {
+      "from": "intent_mismatch_detection",
+      "to": "execution_actions",
+      "contract": "Action suggestions or automation must be explicitly user-approved."
+    },
+    {
+      "from": "recurring_patterns",
+      "to": "local_ui",
+      "contract": "Pattern outputs must show evidence and confidence."
+    },
+    {
+      "from": "local_event_artifacts",
+      "to": "diagnostics",
+      "contract": "Diagnostics expose artifact paths and recent runtime events."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "manual_import",
+      "contract": "Manual import cannot ship without deterministic import fixtures."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "browser_history_import",
+      "contract": "Browser history import cannot use live profile reads in CI."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "chatgpt_export_parser",
+      "contract": "ChatGPT export parsing uses local fixture exports."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "macos_metadata_capture",
+      "contract": "Real adapters have parser fixtures for CI."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "screencapturekit_fallback",
+      "contract": "Screen capture fallback uses deterministic frame fixtures in CI."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "vision_ocr_fallback",
+      "contract": "OCR fallback uses deterministic OCR fixtures in CI."
+    },
+    {
+      "from": "harness_fixtures",
+      "to": "local_model_second_pass",
+      "contract": "Model CI uses a fake or tiny checked-in model path."
+    },
+    {
+      "from": "runtime_artifacts_and_events",
+      "to": "local_event_artifacts",
+      "contract": "New sources write stable artifacts under .harness/runtime/artifacts/."
+    },
+    {
+      "from": "runtime_artifacts_and_events",
+      "to": "diagnostics",
+      "contract": "Structured events make runtime state inspectable."
+    },
+    {
+      "from": "make_verify",
+      "to": "evaluation_sets",
+      "contract": "Verification runs thresholded evaluation."
+    },
+    {
+      "from": "make_verify",
+      "to": "ui_validation",
+      "contract": "Verification covers UI validation and screenshot freshness."
+    },
+    {
+      "from": "make_verify",
+      "to": "architecture_graph_check",
+      "contract": "Verification keeps the long-term architecture graph usable by the harness."
+    },
+    {
+      "from": "ui_validation",
+      "to": "local_ui",
+      "contract": "User-visible UI changes need validation and screenshot evidence."
+    }
+  ],
+  "artifact_contracts": [
+    {
+      "pattern": ".harness/runtime/artifacts/*.json",
+      "owner": "runtime_artifacts_and_events",
+      "rule": "Stable JSON summaries are the preferred UI and diagnostics interface."
+    },
+    {
+      "pattern": ".harness/runtime/artifacts/*.jsonl",
+      "owner": "local_event_artifacts",
+      "rule": "Event streams must be replayable and privacy-filtered."
+    },
+    {
+      "pattern": ".harness/runtime/logs/events.jsonl",
+      "owner": "runtime_artifacts_and_events",
+      "rule": "Structured runtime events should include component, event, mode, artifact_path, duration_ms, event_count, and status when applicable."
+    }
+  ],
+  "verification_gates": [
+    "make harness-check",
+    "make harness-lint",
+    "make cleanup-check",
+    "make validate-ui",
+    "make verify"
+  ],
+  "harness_usage": [
+    "scripts/harness/check-architecture-plan.py validates schema, node coverage, edge endpoints, and linked docs.",
+    "Future feature plans should reference the node IDs they implement or modify.",
+    "When a feature graduates from planned to current, update node status, docs, artifacts, and harness contracts in this graph."
+  ]
+}
