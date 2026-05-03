@@ -27,6 +27,10 @@ Every next feature must preserve these baseline rules:
   implementation. The section must name runtime artifacts, fixtures/fakes, UI
   validation, diagnostics, privacy/permission constraints, and docs or harness
   checks affected by the slice.
+- Prefer `make new-feature name=<slug> class=<class>` for new roadmap slices so
+  plans start with acceptance criteria and the required Harness Impact fields.
+- Register new source-adapter fixtures in `data/capture/adapter_fixture_manifest.json`
+  and keep `make adapter-fixture-check` passing before relying on live data.
 
 ## Universal Use-Case Classes
 
@@ -88,6 +92,8 @@ judgment:
   privacy constraints, and stale-plan checks.
 - `scripts/harness/audit.py` for drift checks across roadmap, docs, fixtures,
   screenshot evidence, and quality notes.
+- `scripts/harness/adapter-fixture-check.py` for adapter fixture manifests,
+  privacy exclusions, normalized JSONL output, and replay evidence.
 - `scripts/product/validate-ui.sh` for any user-visible UI workflow.
 
 Manual commands such as `make observe-live`, `make observe-session`, or future

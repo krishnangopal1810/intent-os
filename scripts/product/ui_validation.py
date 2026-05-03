@@ -103,7 +103,7 @@ def fetch(base: str, path: str) -> str:
 def validate_static_dom(html: str) -> dict[str, object]:
     root = parse_html(html)
     page_text = root.text()
-    required_text = ["IntentOS", "Activity", "Capture Replay", "YouTube"]
+    required_text = ["IntentOS", "Activity", "Action Queue", "Capture Replay"]
     for text in required_text:
         assert_true(text in page_text, f"missing UI text: {text}")
 
@@ -121,7 +121,6 @@ def validate_static_dom(html: str) -> dict[str, object]:
         "data-activity-source",
         "data-activity-bars",
         "data-capture-events",
-        "data-youtube-narrative",
     ]:
         assert_true(elements_with(root, attr=attr), f"missing DOM binding: {attr}")
 
@@ -129,7 +128,8 @@ def validate_static_dom(html: str) -> dict[str, object]:
     styles = [element for element in elements_with(root, tag="link") if has_attr(element, "href", "./styles.css")]
     assert_true(scripts, "missing app.js script tag")
     assert_true(styles, "missing styles.css link tag")
-    assert_true(len(elements_with(root, tag="article")) >= 3, "expected at least three report panels")
+    assert_true("youtube-title" not in html, "legacy YouTube section should not be visible in the UI")
+    assert_true(len(elements_with(root, tag="article")) >= 3, "expected report panels and review cards")
     return {
         "binding_count": sum(1 for element in root.all() for attr in element.attrs if attr.startswith("data-")),
         "panel_count": len(elements_with(root, tag="article")),

@@ -41,6 +41,8 @@ The current local-first slice keeps these concerns separate:
 - `intentos/activity.py`: generic `ActivityEvent` domain type and boundary
   validation.
 - `intentos/classifier.py`: generic behavior taxonomy classifier.
+- `intentos/classifier_context.py`: URL, domain, and title context cue helpers
+  used by the generic classifier.
 - `intentos/reporting.py`: generic aggregate behavior reporting.
 - `intentos/activity_cli.py`: multi-app activity CLI.
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
@@ -106,6 +108,8 @@ The current local-first slice keeps these concerns separate:
 - `data/capture/macos_frontmost_snapshot.json`: deterministic real-adapter
   stdout fixture for macOS frontmost app/window parsing.
 - `data/capture/privacy_policy.json`: local exclusion and text-bounding policy.
+- `data/capture/adapter_fixture_manifest.json`: machine-readable adapter
+  fixture index validated by `make adapter-fixture-check`.
 - `data/beta/fake_chrome_events.json`: deterministic fake Chrome extension
   bridge events for service, privacy, correction, and UI beta validation.
 - `data/youtube/sample_watch_history.json`: deterministic local fixture.
@@ -127,6 +131,14 @@ The current local-first slice keeps these concerns separate:
 - `scripts/product/dogfood-smoke.sh`: real-machine beta smoke that requires
   native recorder row growth, treats Chrome bridge as optional enhancement,
   preserves dogfood data, and writes blocked/pass evidence.
+- `scripts/product/chrome-bridge-smoke.sh`: manual installed-extension smoke
+  that verifies Chrome bridge connected/posting-events state without fake rows.
+- `scripts/harness/adapter-fixture-check.py`: validates adapter fixtures,
+  privacy exclusions, JSONL output, replay behavior, and generated evidence.
+- `scripts/harness/diagnose-json.py`: writes structured runtime diagnostics
+  without raw page bodies, cookies, tokens, screenshots, or keystrokes.
+- `scripts/harness/new-feature.sh`: scaffolds feature-class plans with
+  acceptance criteria and Harness Impact sections.
 - `scripts/product/package-beta.sh`: local ad-hoc signed Swift menu bar app
   package builder with graceful skip behavior when macOS Swift tools are
   unavailable.
@@ -228,8 +240,9 @@ artifact contract, or verification gate.
 
 `scripts/harness/lint.py` enforces the current layer map, import boundaries,
 basic file-size limits, generated-file hygiene, active-plan hygiene, quality
-scorecard rows, and labeled evaluation set coverage. Add new rules there when a
-review finding or repeated mistake should become agent-visible policy.
+scorecard rows, adapter fixture manifest presence, data-flow direction, and
+labeled evaluation set coverage. Add new rules there when a review finding or
+repeated mistake should become agent-visible policy.
 
 As modules grow, promote these expectations from docs into lints:
 

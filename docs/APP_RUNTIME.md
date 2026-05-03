@@ -24,15 +24,28 @@ slices.
   when macOS Swift tools exist, or skip clearly when unavailable.
 - `make install-beta-app`: copy and open the local beta menu bar app on macOS.
 - `make package-extension`: package the internal Chrome bridge extension zip.
+- `make chrome-bridge-smoke`: run the manual installed Chrome bridge smoke
+  without fake bridge rows and write connected/posting-events evidence.
 - `make dogfood-smoke`: run the real 30-minute dogfood beta smoke without the
   fake Chrome bridge, preserving local user data and writing blocked/pass
   evidence.
+- `make new-feature name=<slug> class=<class>`: scaffold an active feature
+  plan from a next-feature harness class with acceptance criteria and a
+  complete Harness Impact section.
+- `make adapter-fixture-check`: validate the adapter fixture manifest, current
+  capture fixtures, privacy exclusions, JSONL replay, and generated evidence.
+- `make diagnose-json`: write a structured `diagnose.json` artifact with app
+  state, beta state, event summaries, log summaries, and next commands.
+- `make feedback-fixture-candidates`: export privacy-redacted beta correction
+  candidates from the local database into ignored runtime artifacts.
+- `make review-status`: inspect local branch and GitHub PR/check status when
+  `gh` is available, while degrading cleanly offline.
 - `make app-status`: show runtime mode, process status when relevant, log
   locations, and UI HTTP health.
 - `make app-stop`: stop the local app process started by the harness.
 - `make validate-ui`: validate the local UI shell against deterministic runtime
-  artifacts and run local headless browser render checks when Chrome or
-  Chromium exists.
+  artifacts and run local headless browser desktop/mobile render checks when
+  Chrome or Chromium exists.
 - `make update-ui-screenshot`: regenerate the checked-in UI screenshot evidence
   from a local browser.
 - `make check-ui-screenshot`: verify that checked-in UI screenshot evidence is
@@ -79,12 +92,12 @@ macOS metadata recorder, stores normalized activity in
 `.harness/runtime/beta/intentos.sqlite`, writes an isolated
 `.harness/runtime/beta/site/beta-config.json`, and starts a local dashboard
 with `?mode=beta` so missing service config cannot fall back to fixture
-reports. Beta and live views hide the legacy YouTube domain panel; YouTube
-activity appears in the normal timeline, activity mix, and reactive surfaces
-instead of a separate bottom section. It does not seed fake rows by default,
-does not require manual imports or Chrome extension setup for first beta value,
-and does not read page bodies, cookies, screenshots, keystrokes, or cloud
-services. Use
+reports. The web shell hides the legacy YouTube domain panel in every mode;
+YouTube activity appears in the normal timeline, activity mix, and reactive
+surfaces instead of a separate bottom section. It does not seed fake rows by
+default, does not require manual imports or Chrome extension setup for first
+beta value, and does not read page bodies, cookies, screenshots, keystrokes, or
+cloud services. Use
 `INTENTOS_BETA_FAKE_BRIDGE=1 make beta-dev` only for explicit fixture bridge
 testing.
 
@@ -145,6 +158,16 @@ Expected artifacts after product code exists:
 - `.harness/runtime/artifacts/beta-dogfood-smoke.json`: real beta smoke result
   with permission, native recorder, optional bridge, event-growth, privacy, and
   dashboard evidence.
+- `.harness/runtime/artifacts/beta-chrome-bridge-smoke.json`: manual installed
+  Chrome bridge smoke result; no fake bridge rows are seeded.
+- `.harness/runtime/artifacts/adapter-fixture-check.json`: adapter fixture
+  manifest validation, generated JSONL paths, replay status, and failures.
+- `.harness/runtime/artifacts/diagnose.json`: structured diagnostics with
+  bounded status, event, log, artifact, and recommended-command summaries.
+- `.harness/runtime/artifacts/feedback-fixture-candidates.json`: privacy-redacted
+  beta correction candidates with raw titles and URLs hashed.
+- `.harness/runtime/artifacts/review-status.json`: local branch and optional
+  GitHub PR/check status for agent review loops.
 - `.harness/runtime/artifacts/beta-dogfood-smoke-daily-review.json`: daily
   review captured during the real dogfood smoke.
 - `.harness/runtime/artifacts/beta-dogfood-smoke-dashboard.png`: dashboard
@@ -187,26 +210,31 @@ IntentOS currently provides `scripts/product/dev.sh`,
 - Visit the primary user workflow.
 - Validate that the page shell and product JSON artifacts load.
 - Write validation evidence into `.harness/runtime/artifacts/`.
-- Fail on blank screens, missing JSON artifacts, or missing core UI text.
+- Fail on blank screens, missing JSON artifacts, missing core UI text, missing
+  decision cards, missing next move text, horizontal overflow, or clipped text.
 - Record validation notes in the active execution plan when relevant.
 
 The current validator fetches the page plus JSON artifacts through a temporary
-local server. It writes `ui-validation.txt`, `ui-validation.json`, and
-`ui-snapshot.html`. When Chrome or Chromium is available locally, it also
-captures `ui-render.png` and checks that the rendered screenshot is non-blank.
-If the local browser can also dump the rendered DOM probe, the validator checks
-for horizontal overflow, clipped visible text, and expected capture events. It
-also checks the committed screenshot evidence under `docs/assets/screenshots/`.
-Run `make update-ui-screenshot` after UI source, fixture, or report-output
-changes. CI does not need Chrome to validate the committed screenshot; the
-screenshot metadata records a source hash and `make verify` fails when the
-image is stale.
+local server in an isolated validation runtime so a running `make dev`
+background sampler cannot race deterministic fixture rendering. It writes
+`ui-validation.txt`, `ui-validation.json`, and `ui-snapshot.html`, then copies
+the `ui-*` evidence back into `.harness/runtime/artifacts/` for diagnostics.
+When Chrome or Chromium is available locally, it also captures
+`ui-render.png`, `ui-render-mobile.png`, and matching DOM/validation artifacts,
+then checks that the rendered screenshots are non-blank. If the local browser
+can also dump the rendered DOM probe, the validator checks for daily decision
+cards, next move text, horizontal overflow, clipped visible text, and expected
+capture events. It also checks the committed screenshot evidence under
+`docs/assets/screenshots/`. Run `make update-ui-screenshot` after UI source,
+fixture, or report-output changes. CI does not need Chrome to validate the
+committed screenshot; the screenshot metadata records a source hash and
+`make verify` fails when the image is stale.
 
 `make validate-beta` covers service-backed UI mode. It writes a temporary
 `beta-config.json`, confirms the dashboard shell loads while service APIs are
-available, checks that correction and setup guidance controls are present, and
-verifies that a relabel operation changes the next daily-review response
-without changing raw events.
+available, checks that correction controls, setup guidance controls, decision
+cards, and next move text are present, and verifies that a relabel operation
+changes the next daily-review response without changing raw events.
 
 ## Observability Contract
 

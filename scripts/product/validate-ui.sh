@@ -4,13 +4,20 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-runtime_dir="${INTENTOS_RUNTIME_DIR:-.harness/runtime}"
+if [ -n "${INTENTOS_RUNTIME_DIR:-}" ]; then
+  runtime_dir="$INTENTOS_RUNTIME_DIR"
+  report_dir="$runtime_dir/artifacts"
+else
+  runtime_dir="${INTENTOS_UI_VALIDATION_RUNTIME_DIR:-.harness/runtime/ui-validation}"
+  report_dir="${INTENTOS_UI_VALIDATION_REPORT_DIR:-.harness/runtime/artifacts}"
+fi
 artifact_dir="$runtime_dir/artifacts"
 log_dir="$runtime_dir/logs"
-mkdir -p "$artifact_dir" "$log_dir"
+mkdir -p "$artifact_dir" "$log_dir" "$report_dir"
 scripts/harness/runtime-log.py ui validation_start mode=temporary_server
 
-scripts/product/dev.sh > "$log_dir/ui-validate-build.log" 2>&1
+INTENTOS_RUNTIME_DIR="$runtime_dir" \
+  scripts/product/dev.sh > "$log_dir/ui-validate-build.log" 2>&1
 
 find_browser() {
   if [ -n "${INTENTOS_BROWSER_BIN:-}" ] && [ -x "$INTENTOS_BROWSER_BIN" ]; then
@@ -86,10 +93,21 @@ capture = json.loads(fetch("/artifacts/capture-summary.json"))
 session_capture = json.loads(fetch("/artifacts/session-capture-summary.json"))
 youtube = json.loads(fetch("/artifacts/youtube-summary.json"))
 
-required_html = ["IntentOS", "data-ui-root", "Behavior reports"]
+required_html = [
+    "IntentOS",
+    "data-ui-root",
+    "Behavior reports",
+    "What to do with this",
+    "Action Queue",
+    "Capture Replay",
+]
 for text in required_html:
     if text not in html:
         raise AssertionError(f"missing UI text: {text}")
+
+for token in ["youtube-title", ">YouTube<", "data-youtube-narrative"]:
+    if token in html:
+        raise AssertionError(f"legacy YouTube UI should not be present: {token}")
 
 for token in [
     "data-primary-narrative",
@@ -99,6 +117,9 @@ for token in [
     "live-session-capture-summary.json",
     "live-capture-summary.json",
     "data-capture-source",
+    "data-action-deck",
+    "data-next-move-title",
+    "data-brief-moments",
 ]:
     if token not in app_js:
         raise AssertionError(f"missing app binding: {token}")
@@ -172,7 +193,10 @@ probe = """
             body_text_length: body.innerText.trim().length,
             panel_count: document.querySelectorAll(".panel").length,
             stat_count: document.querySelectorAll(".stat").length,
+            decision_count: document.querySelectorAll(".decision-card").length,
             event_count: document.querySelectorAll("[data-capture-events] li").length,
+            next_move_text:
+              document.querySelector("[data-next-move-title]")?.textContent.trim() || "",
             horizontal_overflow:
               document.documentElement.scrollWidth >
               document.documentElement.clientWidth + 1,
@@ -201,6 +225,10 @@ probe = """
         window.addEventListener("load", () => {
           window.setTimeout(writeProbe, 600);
           window.setTimeout(writeProbe, 1600);
+          window.setTimeout(writeProbe, 3200);
+          window.setTimeout(writeProbe, 4600);
+          window.setTimeout(writeProbe, 6200);
+          window.setTimeout(writeProbe, 7600);
         });
       })();
     </script>
@@ -263,7 +291,7 @@ def run_browser(
         browser,
         *base_flags,
         f"--user-data-dir={profile_dir}",
-        "--virtual-time-budget=5000",
+        "--virtual-time-budget=9000",
         *extra,
         url,
     ]
@@ -319,14 +347,130 @@ run_browser("dom", ["--dump-dom"], dom, required=False)
 PY
   python3 scripts/product/render-ui-check.py \
     "$render_screenshot" "$render_dom" "$render_json" "$render_text"
+  mobile_screenshot="$artifact_dir/ui-render-mobile.png"
+  mobile_dom="$artifact_dir/ui-render-mobile-dom.html"
+  mobile_json="$artifact_dir/ui-render-mobile-validation.json"
+  mobile_text="$artifact_dir/ui-render-mobile-validation.txt"
+  mobile_viewport="${INTENTOS_UI_RENDER_MOBILE_VIEWPORT:-390,844}"
+  python3 - "$browser" "$mobile_screenshot" "$mobile_dom" \
+    "http://127.0.0.1:$port/site/index.html" "$mobile_viewport" \
+    "$log_dir" "$runtime_dir" <<'PY'
+import subprocess
+import shutil
+import sys
+import time
+from pathlib import Path
+
+browser = sys.argv[1]
+screenshot = Path(sys.argv[2])
+dom = Path(sys.argv[3])
+url = sys.argv[4]
+viewport = sys.argv[5]
+log_dir = Path(sys.argv[6])
+runtime_dir = Path(sys.argv[7])
+
+base_flags = [
+    "--headless=new",
+    "--disable-background-networking",
+    "--disable-component-update",
+    "--disable-extensions",
+    "--disable-gpu",
+    "--disable-sync",
+    "--hide-scrollbars",
+    "--no-first-run",
+    "--no-default-browser-check",
+    f"--window-size={viewport}",
+]
+
+for artifact in [screenshot, dom]:
+    artifact.unlink(missing_ok=True)
+
+
+def run_browser(
+    name: str,
+    extra: list[str],
+    stdout_path: Path | None = None,
+    timeout_artifact: Path | None = None,
+    required: bool = True,
+) -> bool:
+    log_path = log_dir / f"ui-render-mobile-{name}.log"
+    profile_dir = runtime_dir / f"browser-profile-mobile-{name}"
+    shutil.rmtree(profile_dir, ignore_errors=True)
+    command = [
+        browser,
+        *base_flags,
+        f"--user-data-dir={profile_dir}",
+        "--virtual-time-budget=9000",
+        *extra,
+        url,
+    ]
+    with log_path.open("w", encoding="utf-8") as log:
+        stdout = log if stdout_path is None else subprocess.PIPE
+        try:
+            result = subprocess.run(
+                command,
+                check=True,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                timeout=25,
+                text=True,
+            )
+        except subprocess.TimeoutExpired as exc:
+            captured = exc.stdout or ""
+            if isinstance(captured, bytes):
+                captured = captured.decode("utf-8", errors="replace")
+            if stdout_path is not None and "intentos-render-probe" in captured:
+                stdout_path.write_text(captured, encoding="utf-8")
+                log.write(f"\nvalidate-ui: browser {name} timed out after writing stdout\n")
+                return True
+            if timeout_artifact and timeout_artifact.is_file() and timeout_artifact.stat().st_size > 0:
+                log.write(f"\nvalidate-ui: browser {name} timed out after writing artifact\n")
+                return True
+            if not required:
+                log.write(f"\nvalidate-ui: optional browser {name} timed out\n")
+                return False
+            raise SystemExit(f"browser {name} timed out; see {log_path}") from exc
+        except subprocess.CalledProcessError as exc:
+            if not required:
+                log.write(f"\nvalidate-ui: optional browser {name} failed: {exc}\n")
+                return False
+            raise SystemExit(f"browser {name} failed; see {log_path}") from exc
+    if stdout_path is not None:
+        stdout_path.write_text(result.stdout or "", encoding="utf-8")
+    return True
+
+
+def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_file() and path.stat().st_size > 0:
+            return True
+        time.sleep(0.1)
+    return path.is_file() and path.stat().st_size > 0
+
+
+run_browser("screenshot", [f"--screenshot={screenshot}"], timeout_artifact=screenshot)
+if not wait_for_artifact(screenshot):
+    raise SystemExit(f"browser screenshot did not produce {screenshot}")
+run_browser("dom", ["--dump-dom"], dom, required=False)
+PY
+  python3 scripts/product/render-ui-check.py \
+    "$mobile_screenshot" "$mobile_dom" "$mobile_json" "$mobile_text"
 else
-  cat > "$artifact_dir/ui-render-validation.txt" <<'EOF'
-ui-render-validation: skipped
-reason=Chrome or Chromium not found; set INTENTOS_BROWSER_BIN for rendered UI checks
-EOF
+  {
+    echo "ui-render-validation: skipped"
+    echo "reason=Chrome or Chromium not found; set INTENTOS_BROWSER_BIN for rendered UI checks"
+  } > "$artifact_dir/ui-render-validation.txt"
 fi
 
 scripts/harness/runtime-log.py ui validation_completed \
   status=ok artifact_path="$artifact_dir/ui-validation.json"
 
 scripts/product/check-ui-screenshot.sh
+
+if [ "$artifact_dir" != "$report_dir" ]; then
+  for artifact in "$artifact_dir"/ui-*; do
+    [ -e "$artifact" ] || continue
+    cp "$artifact" "$report_dir/"
+  done
+fi

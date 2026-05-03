@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,13 +48,93 @@ SETTINGS_TARGETS = {
 
 def run_check(conn: sqlite3.Connection, mode: str, db_path: str | None = None) -> dict[str, Any]:
     if mode == "fake":
-        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
-        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        apply_fake_scenario(conn, "all_ok", db_path)
     elif mode == "real":
         snapshot = check_accessibility(conn)
         check_browser_automation(conn, snapshot)
     else:
         raise ValueError("permission mode must be real or fake")
+    state.mark_readiness_check(conn)
+    return store.status(conn, db_path)
+
+
+def apply_fake_scenario(
+    conn: sqlite3.Connection, scenario: str, db_path: str | None = None
+) -> dict[str, Any]:
+    """Apply deterministic permission and runtime states for harness checks."""
+
+    store.set_setting(conn, "paused_until", "")
+    store.set_status(conn, "capture_state", "ready")
+    store.set_status(conn, "capture_note", "")
+    store.set_status(conn, "native_recorder_interval_seconds", "5")
+    store.set_status(conn, "native_recorder_pid", "fixture")
+    store.set_status(conn, "native_recorder_log", "fixture")
+
+    if scenario == "all_ok":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "connected")
+        store.set_status(conn, "extension_last_seen_at", store.utc_now())
+    elif scenario == "accessibility_blocked":
+        record(conn, "accessibility_permission", "blocked", "Fake Accessibility probe is blocked.")
+        record(
+            conn,
+            "browser_automation_permission",
+            "unchecked",
+            "Not tested because Accessibility is blocked.",
+        )
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "never_connected")
+        store.set_status(conn, "extension_last_seen_at", "")
+    elif scenario == "automation_blocked":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(
+            conn,
+            "browser_automation_permission",
+            "blocked",
+            "Fake Browser Automation probe is blocked.",
+        )
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "never_connected")
+        store.set_status(conn, "extension_last_seen_at", "")
+    elif scenario == "chrome_bridge_missing":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "never_connected")
+        store.set_status(conn, "extension_last_seen_at", "")
+    elif scenario == "recorder_stale":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        stale = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", stale)
+        store.set_status(conn, "extension_state", "connected")
+        store.set_status(conn, "extension_last_seen_at", store.utc_now())
+    elif scenario == "paused_capture":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "connected")
+        store.set_status(conn, "extension_last_seen_at", store.utc_now())
+        paused_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat().replace("+00:00", "Z")
+        store.set_pause(conn, paused_until)
+    elif scenario == "setup_needed":
+        record(conn, "accessibility_permission", "needs_action", "Fake setup requires Accessibility.")
+        record(conn, "browser_automation_permission", "unchecked", "Run checks after Accessibility is ready.")
+        store.set_status(conn, "native_recorder_state", "not_started")
+        store.set_status(conn, "native_recorder_heartbeat_at", "")
+        store.set_status(conn, "extension_state", "never_connected")
+        store.set_status(conn, "extension_last_seen_at", "")
+    else:
+        raise ValueError("unknown fake permission scenario")
+
     state.mark_readiness_check(conn)
     return store.status(conn, db_path)
 

@@ -45,6 +45,9 @@ echo "+ $python_bin -m intentos.capture_cli normalize-observations data/capture/
 echo "+ $python_bin -m intentos.capture_cli replay $session_jsonl"
 "$python_bin" -m intentos.capture_cli replay "$session_jsonl"
 
+echo "+ scripts/harness/adapter-fixture-check.py"
+scripts/harness/adapter-fixture-check.py
+
 echo "+ scripts/product/validate-beta.sh"
 scripts/product/validate-beta.sh
 

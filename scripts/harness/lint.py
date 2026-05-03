@@ -15,6 +15,7 @@ MAX_PYTHON_LINES = 320
 EXPECTED_LAYERS = {
     "intentos/activity.py",
     "intentos/classifier.py",
+    "intentos/classifier_context.py",
     "intentos/reporting.py",
     "intentos/activity_cli.py",
     "intentos/activity_evaluate.py",
@@ -59,12 +60,14 @@ EXPECTED_LAYERS = {
     "tests/test_capture_privacy.py",
     "tests/test_capture_replay.py",
     "tests/test_capture_session.py",
+    "tests/test_harness_completion.py",
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
     "intentos/cli.py": {"intentos.youtube"},
     "intentos/evaluate.py": {"intentos.youtube"},
-    "intentos/classifier.py": {"intentos.activity"},
+    "intentos/classifier.py": {"intentos.activity", "intentos.classifier_context"},
+    "intentos/classifier_context.py": {"intentos.activity"},
     "intentos/reporting.py": {
         "intentos.activity",
         "intentos.classifier",
@@ -223,6 +226,10 @@ ALLOWED_IMPORTS = {
         "intentos.capture_cli",
         "intentos.capture_replay",
     },
+    "tests/test_harness_completion.py": {
+        "intentos.activity",
+        "intentos.beta",
+    },
     "tests/test_youtube_mvp.py": {"intentos.youtube"},
 }
 
@@ -234,6 +241,8 @@ def main() -> int:
     check_file_sizes(failures)
     check_generated_files_not_tracked(failures)
     check_no_stale_active_plans(failures)
+    check_public_harness_commands(failures)
+    check_architecture_flow_rules(failures)
     check_quality_scorecard(failures)
     check_evaluation_set(failures)
     check_capture_adapter_fixtures(failures)
@@ -366,6 +375,11 @@ def check_no_stale_active_plans(failures: list[str]) -> None:
                 f"{plan.relative_to(ROOT)} must include ## Harness Impact so "
                 "future runtime, fixture, UI, diagnostics, and privacy work is explicit"
             )
+        if "## Acceptance Criteria" not in text:
+            failures.append(
+                f"{plan.relative_to(ROOT)} must include ## Acceptance Criteria so "
+                "implementation and review have a concrete completion gate"
+            )
         else:
             for phrase in [
                 "Runtime commands and artifacts",
@@ -379,6 +393,94 @@ def check_no_stale_active_plans(failures: list[str]) -> None:
                     failures.append(
                         f"{plan.relative_to(ROOT)} Harness Impact must mention {phrase!r}"
                     )
+
+
+def check_public_harness_commands(failures: list[str]) -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    required_targets = {
+        "new-feature:": "scripts/harness/new-feature.sh",
+        "adapter-fixture-check:": "scripts/harness/adapter-fixture-check.py",
+        "chrome-bridge-smoke:": "scripts/product/chrome-bridge-smoke.sh",
+        "diagnose-json:": "scripts/harness/diagnose-json.py",
+        "feedback-fixture-candidates:": "scripts/harness/feedback-fixture-candidates.py",
+        "review-status:": "scripts/harness/review-status.py",
+    }
+    for target, script in required_targets.items():
+        if target not in makefile:
+            failures.append(f"Makefile must expose {target}")
+        path = ROOT / script
+        if not path.is_file():
+            failures.append(f"missing harness command {script}")
+        elif not path.stat().st_mode & 0o111:
+            failures.append(f"{script} must be executable")
+
+    verify = ROOT / "scripts/product/verify.sh"
+    if verify.is_file() and "adapter-fixture-check.py" not in verify.read_text(encoding="utf-8"):
+        failures.append("scripts/product/verify.sh must run adapter-fixture-check.py")
+
+    docs = {
+        "docs/APP_RUNTIME.md": [
+            "make new-feature",
+            "make adapter-fixture-check",
+            "make chrome-bridge-smoke",
+            "make diagnose-json",
+            "make feedback-fixture-candidates",
+            "make review-status",
+        ],
+        "docs/OPERATING_MODEL.md": ["make review-status", "make diagnose-json"],
+        "docs/QUALITY.md": ["adapter fixture manifest", "installed Chrome bridge smoke"],
+    }
+    for relative_path, phrases in docs.items():
+        path = ROOT / relative_path
+        if not path.is_file():
+            failures.append(f"missing {relative_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in phrases:
+            if phrase not in text:
+                failures.append(f"{relative_path} must mention {phrase!r}")
+
+
+def check_architecture_flow_rules(failures: list[str]) -> None:
+    rules = [
+        (
+            "capture adapters must not classify or report",
+            sorted((ROOT / "intentos/capture").glob("*.py")),
+            ("intentos.classifier", "intentos.reporting", "intentos.beta"),
+        ),
+        (
+            "classifiers must not call live sensors or beta runtime",
+            [ROOT / "intentos/classifier.py", ROOT / "intentos/classifier_context.py"],
+            ("intentos.capture", "intentos.beta"),
+        ),
+        (
+            "reports must not bypass normalized events",
+            [ROOT / "intentos/reporting.py"],
+            ("intentos.capture", "intentos.beta"),
+        ),
+    ]
+    for message, paths, forbidden_prefixes in rules:
+        for path in paths:
+            if not path.is_file():
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            imported = import_targets(tree)
+            forbidden = sorted(
+                target
+                for target in imported
+                if any(target == prefix or target.startswith(prefix + ".") for prefix in forbidden_prefixes)
+            )
+            if forbidden:
+                failures.append(
+                    f"{path.relative_to(ROOT)} violates flow rule: {message}; "
+                    f"remove {', '.join(forbidden)}"
+                )
+
+    store_path = ROOT / "intentos/beta/store.py"
+    if store_path.is_file() and "UPDATE ACTIVITY_EVENTS" in store_path.read_text(encoding="utf-8").upper():
+        failures.append(
+            "intentos/beta/store.py must not UPDATE activity_events; corrections must layer over raw events"
+        )
 
 
 def check_quality_scorecard(failures: list[str]) -> None:
@@ -426,6 +528,21 @@ def check_evaluation_set(failures: list[str]) -> None:
 
 
 def check_capture_adapter_fixtures(failures: list[str]) -> None:
+    manifest = ROOT / "data/capture/adapter_fixture_manifest.json"
+    if not manifest.is_file():
+        failures.append("missing data/capture/adapter_fixture_manifest.json")
+    else:
+        try:
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            failures.append(f"data/capture/adapter_fixture_manifest.json is invalid JSON: {exc}")
+        else:
+            adapters = payload.get("adapters") if isinstance(payload, dict) else None
+            if not isinstance(adapters, list) or len(adapters) < 4:
+                failures.append(
+                    "data/capture/adapter_fixture_manifest.json must list current adapter fixtures"
+                )
+
     required = {
         "data/capture/macos_frontmost_snapshot.json": [
             "app_name",
@@ -536,8 +653,11 @@ def check_ui_harness(failures: list[str]) -> None:
             "ui-validation.json",
             "ui-snapshot.html",
             "ui-render-validation.txt",
+            "ui-render-mobile-validation.txt",
             "render-ui-check.py",
             "check-ui-screenshot.sh",
+            "data-action-deck",
+            "data-next-move-title",
             "activity-summary.json",
             "capture-summary.json",
             "session-capture-summary.json",
@@ -654,6 +774,15 @@ def check_beta_harness_contract(failures: list[str]) -> None:
     for path in required_paths:
         if not (ROOT / path).is_file():
             failures.append(f"missing beta harness file {path}")
+
+    validate_beta = ROOT / "scripts/product/validate-beta.sh"
+    if validate_beta.is_file():
+        text = validate_beta.read_text(encoding="utf-8")
+        for phrase in ["decision_count", "data-next-move-title"]:
+            if phrase not in text:
+                failures.append(
+                    f"scripts/product/validate-beta.sh must include beta UI UX probe {phrase!r}"
+                )
 
     app_js = ROOT / "web/app.js"
     if app_js.is_file():

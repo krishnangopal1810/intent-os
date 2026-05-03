@@ -115,7 +115,12 @@ make beta-dev
 make beta-status
 make beta-stop
 make validate-beta
+make adapter-fixture-check
+make diagnose-json
+make feedback-fixture-candidates
+make review-status
 make package-beta
+make chrome-bridge-smoke
 make app-status
 make diagnose
 make observe

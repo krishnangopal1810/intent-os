@@ -16,6 +16,10 @@ echo "diagnose: runtime state"
 scripts/harness/app-status.sh || true
 
 echo
+echo "diagnose: structured JSON artifact"
+scripts/harness/diagnose-json.py || true
+
+echo
 echo "diagnose: beta runtime state"
 scripts/harness/beta-status.sh || true
 

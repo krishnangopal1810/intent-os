@@ -131,15 +131,42 @@ PY
     live_interval="${INTENTOS_LIVE_CAPTURE_INTERVAL_SECONDS:-2}"
     rm -f "$live_output" "$live_timeline_output" "$live_summary_json" "$live_summary_text" "$live_status_json"
     : > "$live_log"
-    nohup python3 -m intentos.capture_cli capture-live \
-      --interval-seconds "$live_interval" \
-      --output "$live_output" \
-      --timeline-output "$live_timeline_output" \
-      --summary-json "$live_summary_json" \
-      --summary-text "$live_summary_text" \
-      --status-json "$live_status_json" \
-      >> "$live_log" 2>&1 &
-    capture_pid="$!"
+    capture_pid="$(
+      python3 - "$live_interval" "$live_output" "$live_timeline_output" \
+        "$live_summary_json" "$live_summary_text" "$live_status_json" "$live_log" <<'PY'
+import subprocess
+import sys
+from pathlib import Path
+
+interval, output, timeline, summary_json, summary_text, status_json, log_path = sys.argv[1:]
+log = Path(log_path).open("ab", buffering=0)
+process = subprocess.Popen(
+    [
+        "python3",
+        "-m",
+        "intentos.capture_cli",
+        "capture-live",
+        "--interval-seconds",
+        interval,
+        "--output",
+        output,
+        "--timeline-output",
+        timeline,
+        "--summary-json",
+        summary_json,
+        "--summary-text",
+        summary_text,
+        "--status-json",
+        status_json,
+    ],
+    stdout=log,
+    stderr=subprocess.STDOUT,
+    stdin=subprocess.DEVNULL,
+    start_new_session=True,
+)
+print(process.pid)
+PY
+    )"
     echo "$capture_pid" > "$CAPTURE_PID_FILE"
     scripts/harness/runtime-log.py harness live_capture_started \
       mode=background_timeline pid="$capture_pid" artifact_path="$live_timeline_output" raw_artifact_path="$live_output"

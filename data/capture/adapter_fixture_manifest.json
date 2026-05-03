@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "adapters": [
+    {
+      "name": "macos_frontmost_snapshot",
+      "kind": "macos_stdout_snapshot",
+      "raw_fixture": "data/capture/macos_frontmost_snapshot.json",
+      "required_expected_fields": ["app_name", "bundle_id", "process_id", "window_title"]
+    },
+    {
+      "name": "browser_active_tab_snapshot",
+      "kind": "browser_tab_snapshot",
+      "raw_fixture": "data/capture/browser_active_tab_snapshot.json",
+      "required_expected_fields": ["browser_name", "domain", "source", "title", "url"]
+    },
+    {
+      "name": "fake_macos_observations",
+      "kind": "normalization",
+      "raw_fixture": "data/capture/fake_macos_observations.json",
+      "browser_tabs": "data/capture/fake_browser_tabs.json",
+      "privacy_policy": "data/capture/privacy_policy.json",
+      "expected_min_events": 6,
+      "replay_required": true
+    },
+    {
+      "name": "fake_session_observations",
+      "kind": "normalization",
+      "raw_fixture": "data/capture/fake_session_observations.json",
+      "privacy_policy": "data/capture/privacy_policy.json",
+      "merge_adjacent": true,
+      "expected_min_events": 3,
+      "excluded_url_substrings": ["bank.example"],
+      "replay_required": true
+    }
+  ]
+}

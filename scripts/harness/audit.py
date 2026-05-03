@@ -39,7 +39,15 @@ def check_stale_plans(failures: list[str]) -> None:
                 f"{rel(path)} is completed but still active; move it to "
                 "docs/plans/completed/"
             )
-        for section in ["## Scope", "## Acceptance Criteria", "## Verification", "## Progress Log"]:
+        if "TBD" in text:
+            failures.append(f"{rel(path)} still contains TBD")
+        for section in [
+            "## Scope",
+            "## Acceptance Criteria",
+            "## Harness Impact",
+            "## Verification",
+            "## Progress Log",
+        ]:
             if section not in text:
                 failures.append(f"{rel(path)} is missing {section}")
 
@@ -111,6 +119,9 @@ def check_stale_docs(failures: list[str]) -> None:
             "make observe-live",
             "make observe-session",
             "make update-ui-screenshot",
+            "make adapter-fixture-check",
+            "make diagnose-json",
+            "make new-feature",
             "structured",
             "local app shell",
         ],
@@ -120,6 +131,7 @@ def check_stale_docs(failures: list[str]) -> None:
             "structured",
             "cleanup/audit scripts",
             "docs/HARNESS_FEATURES.md",
+            "adapter fixture manifest",
         ],
         "docs/HARNESS_FEATURES.md": [
             "Manual real-data import",
@@ -140,6 +152,7 @@ def check_stale_docs(failures: list[str]) -> None:
             "stale plans",
             "fixture drift",
             "quality scorecard gaps",
+            "make chrome-bridge-smoke",
         ],
         "docs/RELIABILITY.md": [
             "make dev-live",
@@ -148,6 +161,7 @@ def check_stale_docs(failures: list[str]) -> None:
             "make check-ui-screenshot",
             "structured",
             "ui-validation.json",
+            "diagnose.json",
         ],
         "docs/DESIGN.md": ["IntentOS UI shell", "daily behavior review"],
         "docs/product/imports.md": [
@@ -184,6 +198,7 @@ def check_fixture_drift(failures: list[str]) -> None:
         "data/capture/fake_session_observations.json",
         "data/capture/browser_active_tab_snapshot.json",
         "data/capture/macos_frontmost_snapshot.json",
+        "data/capture/adapter_fixture_manifest.json",
         "data/capture/privacy_policy.json",
         "data/youtube/evaluation_set.json",
         "data/youtube/sample_watch_history.json",
@@ -248,6 +263,12 @@ def check_ui_shell(failures: list[str]) -> None:
         "docs/assets/screenshots/intent-os-ui.json",
         "scripts/harness/runtime-log.py",
         "scripts/harness/diagnose.sh",
+        "scripts/harness/diagnose-json.py",
+        "scripts/harness/adapter-fixture-check.py",
+        "scripts/harness/new-feature.sh",
+        "scripts/harness/feedback-fixture-candidates.py",
+        "scripts/harness/review-status.py",
+        "scripts/product/chrome-bridge-smoke.sh",
     ]
     for relative_path in required_files:
         if not (ROOT / relative_path).is_file():
@@ -259,6 +280,9 @@ def check_ui_shell(failures: list[str]) -> None:
         for phrase in ["data-ui-root", "IntentOS", "Behavior reports"]:
             if phrase not in text:
                 failures.append(f"web/index.html must mention {phrase!r}")
+        for phrase in ["youtube-title", "data-youtube-narrative"]:
+            if phrase in text:
+                failures.append(f"web/index.html must not expose legacy YouTube UI token {phrase!r}")
 
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
@@ -269,10 +293,12 @@ def check_ui_shell(failures: list[str]) -> None:
             "session-capture-summary.json",
             "live-session-capture-summary.json",
             "live-capture-summary.json",
-            "youtube-summary.json",
         ]:
             if phrase not in text:
                 failures.append(f"web/app.js must load {phrase}")
+        for phrase in ["youtube-summary.json", "data-youtube", "youtube-panel"]:
+            if phrase in text:
+                failures.append(f"web/app.js must not load legacy YouTube UI token {phrase!r}")
 
     validate = ROOT / "scripts/product/validate-ui.sh"
     if validate.is_file():

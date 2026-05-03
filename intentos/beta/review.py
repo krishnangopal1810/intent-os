@@ -39,7 +39,7 @@ def daily_review(conn: sqlite3.Connection, date: str, db_path: str | None = None
         if seconds
     }
     items = review_items(classified, corrected_keys)
-    write_classified_segments(conn, date, items)
+    write_classified_segments(conn, date, aggregate_equivalent_items(items))
     return {
         "date": date,
         "generated_at": store.utc_now(),
@@ -63,11 +63,7 @@ def daily_review(conn: sqlite3.Connection, date: str, db_path: str | None = None
         "top_reactive_surfaces": top_items(
             items, {"passive_consumption", "entertainment", "communication"}
         ),
-        "low_confidence_segments": [
-            item
-            for item in items
-            if item.get("confidence", 1) < 0.55 or item.get("label") == "unknown"
-        ],
+        "low_confidence_segments": low_confidence_items(items),
     }
 
 
@@ -136,8 +132,94 @@ def corrected_segment_keys(conn: sqlite3.Connection) -> set[str]:
 
 
 def top_items(items: list[dict[str, Any]], wanted: set[str]) -> list[dict[str, Any]]:
+    grouped = aggregate_equivalent_items(
+        [item for item in items if item.get("label") in wanted]
+    )
     return sorted(
-        [item for item in items if item.get("label") in wanted],
+        grouped,
         key=lambda item: item.get("duration_seconds", 0),
         reverse=True,
     )[:3]
+
+
+def low_confidence_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped = aggregate_equivalent_items(
+        [
+            item
+            for item in items
+            if item.get("confidence", 1) < 0.55 or item.get("label") == "unknown"
+        ]
+    )
+    return sorted(
+        grouped,
+        key=lambda item: item.get("duration_seconds", 0),
+        reverse=True,
+    )
+
+
+def aggregate_equivalent_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    confidence_totals: dict[tuple[str, str], float] = {}
+    confidence_weights: dict[tuple[str, str], int] = {}
+
+    for item in items:
+        key = equivalent_item_key(item)
+        seconds = positive_int(item.get("duration_seconds"), default=0)
+        sample_count = positive_int(item.get("sample_count"), default=1)
+        confidence = numeric_confidence(item.get("confidence"))
+        weight = max(seconds, 1)
+
+        if key not in groups:
+            groups[key] = dict(item)
+            groups[key]["duration_seconds"] = 0
+            groups[key]["sample_count"] = 0
+            confidence_totals[key] = 0.0
+            confidence_weights[key] = 0
+
+        grouped = groups[key]
+        grouped["duration_seconds"] += seconds
+        grouped["sample_count"] += sample_count
+        if item.get("corrected_label"):
+            grouped["corrected_label"] = item["corrected_label"]
+        confidence_totals[key] += confidence * weight
+        confidence_weights[key] += weight
+
+    for key, grouped in groups.items():
+        seconds = positive_int(grouped.get("duration_seconds"), default=0)
+        grouped["duration"] = format_duration(seconds)
+        if confidence_weights[key]:
+            grouped["confidence"] = round(
+                confidence_totals[key] / confidence_weights[key],
+                2,
+            )
+
+    return list(groups.values())
+
+
+def equivalent_item_key(item: dict[str, Any]) -> tuple[str, str]:
+    segment_key = item.get("segment_key")
+    if not isinstance(segment_key, str) or not segment_key:
+        segment_key = "|".join(
+            [
+                clean_group_value(item.get("source_app")),
+                clean_group_value(item.get("surface")),
+                clean_group_value(item.get("url") or item.get("title")),
+            ]
+        )
+    return (str(item.get("label") or ""), segment_key)
+
+
+def clean_group_value(value: object) -> str:
+    return " ".join(value.lower().split()) if isinstance(value, str) else ""
+
+
+def positive_int(value: object, default: int) -> int:
+    if isinstance(value, int) and value > 0:
+        return value
+    return default
+
+
+def numeric_confidence(value: object) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return 0.0

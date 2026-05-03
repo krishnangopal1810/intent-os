@@ -173,6 +173,12 @@ Acceptance criteria:
   output changes.
 - Keep structured runtime events current when new capture, classification,
   reporting, or UI paths are added.
+- Use `make new-feature` for future roadmap slices so active plans start with
+  acceptance criteria and complete Harness Impact sections.
+- Run `make adapter-fixture-check` when capture or parser fixtures change; keep
+  the adapter fixture manifest aligned with every real adapter.
+- Run `make diagnose-json` and `make review-status` when handing off runtime or
+  PR failures so future agents get structured evidence.
 - Add richer DOM automation to `make validate-ui` when UI workflows become
   interactive enough that static HTML checks and checked-in screenshots are no
   longer sufficient.
@@ -184,6 +190,10 @@ Acceptance criteria:
   and model adapters need equivalent fixtures.
 - Keep beta structured runtime logs current for service startup, browser bridge
   events, corrections, pause/resume, delete-local-data, and retention cleanup.
+- Use `make chrome-bridge-smoke` for installed Chrome bridge validation; it
+  must reach connected or posting-events without seeded fake bridge rows.
+- Use `make feedback-fixture-candidates` to turn trusted tester corrections
+  into privacy-redacted fixture candidates before adding labeled examples.
 - Keep `make observe-live` as the manual local sensor diagnostic and expand it
   as new metadata adapters land.
 - Add stricter architecture rules as modules grow. Promote repeated review
