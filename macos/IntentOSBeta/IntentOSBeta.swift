@@ -3,11 +3,21 @@ import Foundation
 
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static var retainedDelegate: AppDelegate?
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private lazy var repoRoot = findRepoRoot()
     private var statusMenuItem: NSMenuItem?
     private var didOpenDashboardAfterLaunch = false
     private var isStartingBeta = false
+
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        retainedDelegate = delegate
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        app.run()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         rebuildMenu()
@@ -18,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildMenu() {
         let menu = NSMenu()
+        statusItem.button?.title = "IntentOS"
+        statusItem.button?.toolTip = "IntentOS beta"
         let status = NSMenuItem(title: "Capture: unknown", action: nil, keyEquivalent: "")
         status.isEnabled = false
         statusMenuItem = status
@@ -185,7 +197,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateMenuStatus(_ label: String) {
-        statusItem.button?.title = "IntentOS \(label)"
+        statusItem.button?.title = "IntentOS"
+        statusItem.button?.toolTip = "IntentOS \(label)"
         statusMenuItem?.title = "Capture: \(label)"
     }
 

@@ -1,0 +1,58 @@
+name: Bug report
+description: Report broken behavior, failing verification, or incorrect product output.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please remove or redact personal activity metadata before posting.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: IntentOS classified a deep-work segment as entertainment.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: List the smallest steps or command sequence that reproduces the issue.
+      placeholder: |
+        1. Run `make beta-dev`
+        2. Open the dashboard URL
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include macOS version, Python version, browser, and whether Accessibility/Automation permissions are granted.
+      placeholder: macOS 15.x, Python 3.12.x, Chrome 124, Accessibility granted.
+    validations:
+      required: false
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification output
+      description: Paste relevant output from `make verify`, `make validate-beta`, `make diagnose`, or `make beta-status`.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed or redacted personal titles, URLs, tokens, cookies, and activity data that should not be public.
+          required: true

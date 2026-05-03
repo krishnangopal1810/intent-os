@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a product slice, harness improvement, or classification enhancement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or repo capability gap should this solve?
+      placeholder: I cannot tell whether a long browser session was research or passive consumption.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest complete slice that would solve it.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What should be true when this is done?
+      placeholder: |
+        - The dashboard shows ...
+        - `make validate-beta` covers ...
+        - Privacy docs mention ...
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Product behavior
+        - Classification
+        - Capture
+        - Privacy/security
+        - UI
+        - Harness/verification
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This preserves local-first behavior.
+          required: true
+        - label: This does not require keylogging, page bodies, cookies, tokens, cloud inference, or raw screenshot retention.
+          required: true
