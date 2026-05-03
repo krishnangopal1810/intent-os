@@ -44,7 +44,9 @@ local-first behavior layer for answering one uncomfortable question:
 
 The current repo is a source-based macOS beta. It is already runnable,
 inspectable, fixture-backed, service-backed, and privacy-constrained. It is not
-yet a polished public installer.
+yet a polished public installer. It is reasonable for trusted Mac friends who
+are comfortable running a source beta and granting local permissions; it is not
+ready for broad nontechnical distribution.
 
 ## Why This Should Exist
 
@@ -123,6 +125,11 @@ Build and install the local menu bar app:
 make package-beta
 make install-beta-app
 ```
+
+For trusted friend testing, start with the menu bar app or `make beta-dev`,
+then use `Run Permission Check` from the IntentOS menu and inspect
+`make beta-status` if capture looks stuck. The Chrome bridge is optional for
+the first test pass; native recorder capture is the primary beta path.
 
 Run the full local gate:
 

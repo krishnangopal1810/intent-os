@@ -99,42 +99,70 @@ Browser extension capture now exists as a Chrome-first dogfood bridge shell and
 fake harness source. It is an enhancement for richer browser metadata, not a
 blocking requirement for first beta value.
 
-## Recommended Next Slice
+## Friend Testing Readiness
 
-Launch dogfood beta with native-recorder smoke evidence.
+Status: ready for trusted source-beta testing, not public distribution.
 
-Goal: complete one fresh internal dogfood launch pass with native recorder
-capture, menu bar install/open, delete-local-data recovery, and clear evidence
-artifacts; then optionally run a second pass with the Chrome bridge installed.
+What is ready:
 
-Why this is next:
+- Native macOS metadata capture is the primary beta source.
+- Service-backed daily review, corrections, pause/resume, permission guidance,
+  delete-local-data, and diagnostics are wired.
+- Local menu bar packaging and install/open smoke evidence exist.
+- Deterministic verification, cleanup audit, beta validation, UI render checks,
+  and screenshot freshness gates pass locally.
 
-- The first beta experience should work before the user installs a browser
-  extension.
-- Chrome bridge state now distinguishes never connected, connected, stale, and
-  posting events; the launch pass should confirm those states are understandable.
-- The remaining launch question is operational confidence, not manual data
-  import support.
+Testing boundary:
 
-Acceptance criteria:
-
-- `make dogfood-smoke` passes on a dogfood machine from native recorder events
-  with the Chrome bridge absent or stale only as a warning.
-- `make package-beta`, `make install-beta-app`, and `make package-extension`
-  produce local artifacts.
-- `make beta-status` and dashboard onboarding show native recorder as primary
-  capture source and Chrome bridge as optional enhanced browser metadata.
-- A second smoke with the extension installed verifies the bridge moves to
-  connected or posting-events.
+- Send only to trusted Mac users who are comfortable running a source beta,
+  granting Accessibility and browser Automation permissions, and sharing
+  diagnostics if setup fails.
+- Do not present it as a polished installer, notarized app, or public beta.
+- Chrome bridge setup is optional for the first pass; native recorder capture
+  should show value without it.
+- Ask testers to report permission-check output, `make beta-status`, and
+  dashboard behavior rather than sharing raw SQLite data.
 
 Current evidence:
 
+- 2026-05-03: `make verify` passed, including beta validation and UI render
+  checks.
+- 2026-05-03: `make cleanup-check` passed after splitting beta correction-key
+  helpers out of `store.py`.
+- 2026-05-03: `make package-beta` produced the ad-hoc signed local menu bar
+  app bundle.
+- 2026-05-03: `make install-beta-app` installed and opened
+  `/Users/kgopal/Applications/IntentOSBeta.app`.
+- 2026-05-03: `make package-extension` produced the internal Chrome bridge zip.
+- 2026-05-03: `make beta-status` reported readiness `ready`, native recorder
+  `running`, SQLite `quick_check` `ok`, and Chrome bridge `never_connected`
+  as an optional unchecked enhancement.
 - 2026-05-03: `make dogfood-smoke` passed for 30 minutes on the dogfood
   machine with native recorder events and no fake bridge. Rows increased from
   3292 to 3348, pause held row count steady, and Chrome bridge absence was
   recorded only as a warning.
-- Remaining operational checks are menu bar install/open smoke on the installed
-  app bundle and a second smoke with the Chrome extension installed.
+
+## Recommended Next Slice
+
+Trusted friend beta handoff plus installed Chrome bridge smoke.
+
+Goal: send the source beta to a small trusted Mac tester group, collect setup
+and classification feedback, and run a second smoke with the Chrome bridge
+installed so bridge health moves from `never_connected` to `connected` or
+`posting_events`.
+
+Acceptance criteria:
+
+- At least two testers can launch the source beta through the menu bar app or
+  `make beta-dev`, grant required local permissions, and see current-day
+  activity in the service-backed dashboard.
+- Permission-check output is understandable enough that testers can recover
+  from missing Accessibility, Automation, native recorder, or Chrome bridge
+  setup without chat-only instructions.
+- A second smoke with the Chrome extension installed verifies bridge connected
+  or posting-events state while native recorder remains the primary path.
+- Feedback that changes product assumptions is recorded in docs or fixtures,
+  not left only in chat.
 
 ## Harness Upgrades To Keep Current
 

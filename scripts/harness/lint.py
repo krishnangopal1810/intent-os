@@ -21,6 +21,7 @@ EXPECTED_LAYERS = {
     "intentos/beta/__init__.py",
     "intentos/beta/db_health.py",
     "intentos/beta/extension.py",
+    "intentos/beta/keys.py",
     "intentos/beta/native_recorder.py",
     "intentos/beta/permissions.py",
     "intentos/beta/recorder.py",
@@ -78,6 +79,7 @@ ALLOWED_IMPORTS = {
         "intentos.capture.browser",
         "intentos.capture.privacy",
     },
+    "intentos/beta/keys.py": set(),
     "intentos/beta/native_recorder.py": {
         "intentos.activity",
         "intentos.beta",
@@ -111,6 +113,7 @@ ALLOWED_IMPORTS = {
     },
     "intentos/beta/store.py": {
         "intentos.beta.db_health",
+        "intentos.beta.keys",
         "intentos.beta",
         "intentos.activity",
         "intentos.classifier",
