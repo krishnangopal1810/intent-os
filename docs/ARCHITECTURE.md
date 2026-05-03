@@ -53,6 +53,8 @@ The current local-first slice keeps these concerns separate:
   derived labels.
 - `intentos/beta/extension.py`: Chrome extension bridge validation and privacy
   filtering for bounded tab metadata.
+- `intentos/beta/keys.py`: stable review segment keys and correction matching
+  helpers shared by beta persistence and review generation.
 - `intentos/beta/native_recorder.py`: beta native macOS recorder that samples
   frontmost app/window metadata, uses the existing browser metadata fallback,
   applies privacy filtering through the capture stack, and writes SQLite rows.

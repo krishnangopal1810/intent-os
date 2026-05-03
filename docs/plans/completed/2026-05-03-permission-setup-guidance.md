@@ -84,6 +84,12 @@ module so the service, dashboard, validation, and native wrapper do not drift.
   then reported only the unrelated `intentos/beta/store.py` size limit.
 - 2026-05-03: Split SQLite health helpers out of `store.py`, reran
   `make verify`, and completed the plan with the full gate passing.
+- 2026-05-03: Follow-up fix: native menu bar `Run Permission Check` now shows
+  a readiness/permission result alert instead of silently discarding the API
+  response.
+- 2026-05-03: Follow-up fix: the permission result alert now includes exact
+  Chrome bridge install steps and the local unpacked extension path when the
+  bridge is unchecked.
 
 ## Handoff Notes
 

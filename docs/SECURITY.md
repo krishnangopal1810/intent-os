@@ -89,7 +89,15 @@ health, and payment forms should default to metadata-only capture or exclusion.
 Map and directions URLs are also excluded by default because they can contain
 precise location coordinates inside otherwise ordinary browser metadata.
 
-## Required Before Real Users
+## Trusted Beta Boundary
+
+The current repo can be shared with trusted Mac friends as a source beta when
+they understand that it runs a local recorder, writes local SQLite data under
+`.harness/runtime/beta/`, and may need Accessibility and browser Automation
+permissions. Testers should share `make beta-status`, permission-check output,
+or generated smoke evidence for debugging instead of sharing raw SQLite data.
+
+## Required Before Public Users
 
 - Public authentication and authorization model
 - User-facing retention controls beyond the dogfood 30-day default

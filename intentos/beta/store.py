@@ -9,10 +9,10 @@ from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 from intentos.activity import ActivityEvent
 from intentos.beta.db_health import checkpoint, db_file_stats, quick_check
+from intentos.beta.keys import clean_key, domain_for_url, segment_key_from_parts, stable_url_pattern
 from intentos.classifier import BehaviorLabel
 from intentos.reporting import event_sample_count
 
@@ -21,10 +21,19 @@ SCHEMA_VERSION = "1"
 DEFAULT_RETENTION_DAYS = 30
 
 
+class ClosingConnection(sqlite3.Connection):
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        try:
+            super().__exit__(exc_type, exc, tb)
+        finally:
+            self.close()
+        return False
+
+
 def connect(path: str | Path) -> sqlite3.Connection:
     db_path = Path(path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, factory=ClosingConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -256,26 +265,6 @@ def event_key(event: ActivityEvent) -> str:
 def segment_key(event: ActivityEvent) -> str:
     return segment_key_from_parts(asdict(event))
 
-def segment_key_from_parts(item: dict[str, Any]) -> str:
-    url = stable_url_pattern(item.get("url"))
-    surface = clean_key(domain_for_url(item.get("url")) or item.get("surface"))
-    title = clean_key(item.get("title"))
-    return "|".join([clean_key(item.get("source_app")), surface, url or title])
-
-def stable_url_pattern(url: object) -> str:
-    if not isinstance(url, str) or not url.strip():
-        return ""
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        return ""
-    return f"{parsed.scheme}://{parsed.netloc.lower()}{parsed.path}".rstrip("/")
-
-def domain_for_url(url: object) -> str:
-    pattern = stable_url_pattern(url)
-    return urlparse(pattern).netloc.removeprefix("www.") if pattern else ""
-
-def clean_key(value: object) -> str:
-    return " ".join(value.lower().split()) if isinstance(value, str) else ""
 
 def row_to_event(row: sqlite3.Row) -> ActivityEvent:
     return ActivityEvent(
