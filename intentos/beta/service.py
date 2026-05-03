@@ -16,6 +16,10 @@ from intentos.beta.extension import chrome_event_to_activity
 from intentos.capture.privacy import load_privacy_policy
 
 
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+
+
 @dataclass(frozen=True)
 class ServiceConfig:
     db_path: Path
@@ -194,7 +198,10 @@ def serve(config: ServiceConfig) -> None:
         store.set_status(conn, "capture_note", "")
         if config.service_log:
             store.set_status(conn, "service_log", str(config.service_log))
-    server = ThreadingHTTPServer(("127.0.0.1", config.port), make_handler(config))
+    server = ReusableThreadingHTTPServer(
+        ("127.0.0.1", config.port),
+        make_handler(config),
+    )
     print(f"beta-service: serving http://127.0.0.1:{config.port}", flush=True)
     server.serve_forever()
 

@@ -219,12 +219,14 @@ make beta-stop
 The beta service stores accepted events in
 `.harness/runtime/beta/intentos.sqlite`, exposes `/api/status`,
 `/api/daily-review`, `/api/events`, `/api/corrections`, `/api/pause`,
-`/api/resume`, `/api/delete-local-data`, and `/api/browser-event`, and uses a
-fake Chrome bridge in harness mode. The Chrome MV3 bridge shell captures only
-bounded tab metadata: URL, title, domain, tab/window id, active state,
-timestamp, source, and optional YouTube/document page-kind metadata. It does
-not send page bodies, cookies, tokens, screenshots, keystrokes, or clipboard
-contents.
+`/api/resume`, `/api/delete-local-data`, and `/api/browser-event`, and serves
+the dashboard from `.harness/runtime/beta/site/` with service-backed beta mode
+required. If the beta service config is missing, the UI must show a live
+service problem rather than fixture reports. The Chrome MV3 bridge shell
+captures only bounded tab metadata: URL, title, domain, tab/window id, active
+state, timestamp, source, and optional YouTube/document page-kind metadata. It
+does not send page bodies, cookies, tokens, screenshots, keystrokes, or
+clipboard contents.
 
 ## Harness Requirements
 

@@ -74,11 +74,12 @@ metadata-only adapters outside CI and write replay artifacts under
 `make beta-dev` is the dogfood beta path. It builds the web shell, starts a
 local Python service bound to `127.0.0.1:58917` by default, starts the native
 macOS metadata recorder, stores normalized activity in
-`.harness/runtime/beta/intentos.sqlite`, writes
-`.harness/runtime/site/beta-config.json`, and starts a local dashboard. It
-does not seed fake rows by default, does not require manual imports or Chrome
-extension setup for first beta value, and does not read page bodies, cookies,
-screenshots, keystrokes, or cloud services. Use
+`.harness/runtime/beta/intentos.sqlite`, writes an isolated
+`.harness/runtime/beta/site/beta-config.json`, and starts a local dashboard
+with `?mode=beta` so missing service config cannot fall back to fixture
+reports. It does not seed fake rows by default, does not require manual imports
+or Chrome extension setup for first beta value, and does not read page bodies,
+cookies, screenshots, keystrokes, or cloud services. Use
 `INTENTOS_BETA_FAKE_BRIDGE=1 make beta-dev` only for explicit fixture bridge
 testing.
 
@@ -102,6 +103,9 @@ Expected artifacts after product code exists:
   PID, DB path, service URL, dashboard URL, daily review artifact, and log paths.
 - `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
   30-day retention.
+- `.harness/runtime/beta/site/`: isolated beta dashboard shell and service
+  config. This keeps dogfood live data separate from fixture UI builds under
+  `.harness/runtime/site/`.
 - `.harness/runtime/logs/app.log`: app logs.
 - `.harness/runtime/logs/events.jsonl`: structured runtime events emitted by
   harness and product scripts.
