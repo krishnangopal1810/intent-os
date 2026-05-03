@@ -46,6 +46,8 @@ The current local-first slice keeps these concerns separate:
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
 - `intentos/beta/store.py`: SQLite schema, retention, raw event persistence,
   settings, runtime status, corrections, and delete-local-data behavior.
+- `intentos/beta/db_health.py`: SQLite quick-check, WAL checkpoint, and local
+  DB/WAL/SHM file-size helpers used by beta status and reset flows.
 - `intentos/beta/review.py`: service-backed daily review generation that reuses
   the existing classifier/reporting pipeline and layers corrections over
   derived labels.
@@ -54,9 +56,9 @@ The current local-first slice keeps these concerns separate:
 - `intentos/beta/native_recorder.py`: beta native macOS recorder that samples
   frontmost app/window metadata, uses the existing browser metadata fallback,
   applies privacy filtering through the capture stack, and writes SQLite rows.
-- `intentos/beta/permissions.py`: explicit dogfood permission probes and local
-  repair actions for Accessibility, browser Automation, Chrome bridge setup,
-  and diagnostics.
+- `intentos/beta/permissions.py`: explicit dogfood permission probes, local
+  repair actions, and target-specific setup guidance for Accessibility,
+  browser Automation, Chrome bridge setup, and diagnostics.
 - `intentos/beta/recorder.py`: beta recorder rules for idle and long-gap
   handling before persistence.
 - `intentos/beta/service.py`: local `127.0.0.1` HTTP APIs for status, events,

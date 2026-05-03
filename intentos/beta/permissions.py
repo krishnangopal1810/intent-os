@@ -15,14 +15,32 @@ SETTINGS_TARGETS = {
     "accessibility": {
         "label": "Accessibility Settings",
         "command": ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"],
+        "summary": "Grant access so IntentOS can read the current app and focused window title.",
+        "steps": [
+            "In Privacy & Security > Accessibility, enable IntentOSBeta if it is listed.",
+            "If macOS lists Terminal, Python, osascript, or Codex instead, enable the entry that launched the beta.",
+            "Return to IntentOS and run the permission check again.",
+        ],
+        "verify": "Accessibility should show Ready, and the native recorder should keep writing current app/window metadata.",
     },
     "automation": {
         "label": "Automation Settings",
         "command": ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"],
+        "summary": "Allow local browser title and URL enrichment when a supported browser is frontmost.",
+        "steps": [
+            "Put Chrome, Safari, Edge, Brave, or Arc in front, then run the permission check to trigger the macOS prompt.",
+            "In Privacy & Security > Automation, find IntentOSBeta, Python, osascript, Terminal, or Codex and enable the browser entry.",
+            "If no browser entry exists yet, switch to the browser and run the permission check again so macOS creates it.",
+        ],
+        "verify": "Browser Automation should show Ready when a supported browser tab is frontmost.",
     },
     "chrome_extensions": {
         "label": "Chrome Extensions",
         "command": ["open", "-a", "Google Chrome", "chrome://extensions/"],
+        "summary": "Optional: install the local Chrome bridge for richer tab metadata.",
+        "steps": [],
+        "verify": "After loading the extension, the Chrome bridge status should move to Connected or Posting events.",
+        "optional": True,
     },
 }
 
@@ -63,7 +81,16 @@ def check_browser_automation(
             conn,
             "browser_automation_permission",
             "unchecked",
-            "Run this check again with Chrome, Safari, Edge, Brave, or Arc in front.",
+            "Not tested because Accessibility is not ready; run this check again after frontmost app metadata works.",
+        )
+        return
+    browser_name = browser.browser_application_name(snapshot.app_name, snapshot.bundle_id)
+    if browser_name is None:
+        record(
+            conn,
+            "browser_automation_permission",
+            "not_applicable",
+            f"Not tested because {snapshot.app_name} is frontmost. Switch to Chrome, Safari, Edge, Brave, or Arc and run checks again.",
         )
         return
     try:
@@ -76,7 +103,7 @@ def check_browser_automation(
             conn,
             "browser_automation_permission",
             "not_applicable",
-            "The frontmost app is not a supported browser, or no active tab URL is visible.",
+            f"{browser_name} is frontmost, but no active http/https tab URL is visible.",
         )
         return
     record(
@@ -99,7 +126,50 @@ def open_settings_target(target: str, runtime_dir: Path, allow_open: bool = True
         label = str(spec["label"])
     if allow_open:
         subprocess.run(command, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return {"status": "opened" if allow_open else "validated", "target": target, "label": label}
+    return {
+        "status": "opened" if allow_open else "validated",
+        "target": target,
+        "label": label,
+        "guidance": setup_guidance(target, runtime_dir),
+    }
+
+
+def setup_guidance(target: str, runtime_dir: Path) -> dict[str, Any]:
+    if target == "diagnostics":
+        return {
+            "title": "Diagnostics",
+            "summary": "Use this folder when setup still looks blocked after granting permissions.",
+            "steps": [
+                "Open beta/app.env to confirm the dashboard and service URLs.",
+                "Open logs/beta-native-recorder.log for recorder errors.",
+                "Run make beta-status from the repo for the same status in text form.",
+            ],
+            "verify": "Send the diagnostics folder or beta-status output with any setup report.",
+            "optional": False,
+        }
+    spec = SETTINGS_TARGETS.get(target)
+    if spec is None:
+        raise ValueError("unknown settings target")
+    steps = list(spec.get("steps", []))
+    if target == "chrome_extensions":
+        steps = chrome_extension_steps()
+    return {
+        "title": str(spec["label"]),
+        "summary": str(spec["summary"]),
+        "steps": steps,
+        "verify": str(spec["verify"]),
+        "optional": bool(spec.get("optional", False)),
+    }
+
+
+def chrome_extension_steps() -> list[str]:
+    extension_dir = Path(__file__).resolve().parents[2] / "extension/chrome"
+    return [
+        "Turn on Developer mode in the Chrome Extensions page.",
+        f"Click Load unpacked and select {extension_dir}.",
+        "Keep the IntentOS beta running; the bridge posts bounded active-tab metadata only to 127.0.0.1.",
+        "Return to the dashboard and wait for Chrome bridge status to update.",
+    ]
 
 
 def record(conn: sqlite3.Connection, key: str, value: str, detail: str) -> None:

@@ -124,6 +124,19 @@ class BetaNativeRecorderTests(unittest.TestCase):
 
         self.assertEqual(native_recorder.parse_hid_idle_seconds(output), 12)
 
+    def test_status_marks_stale_recorder_heartbeat_as_capture_issue(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "beta.sqlite"
+            with store.connect(db) as conn:
+                store.init_db(conn)
+                store.set_status(conn, "native_recorder_state", "running")
+                store.set_status(conn, "native_recorder_interval_seconds", "5")
+                store.set_status(conn, "native_recorder_heartbeat_at", "2026-01-01T00:00:00Z")
+                status = store.status(conn, str(db))
+
+        self.assertEqual(status["native_recorder"]["state"], "stale")
+        self.assertEqual(status["permissions"]["native_recorder"]["state"], "needs_action")
+
 
 def sample_event(metadata=None):
     return ActivityEvent(

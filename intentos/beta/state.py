@@ -23,11 +23,16 @@ def status(conn: sqlite3.Connection, db_path: str | None = None) -> dict[str, An
     native = native_recorder_status(conn)
     extension = extension_status(conn)
     payload = {
-        "service": {"state": store.runtime_value(conn, "service_state") or "running"},
+        "service": {
+            "state": store.runtime_value(conn, "service_state") or "running",
+            "started_at": store.runtime_value(conn, "service_started_at"),
+        },
         "database": {
             "path": db_path,
             "retention_days": int(store.setting(conn, "retention_days", "30")),
             "writable": db_writable(conn),
+            "quick_check": safe_quick_check(conn),
+            **store.db_file_stats(db_path),
         },
         "capture": {
             "state": store.runtime_value(conn, "capture_state") or "ready",
@@ -93,12 +98,14 @@ def mark_readiness_check(conn: sqlite3.Connection) -> None:
 def permission_summary(conn: sqlite3.Connection, payload: dict[str, Any]) -> dict[str, Any]:
     extension = payload["extension"]["state"]
     capture_state = payload["capture"]["state"]
+    database = payload["database"]
+    db_ok = database["writable"] and database.get("quick_check") == "ok"
     return {
         "local_service": item("ok", "Local service", "Dashboard API is running.", "diagnostics"),
         "database": item(
-            "ok" if payload["database"]["writable"] else "blocked",
+            "ok" if db_ok else "blocked",
             "Local database",
-            "SQLite is writable." if payload["database"]["writable"] else "SQLite is not writable.",
+            database_detail(payload["database"]),
             "diagnostics",
         ),
         "accessibility": permission_item(
@@ -156,12 +163,21 @@ def item(state: str, label: str, detail: str, action: str) -> dict[str, str]:
 
 
 def native_recorder_status(conn: sqlite3.Connection) -> dict[str, Any]:
+    raw_state = store.runtime_value(conn, "native_recorder_state") or "not_started"
+    heartbeat_at = store.runtime_value(conn, "native_recorder_heartbeat_at")
+    interval = store.runtime_value(conn, "native_recorder_interval_seconds")
+    state_name = raw_state
+    if raw_state == "running" and heartbeat_at:
+        threshold = native_stale_threshold(interval)
+        if not is_recent_seconds(heartbeat_at, threshold):
+            state_name = "stale"
     return {
-        "state": store.runtime_value(conn, "native_recorder_state") or "not_started",
+        "state": state_name,
         "pid": store.runtime_value(conn, "native_recorder_pid"),
+        "heartbeat_at": heartbeat_at,
         "last_event_at": store.runtime_value(conn, "native_recorder_last_event_at"),
         "last_error": store.runtime_value(conn, "native_recorder_last_error"),
-        "interval_seconds": store.runtime_value(conn, "native_recorder_interval_seconds"),
+        "interval_seconds": interval,
         "log": store.runtime_value(conn, "native_recorder_log"),
     }
 
@@ -196,9 +212,24 @@ def native_recorder_detail(native: dict[str, Any]) -> str:
     if state_name == "running":
         last = native.get("last_event_at")
         return f"Native macOS metadata capture is running{f'; last event {last}' if last else ''}."
+    if state_name == "stale":
+        heartbeat = native.get("heartbeat_at") or "unknown"
+        return f"Native recorder has not checked in recently; last heartbeat {heartbeat}."
     if state_name == "error":
         return native.get("last_error") or "Native recorder failed."
     return f"Native recorder is {state_name}."
+
+
+def database_detail(database: dict[str, Any]) -> str:
+    if not database.get("writable"):
+        return "SQLite is not writable."
+    quick_check = database.get("quick_check")
+    if quick_check != "ok":
+        return f"SQLite health check failed: {quick_check}."
+    wal_bytes = database.get("wal_bytes")
+    if isinstance(wal_bytes, int) and wal_bytes > 0:
+        return f"SQLite is writable; WAL is {wal_bytes} bytes."
+    return "SQLite is writable and healthy."
 
 
 def chrome_extension_detail(extension: dict[str, Any]) -> str:
@@ -233,9 +264,32 @@ def db_writable(conn: sqlite3.Connection) -> bool:
         return False
 
 
+def safe_quick_check(conn: sqlite3.Connection) -> str:
+    try:
+        return store.quick_check(conn)
+    except sqlite3.Error as exc:
+        return f"error: {' '.join(str(exc).split())}"
+
+
 def is_recent(value: str, minutes: int) -> bool:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return False
     return parsed.astimezone(timezone.utc) >= datetime.now(timezone.utc) - timedelta(minutes=minutes)
+
+
+def is_recent_seconds(value: str, seconds: int) -> bool:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.astimezone(timezone.utc) >= datetime.now(timezone.utc) - timedelta(seconds=seconds)
+
+
+def native_stale_threshold(interval: str | None) -> int:
+    try:
+        seconds = int(interval or "5")
+    except ValueError:
+        seconds = 5
+    return max(30, seconds * 4)

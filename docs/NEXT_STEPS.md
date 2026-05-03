@@ -84,11 +84,11 @@ Why this mattered:
 
 Completed acceptance criteria:
 
-- Dashboard shows non-blocking first-run local-only onboarding and permission
-  health.
+- Dashboard shows non-blocking first-run local-only onboarding, permission
+  health, and target-specific setup guidance.
 - Menu bar exposes setup-needed, paused, running, capture issue, permission
-  check, settings, Chrome setup, diagnostics, and existing pause/resume/delete
-  actions.
+  check, settings, Chrome setup, diagnostics, setup guidance, and existing
+  pause/resume/delete actions.
 - `make validate-beta` covers onboarding, permission APIs, settings validation,
   corrections, pause/resume, delete-local-data, and service-backed UI loading
   with fake probes.
@@ -126,6 +126,15 @@ Acceptance criteria:
   capture source and Chrome bridge as optional enhanced browser metadata.
 - A second smoke with the extension installed verifies the bridge moves to
   connected or posting-events.
+
+Current evidence:
+
+- 2026-05-03: `make dogfood-smoke` passed for 30 minutes on the dogfood
+  machine with native recorder events and no fake bridge. Rows increased from
+  3292 to 3348, pause held row count steady, and Chrome bridge absence was
+  recorded only as a warning.
+- Remaining operational checks are menu bar install/open smoke on the installed
+  app bundle and a second smoke with the Chrome extension installed.
 
 ## Harness Upgrades To Keep Current
 

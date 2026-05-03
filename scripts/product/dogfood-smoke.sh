@@ -95,6 +95,29 @@ def extension_warning(status: dict) -> str | None:
     return "Chrome bridge is absent or stale; native recorder is still the beta launch path."
 
 
+def verify_pause_resume() -> dict:
+    before = get_json(f"{service_url}/api/status")
+    interval = int((before.get("native_recorder") or {}).get("interval_seconds") or 5)
+    wait_seconds = max(6, interval + 2)
+    post_json(f"{service_url}/api/pause", {"minutes": 15})
+    time.sleep(wait_seconds)
+    settled = get_json(f"{service_url}/api/status")
+    settled_rows = settled["row_counts"]["activity_events"]
+    time.sleep(wait_seconds)
+    paused = get_json(f"{service_url}/api/status")
+    paused_rows = paused["row_counts"]["activity_events"]
+    post_json(f"{service_url}/api/resume", {})
+    resumed = get_json(f"{service_url}/api/status")
+    return {
+        "wait_seconds": wait_seconds,
+        "before_rows": before["row_counts"]["activity_events"],
+        "settled_rows": settled_rows,
+        "paused_rows": paused_rows,
+        "resume_status": resumed.get("pause", {}),
+        "passed": paused_rows == settled_rows and not resumed.get("pause", {}).get("paused"),
+    }
+
+
 def privacy_failures(events: list[dict]) -> list[str]:
     forbidden = {"body", "page_body", "content", "cookies", "cookie", "authorization", "token", "password"}
     failures = []
@@ -168,10 +191,13 @@ if native_state != "running":
         "failures": [f"native recorder is not running; current state is {native_state}"],
         "permission_preflight": permission_status.get("permissions", {}),
         "baseline_status": baseline,
+        "pause_check": None,
     }
     smoke_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     log(f"dogfood-smoke: blocked: {payload['failures'][0]}")
     raise SystemExit(2)
+pause_check = verify_pause_resume()
+baseline = get_json(f"{service_url}/api/status")
 baseline_rows = baseline["row_counts"]["activity_events"]
 samples = []
 log(f"dogfood-smoke: observing for {seconds_to_run}s; baseline_rows={baseline_rows}")
@@ -210,6 +236,11 @@ event_seen = final_rows > baseline_rows
 failures = []
 failures.extend(permission_failures(final_status))
 failures.extend(privacy_failures(events))
+if not pause_check["passed"]:
+    failures.append(
+        "pause did not hold as a privacy control; rows changed from "
+        f"{pause_check['settled_rows']} to {pause_check['paused_rows']} while paused"
+    )
 final_native_state = (final_status.get("native_recorder") or {}).get("state")
 if final_native_state != "running":
     failures.append(f"native recorder stopped or failed during smoke; final state is {final_native_state}")
@@ -236,6 +267,7 @@ payload = {
     "baseline_last_event_time": baseline.get("last_event_time"),
     "final_last_event_time": final_status.get("last_event_time"),
     "event_seen": event_seen,
+    "pause_check": pause_check,
     "native_recorder": final_status.get("native_recorder", {}),
     "extension": final_status.get("extension", {}),
     "permission_preflight": permission_status.get("permissions", {}),

@@ -9,9 +9,9 @@ Use this document to keep quality visible to future Codex runs.
 | Product definition | Green | IntentOS brief, behavior taxonomy, YouTube slice, multi-app `ActivityEvent` foundation, and dogfood beta target are specified. |
 | Architecture | Yellow | Local-first Python CLI/UI stack, beta service/SQLite boundaries, MVP boundaries, and capture adapter boundaries are documented and linted. |
 | Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, beta validation, UI validation, and labeled fixture evaluation. |
-| Security | Yellow | Local-only defaults, live-capture privacy rules, beta SQLite retention, Chrome bridge filtering, background timeline visibility, and manual macOS permission handling are documented; polished permission UX is pending. |
-| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, and artifact runtime exist; richer observability is pending. |
-| UX | Yellow | A local UI shell now supports service-backed daily review and correction controls; native dogfood menu bar packaging exists, but onboarding and permissions remain rough. |
+| Security | Yellow | Local-only defaults, live-capture privacy rules, beta SQLite retention, Chrome bridge filtering, background timeline visibility, and manual macOS permission handling are documented; permission actions now include local setup guidance. |
+| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, artifact runtime, and a passing 30-minute native-recorder dogfood smoke exist; richer observability is pending. |
+| UX | Yellow | A local UI shell now supports service-backed daily review, correction controls, and permission setup guidance; native dogfood menu bar packaging exists, but fresh-install polish is still pending. |
 
 ## Known Gaps
 
@@ -19,8 +19,11 @@ Use this document to keep quality visible to future Codex runs.
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
   richer DOM automation is still pending.
-- Dogfood beta packaging exists as a local unsigned menu bar app, but
-  notarization, onboarding, and public distribution are out of scope.
+- Dogfood beta packaging exists as a local unsigned menu bar app with
+  target-specific setup guidance, but notarization and public distribution are
+  out of scope.
+- Fresh dogfood smoke evidence exists for native recorder row growth and pause
+  privacy; the Chrome extension bridge still needs an installed-extension smoke.
 - Browser/app capture for beta v1 is Chrome-first and metadata-only; richer
   cross-browser adapters are pending.
 - Session timeline fixtures, merge tests, replay checks, and UI timeline

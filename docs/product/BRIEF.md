@@ -118,8 +118,9 @@ The current beta target is a trusted internal macOS dogfood build:
   timeline, deep-work highlights, reactive surfaces, low-confidence segments,
   and local correction controls
 - pause/resume and delete-local-data controls
-- first-run local-only onboarding plus visible Accessibility, browser
-  Automation, native recorder, optional Chrome bridge, capture, and database health
+- first-run local-only onboarding plus target-specific Accessibility, browser
+  Automation, native recorder, optional Chrome bridge, capture, and database
+  health guidance
 - local Swift menu bar wrapper that launches/stops the beta harness
 - real dogfood smoke evidence that observes live local capture without seeding
   fake rows or deleting user data

@@ -170,6 +170,10 @@ if permissions["permissions"]["accessibility"]["state"] != "ok":
     raise AssertionError("fake permission check did not pass")
 if opened["status"] != "validated":
     raise AssertionError("settings endpoint did not validate target")
+if not opened.get("guidance", {}).get("steps"):
+    raise AssertionError("settings endpoint must include setup guidance")
+if "Accessibility" not in opened["guidance"].get("title", ""):
+    raise AssertionError("settings guidance must name the target")
 if not completed["completed"]:
     raise AssertionError("onboarding completion was not persisted")
 if not review["items"]:
@@ -200,6 +204,7 @@ with urlopen(ui_url.replace("index.html", "beta-config.json"), timeout=3) as res
 for token in [
     "data-correction-controls",
     "data-onboarding",
+    "data-setup-guidance",
     "Native recorder",
     "/api/permissions/check",
     "POST /api/corrections",
@@ -249,6 +254,8 @@ probe = """
               document.querySelector("[data-onboarding]")?.hidden === false,
             correction_controls:
               document.querySelectorAll(".event-correction").length,
+            youtube_visible:
+              document.querySelector(".youtube-panel")?.hidden === false,
             horizontal_overflow:
               document.documentElement.scrollWidth >
               document.documentElement.clientWidth + 1,
@@ -296,6 +303,7 @@ PY
   beta_render_dom="$ARTIFACT_DIR/beta-ui-render-dom.html"
   beta_render_json="$ARTIFACT_DIR/beta-ui-render-validation.json"
   beta_render_text="$ARTIFACT_DIR/beta-ui-render-validation.txt"
+  rm -f "$beta_render_screenshot" "$beta_render_dom" "$beta_render_json" "$beta_render_text"
   python3 - "$browser" "$ui_url" "$beta_render_screenshot" "$beta_render_dom" "$LOG_DIR" "$WORK_DIR" <<'PY'
 import shutil
 import subprocess
@@ -358,10 +366,20 @@ def run(name: str, extra: list[str], stdout_path: Path | None = None, required: 
 
 
 run("screenshot", [f"--screenshot={screenshot}"])
-run("dom", ["--virtual-time-budget=5000", "--dump-dom"], dom, required=False)
+run("dom", ["--virtual-time-budget=5000", "--dump-dom"], dom, required=True)
 PY
   python3 scripts/product/render-ui-check.py \
     "$beta_render_screenshot" "$beta_render_dom" "$beta_render_json" "$beta_render_text" 2
+  python3 - "$beta_render_json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+probe = payload.get("probe") or {}
+if probe.get("youtube_visible"):
+    raise SystemExit("beta dashboard must hide the legacy YouTube panel")
+PY
 else
   cat > "$ARTIFACT_DIR/beta-ui-render-validation.txt" <<'EOF'
 beta-ui-render-validation: skipped

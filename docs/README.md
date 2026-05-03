@@ -140,9 +140,11 @@ also outside CI; deterministic session fixtures cover merge, privacy, replay,
 and UI timeline behavior.
 `make dev-live` is the explicit real macOS UI flow: it runs a fresh bounded
 `make observe-session`, preserves the live replay artifact, and then starts the
-UI with live session data preferred. It reflects only activity captured during
+UI with a strict live-session URL. It reflects only activity captured during
 that bounded command window for the session timeline, while the background
-sampler remains separately visible in harness status.
+sampler remains separately visible in harness status. If that live artifact is
+missing, the UI shows a live-capture error instead of falling back to fixture
+reports.
 `make validate-ui` also runs local headless browser render diagnostics when
 Chrome or Chromium exists.
 `make update-ui-screenshot` regenerates checked-in UI evidence when UI source,
@@ -156,7 +158,9 @@ native recorder, and an optional fake Chrome bridge when explicitly enabled.
 `make beta-status` reads the beta DB and `.harness/runtime/beta/app.env`;
 `make validate-beta` writes
 `.harness/runtime/artifacts/beta-validation.json` and
-`.harness/runtime/artifacts/beta-daily-review.json`.
+`.harness/runtime/artifacts/beta-daily-review.json`. Beta and live dashboards
+hide the legacy YouTube domain panel; YouTube is represented through the normal
+timeline and behavior mix.
 
 ## Next Feature Readiness
 

@@ -18,9 +18,14 @@ class BetaServiceTests(unittest.TestCase):
                 db_path=db,
                 privacy_policy_path=Path("data/capture/privacy_policy.json"),
                 port=0,
+                runtime_dir=Path(tmp),
                 permission_mode="fake",
                 allow_system_open=False,
             )
+            artifacts = Path(tmp) / "artifacts"
+            artifacts.mkdir()
+            stale_report = artifacts / "beta-daily-review.json"
+            stale_report.write_text("{}", encoding="utf-8")
             with store.connect(db) as conn:
                 store.init_db(conn)
             server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(config))
@@ -64,13 +69,17 @@ class BetaServiceTests(unittest.TestCase):
         self.assertFalse(onboarding["onboarding"]["completed"])
         self.assertEqual(permission_check["permissions"]["accessibility"]["state"], "ok")
         self.assertEqual(settings["status"], "validated")
+        self.assertIn("browser entry", " ".join(settings["guidance"]["steps"]))
         self.assertTrue(completed["completed"])
         self.assertEqual(correction["status"], "corrected")
         self.assertEqual(corrected["items"][0]["label"], "learning")
         self.assertEqual(pause["status"], "paused")
         self.assertTrue(paused["pause"]["paused"])
         self.assertEqual(delete["status"], "deleted")
+        self.assertIn(str(stale_report), delete["cleared_artifacts"])
+        self.assertFalse(stale_report.exists())
         self.assertEqual(deleted["row_counts"]["activity_events"], 0)
+        self.assertEqual(deleted["service"]["state"], "running")
 
 
 def get_json(url):

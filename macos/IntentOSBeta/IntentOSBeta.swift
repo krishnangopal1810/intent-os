@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Open Dashboard", #selector(openDashboard)))
         menu.addItem(item("Start Beta", #selector(startBeta)))
+        menu.addItem(item("Restart Beta", #selector(restartBeta)))
         menu.addItem(item("Stop Beta", #selector(stopBeta)))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Run Permission Check", #selector(runPermissionCheck)))
@@ -66,6 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startBetaIfNeeded(openWhenReady: false)
     }
 
+    @objc private func restartBeta() {
+        startBetaIfNeeded(openWhenReady: true)
+    }
+
     @objc private func stopBeta() {
         runMake("beta-stop")
     }
@@ -75,15 +80,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openAccessibilitySettings() {
-        post("/api/open-system-settings", body: #"{"target":"accessibility"}"#)
+        openSettings("accessibility")
     }
 
     @objc private func openAutomationSettings() {
-        post("/api/open-system-settings", body: #"{"target":"automation"}"#)
+        openSettings("automation")
     }
 
     @objc private func openChromeSetup() {
-        post("/api/open-system-settings", body: #"{"target":"chrome_extensions"}"#)
+        openSettings("chrome_extensions")
+    }
+
+    private func openSettings(_ target: String) {
+        post("/api/open-system-settings", body: #"{"target":"\#(target)"}"#) { payload in
+            self.showSetupGuidance(payload)
+        }
     }
 
     @objc private func openDashboard() {
@@ -170,16 +181,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func post(_ path: String, body: String) {
+    private func post(
+        _ path: String,
+        body: String,
+        completion: (([String: Any]?) -> Void)? = nil
+    ) {
         guard let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + path) else {
-            runMake("beta-dev")
+            runMake("beta-dev") { _ in completion?(nil) }
             return
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
-        URLSession.shared.dataTask(with: request).resume()
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            var payload: [String: Any]?
+            if let data,
+               let object = try? JSONSerialization.jsonObject(with: data),
+               let json = object as? [String: Any] {
+                payload = json
+            }
+            if let completion {
+                DispatchQueue.main.async {
+                    completion(payload)
+                }
+            }
+        }.resume()
+    }
+
+    private func showSetupGuidance(_ payload: [String: Any]?) {
+        guard let guidance = payload?["guidance"] as? [String: Any] else { return }
+        let title = guidance["title"] as? String ?? payload?["label"] as? String ?? "IntentOS Setup"
+        let summary = guidance["summary"] as? String
+        let steps = (guidance["steps"] as? [Any])?.compactMap { $0 as? String } ?? []
+        let verify = guidance["verify"] as? String
+        var sections: [String] = []
+        if let summary, !summary.isEmpty {
+            sections.append(summary)
+        }
+        if !steps.isEmpty {
+            sections.append(
+                steps.enumerated()
+                    .map { "\($0.offset + 1). \($0.element)" }
+                    .joined(separator: "\n")
+            )
+        }
+        if let verify, !verify.isEmpty {
+            sections.append("Verify: \(verify)")
+        }
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = sections.joined(separator: "\n\n")
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func refreshStatus() {
@@ -188,8 +244,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             updateMenuStatus("Stopped")
             return
         }
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            let label = self.statusLabel(from: data) ?? "Running"
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            let label = error == nil ? (self.statusLabel(from: data) ?? "Capture Issue") : "Capture Issue"
             DispatchQueue.main.async {
                 self.updateMenuStatus(label)
             }
@@ -224,7 +280,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let recorder = json["native_recorder"] as? [String: Any],
            let recorderState = recorder["state"] as? String,
            recorderState != "running" {
-            return recorderState == "not_started" ? "Setup Needed" : "Capture Issue"
+            return ["not_started", "disabled"].contains(recorderState) ? "Setup Needed" : "Capture Issue"
         }
         return "Running"
     }
