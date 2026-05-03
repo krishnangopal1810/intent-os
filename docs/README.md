@@ -148,10 +148,13 @@ Chrome or Chromium exists.
 `make update-ui-screenshot` regenerates checked-in UI evidence when UI source,
 fixture, or report-output changes affect the rendered product.
 
-The dogfood beta commands use the same local runtime root. `make beta-dev`
-starts `.harness/runtime/beta/intentos.sqlite`, a `127.0.0.1` beta service, a
-service-backed dashboard, and a fake Chrome bridge. `make beta-status` reads
-the beta DB and `.harness/runtime/beta/app.env`; `make validate-beta` writes
+The dogfood beta commands use the same local runtime root but keep the
+service-backed dashboard under `.harness/runtime/beta/site/` so normal fixture
+UI builds cannot erase live beta configuration. `make beta-dev` starts
+`.harness/runtime/beta/intentos.sqlite`, a `127.0.0.1` beta service, a
+native recorder, and an optional fake Chrome bridge when explicitly enabled.
+`make beta-status` reads the beta DB and `.harness/runtime/beta/app.env`;
+`make validate-beta` writes
 `.harness/runtime/artifacts/beta-validation.json` and
 `.harness/runtime/artifacts/beta-daily-review.json`.
 

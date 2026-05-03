@@ -41,6 +41,11 @@ function apiUrl(config, path) {
   return `${config.serviceUrl}${path}`;
 }
 
+function requiresBetaServiceMode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mode") === "beta" || params.get("beta") === "1";
+}
+
 async function loadFirst(pathsToTry) {
   const errors = [];
   for (const path of pathsToTry) {
@@ -460,12 +465,41 @@ function captureStatusText(isLiveCapture, status) {
 }
 
 async function boot() {
+  const betaRequired = requiresBetaServiceMode();
   const betaConfig = await loadOptionalJson("./beta-config.json");
   if (betaConfig?.serviceUrl) {
     await bootBeta(betaConfig);
     return;
   }
+  if (betaRequired) {
+    renderBetaUnavailable(
+      "Live beta configuration is missing. Start Beta from the menu bar or run make beta-dev so the dashboard can connect to local SQLite data.",
+    );
+    return;
+  }
   await bootArtifacts();
+}
+
+function renderBetaUnavailable(message) {
+  setBetaServiceMode(true);
+  document.querySelector("[data-primary-total]").textContent = "--";
+  document.querySelector("[data-primary-narrative]").textContent = message;
+  document.querySelector("[data-youtube-narrative]").textContent = "";
+  document.querySelector("[data-status]").textContent =
+    "Live beta service unavailable";
+  document.querySelector("[data-activity-source]").textContent =
+    "Local beta service";
+  document.querySelector("[data-capture-source]").textContent =
+    "No fixture fallback";
+  document.querySelector("[data-stats]").replaceChildren();
+  document.querySelector("[data-insights]").replaceChildren();
+  document.querySelector("[data-activity-bars]").replaceChildren();
+  renderFocusMeter({ labels: {}, total_seconds: 0 });
+  renderScore({ labels: {}, total_seconds: 0 });
+  renderTimelineWithOptions([], null);
+  renderYoutubeMeter({});
+  renderBetaQueues(null);
+  renderOnboarding(null, null, null);
 }
 
 async function bootArtifacts() {

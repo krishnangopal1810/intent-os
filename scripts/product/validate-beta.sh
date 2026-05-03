@@ -133,7 +133,7 @@ ui_port="$(choose_port)"
 INTENTOS_RUNTIME_DIR="$WORK_DIR" INTENTOS_APP_PORT="$ui_port" \
   scripts/product/start-ui.sh > "$LOG_DIR/beta-ui.log" 2>&1 &
 ui_pid="$!"
-ui_url="http://127.0.0.1:$ui_port/site/index.html"
+ui_url="http://127.0.0.1:$ui_port/site/index.html?mode=beta"
 wait_for_url "$ui_url" "$ui_pid"
 
 python3 - "$service_url" "$ui_url" "$VALIDATION_JSON" "$DAILY_REVIEW_JSON" "$BETA_DATE" <<'PY'

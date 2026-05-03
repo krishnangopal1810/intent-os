@@ -108,7 +108,9 @@ timeline. It records structured runtime events for session start/completion,
 duration, interval, output path, and replay artifact.
 
 `make beta-dev` writes `.harness/runtime/beta/app.env`, starts the beta service
-and fake Chrome bridge, and serves the dashboard in service-backed mode. The
+and native recorder, and serves an isolated dashboard in service-backed beta
+mode. The dashboard is launched with `?mode=beta`; if service config is missing
+or broken, the UI shows a live-service problem instead of fixture reports. The
 service status reports DB path, retention, pause state, extension state, latest
 event time, row counts, and log paths. `make validate-beta` uses the same API
 surface with a temporary DB and writes `beta-validation.json` plus

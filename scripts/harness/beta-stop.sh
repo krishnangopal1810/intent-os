@@ -14,6 +14,28 @@ pid_from_env() {
   fi
 }
 
+wait_for_exit() {
+  local label="$1"
+  local pid="$2"
+  local attempt
+  for attempt in {1..30}; do
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      return
+    fi
+    sleep 0.1
+  done
+  if kill -0 "$pid" >/dev/null 2>&1; then
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+    echo "beta-stop: force stopped $label pid $pid"
+  fi
+  for attempt in {1..10}; do
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      return
+    fi
+    sleep 0.1
+  done
+}
+
 stop_pid_file() {
   local label="$1"
   local pid_file="$2"
@@ -28,6 +50,7 @@ stop_pid_file() {
   fi
   if [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1; then
     kill "$pid" >/dev/null 2>&1 || true
+    wait_for_exit "$label" "$pid"
     echo "beta-stop: stopped $label pid $pid"
   else
     echo "beta-stop: recorded $label process was not running"

@@ -8,7 +8,8 @@ RUNTIME_DIR="${INTENTOS_RUNTIME_DIR:-.harness/runtime}"
 BETA_DIR="$RUNTIME_DIR/beta"
 LOG_DIR="$RUNTIME_DIR/logs"
 ARTIFACT_DIR="$RUNTIME_DIR/artifacts"
-SITE_DIR="$RUNTIME_DIR/site"
+SITE_RUNTIME_DIR="$BETA_DIR"
+SITE_DIR="$SITE_RUNTIME_DIR/site"
 BETA_ENV="$BETA_DIR/app.env"
 SERVICE_PID_FILE="$BETA_DIR/service.pid"
 BRIDGE_PID_FILE="$BETA_DIR/fake-bridge.pid"
@@ -45,6 +46,7 @@ import sys
 
 port = int(sys.argv[1])
 with socket.socket() as sock:
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.bind(("127.0.0.1", port))
     except OSError as exc:
@@ -107,7 +109,7 @@ PY
 scripts/harness/beta-stop.sh >/dev/null 2>&1 || true
 scripts/harness/runtime-log.py beta dev_start mode=dogfood_harness
 
-INTENTOS_RUNTIME_DIR="$RUNTIME_DIR" INTENTOS_PRESERVE_LIVE_ARTIFACTS=1 \
+INTENTOS_RUNTIME_DIR="$SITE_RUNTIME_DIR" INTENTOS_PRESERVE_LIVE_ARTIFACTS=1 \
   scripts/product/dev.sh > "$UI_LOG" 2>&1
 
 service_port="$DEFAULT_SERVICE_PORT"
@@ -215,9 +217,9 @@ cat > "$SITE_DIR/beta-config.json" <<EOF
 EOF
 
 ui_port="$(choose_port)"
-ui_url="http://127.0.0.1:$ui_port/site/index.html"
+ui_url="http://127.0.0.1:$ui_port/site/index.html?mode=beta"
 ui_pid="$(start_process "$UI_LOG" env \
-  INTENTOS_RUNTIME_DIR="$RUNTIME_DIR" \
+  INTENTOS_RUNTIME_DIR="$SITE_RUNTIME_DIR" \
   INTENTOS_APP_PORT="$ui_port" \
   scripts/product/start-ui.sh)"
 echo "$ui_pid" > "$UI_PID_FILE"
@@ -243,6 +245,7 @@ wait_for_url "$ui_url" "$ui_pid"
   echo "INTENTOS_BETA_UI_PID=$ui_pid"
   echo "INTENTOS_BETA_UI_PORT=$ui_port"
   echo "INTENTOS_BETA_UI_URL=$ui_url"
+  echo "INTENTOS_BETA_SITE_DIR=$SITE_DIR"
   echo "INTENTOS_BETA_UI_LOG=$UI_LOG"
   echo "INTENTOS_BETA_DAILY_REVIEW=$ARTIFACT_DIR/beta-daily-review.json"
   echo "INTENTOS_BETA_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
