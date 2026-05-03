@@ -1,4 +1,4 @@
-.PHONY: app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot cleanup-check dev dev-live diagnose harness-check harness-lint harness-status observe observe-live observe-session package-beta update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
+.PHONY: app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot cleanup-check dev dev-live diagnose dogfood-smoke harness-check harness-lint harness-status install-beta-app observe observe-live observe-session package-beta package-extension update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -35,6 +35,15 @@ validate-beta:
 
 package-beta:
 	@scripts/product/package-beta.sh
+
+install-beta-app:
+	@scripts/product/install-beta-app.sh
+
+package-extension:
+	@scripts/product/package-extension.sh
+
+dogfood-smoke:
+	@scripts/product/dogfood-smoke.sh
 
 update-ui-screenshot:
 	@scripts/product/update-ui-screenshot.sh

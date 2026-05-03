@@ -187,7 +187,7 @@ function renderScore(summary) {
       : "No reactive activity appeared in this report.";
 }
 
-function renderInsights(summary, capture, youtube) {
+function renderInsights(summary, capture, youtube, options = {}) {
   const insights = document.querySelector("[data-insights]");
   const focusSeconds =
     labelSeconds(summary, "deep_work") +
@@ -208,6 +208,9 @@ function renderInsights(summary, capture, youtube) {
   const youtubeLearning = Math.round(
     youtube.summary?.learning_percentage || 0,
   );
+  const replayNote = options.beta
+    ? `${captureItems.length} live service segment${captureItems.length === 1 ? "" : "s"} loaded from SQLite.`
+    : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`;
   const rows = [
     {
       label: "Focused work",
@@ -224,7 +227,7 @@ function renderInsights(summary, capture, youtube) {
     {
       label: "Replay confidence",
       value: captureItems.length ? `${averageConfidence}%` : "No rows",
-      note: `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`,
+      note: replayNote,
       className: "label-learning",
     },
   ];
@@ -355,19 +358,24 @@ function renderCorrectionControl(item, betaConfig) {
 
 async function postCorrection(betaConfig, item, correctedLabel, applyToFuture) {
   const endpointNote = "POST /api/corrections";
-  const response = await fetch(apiUrl(betaConfig, "/api/corrections"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  await postJson(betaConfig, "/api/corrections", {
       segment: item,
       corrected_label: correctedLabel,
       apply_to_future: applyToFuture,
       endpoint: endpointNote,
-    }),
+    });
+}
+
+async function postJson(betaConfig, path, payload) {
+  const response = await fetch(apiUrl(betaConfig, path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    throw new Error(`Correction failed: ${response.status}`);
+    throw new Error(`${path} failed: ${response.status}`);
   }
+  return response.json();
 }
 
 function renderBetaQueues(review) {
@@ -426,6 +434,17 @@ function renderYoutubeMeter(summary) {
   );
 }
 
+function setBetaServiceMode(enabled) {
+  const youtubePanel = document.querySelector(".youtube-panel");
+  const youtubeNav = document.querySelector('a[href="#youtube-title"]');
+  if (youtubePanel) {
+    youtubePanel.hidden = enabled;
+  }
+  if (youtubeNav) {
+    youtubeNav.hidden = enabled;
+  }
+}
+
 function captureStatusText(isLiveCapture, status) {
   if (!isLiveCapture) {
     return "Fixture reports loaded";
@@ -450,6 +469,7 @@ async function boot() {
 }
 
 async function bootArtifacts() {
+  setBetaServiceMode(false);
   const [activity, captureResult, youtube] = await Promise.all([
     loadJson(paths.activity),
     loadFirst(paths.capture),
@@ -508,17 +528,19 @@ async function bootArtifacts() {
   renderTimeline(capture.items || []);
   renderYoutubeMeter(youtube.summary);
   renderBetaQueues(null);
+  renderOnboarding(null, null, null);
 }
 
 async function bootBeta(betaConfig) {
+  setBetaServiceMode(true);
   const date = betaConfig.date || new Date().toISOString().slice(0, 10);
-  const [review, youtube] = await Promise.all([
+  const [review, onboarding] = await Promise.all([
     loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
-    loadOptionalJson(paths.youtube),
+    loadJson(apiUrl(betaConfig, "/api/onboarding")),
   ]);
-  const fallbackYoutube = youtube || {
+  const betaContext = {
     summary: {
-      narrative: "YouTube fixture report unavailable in beta service mode.",
+      narrative: "",
       learning_percentage: 0,
       passive_consumption_percentage: 0,
       unknown_percentage: 0,
@@ -526,16 +548,17 @@ async function bootBeta(betaConfig) {
   };
   const status = review.status || {};
   const extensionState = status.extension?.state || "not connected";
+  const recorderState = status.native_recorder?.state || "not started";
   const paused = status.pause?.paused ? "Paused" : "Running";
+  const readiness = status.readiness?.label || "Beta";
 
   document.querySelector("[data-primary-total]").textContent =
     review.summary.total_duration || formatDuration(review.summary.total_seconds || 0);
   document.querySelector("[data-primary-narrative]").textContent =
     summaryHeadline(review.summary);
-  document.querySelector("[data-youtube-narrative]").textContent =
-    formatNarrative(fallbackYoutube.summary.narrative);
+  document.querySelector("[data-youtube-narrative]").textContent = "";
   document.querySelector("[data-status]").textContent =
-    `${paused} - Chrome bridge ${extensionState}`;
+    `${readiness} - ${paused} - Native recorder ${recorderState} - Chrome bridge ${extensionState}`;
   document.querySelector("[data-activity-source]").textContent =
     "Local beta service";
   document.querySelector("[data-capture-source]").textContent =
@@ -543,12 +566,108 @@ async function bootBeta(betaConfig) {
 
   renderFocusMeter(review.summary);
   renderScore(review.summary);
-  renderInsights(review.summary, review, fallbackYoutube);
+  renderInsights(review.summary, review, betaContext, { beta: true });
   renderStats(review.summary);
   renderBars(review.summary);
   renderTimelineWithOptions(review.items || [], betaConfig);
-  renderYoutubeMeter(fallbackYoutube.summary);
+  renderYoutubeMeter(betaContext.summary);
   renderBetaQueues(review);
+  renderOnboarding(betaConfig, onboarding.onboarding, status);
+}
+
+function renderOnboarding(betaConfig, onboarding, status) {
+  const panel = document.querySelector("[data-onboarding]");
+  if (!panel || !betaConfig || !onboarding || !status) {
+    if (panel) {
+      panel.hidden = true;
+    }
+    return;
+  }
+  const readiness = status.readiness?.state || "setup_needed";
+  panel.hidden = Boolean(onboarding.dismissed) ||
+    (Boolean(onboarding.completed) && readiness !== "setup_needed");
+  renderPermissionChecklist(status);
+  bindOnboardingActions(betaConfig);
+}
+
+function renderPermissionChecklist(status) {
+  const list = document.querySelector("[data-permission-checklist]");
+  const permissions = status.permissions || {};
+  const items = [
+    permissions.local_service,
+    permissions.database,
+    permissions.accessibility,
+    permissions.browser_automation,
+    permissions.native_recorder,
+    permissions.chrome_extension,
+    permissions.capture,
+    permissions.privacy,
+    {
+      state: "ok",
+      label: "Delete local data",
+      detail: "Available from the dashboard API and menu bar.",
+    },
+  ].filter(Boolean);
+  list.replaceChildren(
+    ...items.map((item) => {
+      const row = document.createElement("div");
+      row.className = `permission-item permission-${item.state}`;
+      const stateText = document.createElement("span");
+      stateText.className = "permission-state";
+      stateText.textContent = permissionStateLabel(item.state);
+      const copy = document.createElement("span");
+      copy.className = "permission-copy";
+      const title = document.createElement("strong");
+      title.textContent = item.label;
+      const detail = document.createElement("span");
+      detail.textContent = item.detail;
+      copy.append(title, detail);
+      row.append(stateText, copy);
+      return row;
+    }),
+  );
+}
+
+function permissionStateLabel(state) {
+  if (state === "ok") {
+    return "Ready";
+  }
+  if (state === "needs_action") {
+    return "Action";
+  }
+  if (state === "blocked") {
+    return "Blocked";
+  }
+  if (state === "not_applicable") {
+    return "Optional";
+  }
+  return "Check";
+}
+
+function bindOnboardingActions(betaConfig) {
+  const bindings = [
+    ["[data-onboarding-check]", async () => postJson(betaConfig, "/api/permissions/check", {})],
+    ["[data-open-accessibility]", async () => openSetting(betaConfig, "accessibility")],
+    ["[data-open-automation]", async () => openSetting(betaConfig, "automation")],
+    ["[data-open-chrome]", async () => openSetting(betaConfig, "chrome_extensions")],
+    ["[data-open-diagnostics]", async () => openSetting(betaConfig, "diagnostics")],
+    ["[data-onboarding-complete]", async () => postJson(betaConfig, "/api/onboarding", { action: "complete" })],
+    ["[data-onboarding-dismiss]", async () => postJson(betaConfig, "/api/onboarding", { action: "dismiss", minutes: 240 })],
+  ];
+  bindings.forEach(([selector, handler]) => {
+    const button = document.querySelector(selector);
+    if (!button) {
+      return;
+    }
+    button.onclick = async () => {
+      await handler();
+      await boot();
+    };
+  });
+}
+
+function openSetting(betaConfig, target) {
+  return postJson(betaConfig, "/api/open-system-settings", { target });
 }
 
 boot().catch((error) => {

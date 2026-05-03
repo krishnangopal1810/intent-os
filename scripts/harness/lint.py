@@ -20,9 +20,12 @@ EXPECTED_LAYERS = {
     "intentos/activity_evaluate.py",
     "intentos/beta/__init__.py",
     "intentos/beta/extension.py",
+    "intentos/beta/native_recorder.py",
+    "intentos/beta/permissions.py",
     "intentos/beta/recorder.py",
     "intentos/beta/review.py",
     "intentos/beta/service.py",
+    "intentos/beta/state.py",
     "intentos/beta/store.py",
     "intentos/beta_cli.py",
     "intentos/capture/__init__.py",
@@ -42,6 +45,8 @@ EXPECTED_LAYERS = {
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
     "tests/test_beta_extension.py",
+    "tests/test_beta_native_recorder.py",
+    "tests/test_beta_permissions.py",
     "tests/test_beta_service.py",
     "tests/test_beta_store.py",
     "tests/test_capture_browser.py",
@@ -71,6 +76,16 @@ ALLOWED_IMPORTS = {
         "intentos.capture.browser",
         "intentos.capture.privacy",
     },
+    "intentos/beta/native_recorder.py": {
+        "intentos.activity",
+        "intentos.beta",
+        "intentos.capture.live",
+        "intentos.capture.macos",
+    },
+    "intentos/beta/permissions.py": {
+        "intentos.beta",
+        "intentos.capture",
+    },
     "intentos/beta/recorder.py": {
         "intentos.activity",
         "intentos.beta",
@@ -89,7 +104,11 @@ ALLOWED_IMPORTS = {
         "intentos.beta.extension",
         "intentos.capture.privacy",
     },
+    "intentos/beta/state.py": {
+        "intentos.beta",
+    },
     "intentos/beta/store.py": {
+        "intentos.beta",
         "intentos.activity",
         "intentos.classifier",
         "intentos.reporting",
@@ -151,6 +170,13 @@ ALLOWED_IMPORTS = {
     "tests/test_beta_extension.py": {
         "intentos.beta.extension",
         "intentos.capture.privacy",
+    },
+    "tests/test_beta_native_recorder.py": {
+        "intentos.activity",
+        "intentos.beta",
+    },
+    "tests/test_beta_permissions.py": {
+        "intentos.beta",
     },
     "tests/test_beta_service.py": {
         "intentos.beta",
@@ -582,14 +608,27 @@ def check_live_capture_contract(failures: list[str]) -> None:
 def check_beta_harness_contract(failures: list[str]) -> None:
     """Keep the dogfood beta runnable, inspectable, and local-only."""
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    for target in ["beta-dev:", "beta-status:", "beta-stop:", "validate-beta:", "package-beta:"]:
+    for target in [
+        "beta-dev:",
+        "beta-status:",
+        "beta-stop:",
+        "validate-beta:",
+        "package-beta:",
+        "install-beta-app:",
+        "package-extension:",
+    ]:
         if target not in makefile:
             failures.append(f"Makefile must expose {target}")
+    if "dogfood-smoke:" not in makefile:
+        failures.append("Makefile must expose dogfood-smoke:")
 
     required_paths = [
         "intentos/beta/store.py",
         "intentos/beta/service.py",
+        "intentos/beta/state.py",
+        "intentos/beta/permissions.py",
         "intentos/beta/extension.py",
+        "intentos/beta/native_recorder.py",
         "intentos/beta/recorder.py",
         "intentos/beta/review.py",
         "intentos/beta_cli.py",
@@ -598,6 +637,9 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         "scripts/harness/beta-stop.sh",
         "scripts/product/validate-beta.sh",
         "scripts/product/package-beta.sh",
+        "scripts/product/install-beta-app.sh",
+        "scripts/product/package-extension.sh",
+        "scripts/product/dogfood-smoke.sh",
         "data/beta/fake_chrome_events.json",
         "extension/chrome/manifest.json",
         "macos/IntentOSBeta/IntentOSBeta.swift",
@@ -609,17 +651,21 @@ def check_beta_harness_contract(failures: list[str]) -> None:
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
         text = app_js.read_text(encoding="utf-8")
-        for phrase in ["beta-config.json", "/api/daily-review", "/api/corrections"]:
+        for phrase in ["beta-config.json", "/api/daily-review", "/api/corrections", "/api/permissions/check"]:
             if phrase not in text:
                 failures.append(f"web/app.js must support beta service mode phrase {phrase!r}")
     app_html = ROOT / "web/index.html"
-    if app_html.is_file() and "data-correction-controls" not in app_html.read_text(encoding="utf-8"):
-        failures.append("web/index.html must expose beta correction controls")
+    if app_html.is_file():
+        html = app_html.read_text(encoding="utf-8")
+        if "data-correction-controls" not in html:
+            failures.append("web/index.html must expose beta correction controls")
+        if "data-onboarding" not in html:
+            failures.append("web/index.html must expose beta onboarding controls")
 
     docs = {
-        "docs/APP_RUNTIME.md": ["make beta-dev", "beta-validation.json"],
+        "docs/APP_RUNTIME.md": ["make beta-dev", "beta-validation.json", "make dogfood-smoke"],
         "docs/SECURITY.md": ["Chrome extension bridge", "delete all local user data"],
-        "docs/ARCHITECTURE.md": ["intentos/beta/store.py", "extension/chrome/"],
+        "docs/ARCHITECTURE.md": ["intentos/beta/store.py", "intentos/beta/permissions.py", "extension/chrome/"],
     }
     for relative_path, phrases in docs.items():
         text = (ROOT / relative_path).read_text(encoding="utf-8")

@@ -11,15 +11,22 @@ slices.
   timeline.
 - `make dev-live`: run a fresh bounded macOS live session, preserve its replay
   artifact, and launch the local UI shell against that live session summary.
-- `make beta-dev`: start the dogfood beta service, SQLite DB, service-backed
-  dashboard, and fake Chrome bridge in harness mode.
+- `make beta-dev`: start the dogfood beta service, native recorder, SQLite DB,
+  and service-backed dashboard with fake bridge disabled by default.
 - `make beta-status`: show beta service PID, DB path, capture state, pause
-  state, extension bridge state, last event time, row counts, and log paths.
-- `make beta-stop`: stop beta service, fake bridge, and beta UI processes.
+  state, native recorder state, extension bridge state, last event time, row
+  counts, and log paths.
+- `make beta-stop`: stop beta service, native recorder, fake bridge, and beta
+  UI processes.
 - `make validate-beta`: run deterministic beta API, persistence, correction,
   privacy, delete-data, and UI smoke checks against a temp DB.
-- `make package-beta`: build the local unsigned Swift menu bar app bundle when
-  macOS Swift tools exist, or skip clearly when unavailable.
+- `make package-beta`: build the local ad-hoc signed Swift menu bar app bundle
+  when macOS Swift tools exist, or skip clearly when unavailable.
+- `make install-beta-app`: copy and open the local beta menu bar app on macOS.
+- `make package-extension`: package the internal Chrome bridge extension zip.
+- `make dogfood-smoke`: run the real 30-minute dogfood beta smoke without the
+  fake Chrome bridge, preserving local user data and writing blocked/pass
+  evidence.
 - `make app-status`: show runtime mode, process status when relevant, log
   locations, and UI HTTP health.
 - `make app-stop`: stop the local app process started by the harness.
@@ -65,12 +72,24 @@ metadata-only adapters outside CI and write replay artifacts under
 `.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
 
 `make beta-dev` is the dogfood beta path. It builds the web shell, starts a
-local Python service bound to `127.0.0.1`, stores normalized activity in
+local Python service bound to `127.0.0.1:58917` by default, starts the native
+macOS metadata recorder, stores normalized activity in
 `.harness/runtime/beta/intentos.sqlite`, writes
-`.harness/runtime/site/beta-config.json`, starts a local dashboard, and posts
-fixture Chrome tab metadata through the same `/api/browser-event` endpoint used
-by the Chrome extension bridge. It does not require manual imports and does not
-read page bodies, cookies, screenshots, keystrokes, or cloud services.
+`.harness/runtime/site/beta-config.json`, and starts a local dashboard. It
+does not seed fake rows by default, does not require manual imports or Chrome
+extension setup for first beta value, and does not read page bodies, cookies,
+screenshots, keystrokes, or cloud services. Use
+`INTENTOS_BETA_FAKE_BRIDGE=1 make beta-dev` only for explicit fixture bridge
+testing.
+
+`make dogfood-smoke` is the explicit real-machine beta path. It starts the same
+local service, dashboard, and native recorder with `INTENTOS_BETA_FAKE_BRIDGE=0`,
+runs `/api/permissions/check`, observes real SQLite row growth for 30 minutes by
+default, and writes `beta-dogfood-smoke.json`,
+`beta-dogfood-smoke-daily-review.json`, `beta-dogfood-smoke-dashboard.png`, and
+`logs/beta-dogfood-smoke.log`. It does not seed fake rows, create fake
+corrections, or call delete-local-data against the dogfood database. Missing
+Chrome bridge metadata is a warning when native recorder events are increasing.
 
 ## Runtime State
 
@@ -79,8 +98,8 @@ Expected artifacts after product code exists:
 
 - `.harness/runtime/app.env`: runtime status, process ID when relevant, log
   path, artifact path, runtime mode, data mode, and UI URL.
-- `.harness/runtime/beta/app.env`: beta service/UI/fake-bridge PID, DB path,
-  service URL, dashboard URL, daily review artifact, and log paths.
+- `.harness/runtime/beta/app.env`: beta service/UI/native-recorder/fake-bridge
+  PID, DB path, service URL, dashboard URL, daily review artifact, and log paths.
 - `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
   30-day retention.
 - `.harness/runtime/logs/app.log`: app logs.
@@ -92,8 +111,10 @@ Expected artifacts after product code exists:
 - `.harness/runtime/logs/live-session-capture.log`: manual bounded session
   diagnostic log when `make observe-session` is run.
 - `.harness/runtime/logs/beta-service.log`: local beta service logs.
+- `.harness/runtime/logs/beta-native-recorder.log`: native recorder samples,
+  errors, and row-write counts.
 - `.harness/runtime/logs/beta-fake-bridge.log`: fake Chrome bridge posts used
-  in harness mode.
+  only when `INTENTOS_BETA_FAKE_BRIDGE=1` is requested.
 - `.harness/runtime/artifacts/`: screenshots, videos, or validation evidence.
   The current CLI slice writes YouTube, multi-app activity, and fake capture
   replay text/JSON summaries. Manual live capture also writes
@@ -107,8 +128,17 @@ Expected artifacts after product code exists:
   validation evidence.
 - `.harness/runtime/artifacts/beta-daily-review.json`: latest beta daily
   review evidence from validation or beta dev.
-- `.harness/runtime/artifacts/IntentOSBeta.app`: local unsigned dogfood menu
-  bar bundle when `make package-beta` builds on macOS.
+- `.harness/runtime/artifacts/beta-dogfood-smoke.json`: real beta smoke result
+  with permission, native recorder, optional bridge, event-growth, privacy, and
+  dashboard evidence.
+- `.harness/runtime/artifacts/beta-dogfood-smoke-daily-review.json`: daily
+  review captured during the real dogfood smoke.
+- `.harness/runtime/artifacts/beta-dogfood-smoke-dashboard.png`: dashboard
+  screenshot evidence from the real dogfood smoke when Chrome/Chromium exists.
+- `.harness/runtime/artifacts/IntentOSBeta.app`: local ad-hoc signed dogfood
+  menu bar bundle when `make package-beta` builds on macOS.
+- `.harness/runtime/artifacts/IntentOSChromeBridge.zip`: internal Chrome bridge
+  package when `make package-extension` runs.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
 
 ## Product Runtime Contract
@@ -129,6 +159,7 @@ The implementation must also provide one of these verification paths:
 IntentOS currently provides `scripts/product/dev.sh`,
 `scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`,
 `scripts/product/validate-beta.sh`, `scripts/product/package-beta.sh`,
+`scripts/product/install-beta-app.sh`, `scripts/product/package-extension.sh`,
 `scripts/product/verify.sh`, `scripts/harness/beta-dev.sh`,
 `scripts/harness/beta-status.sh`, `scripts/harness/beta-stop.sh`, and
 `scripts/harness/dev-live.sh`.

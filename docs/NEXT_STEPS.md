@@ -39,9 +39,9 @@ Completed acceptance criteria:
 Dogfood beta harness.
 
 Goal: make IntentOS usable by internal macOS dogfood users without manual
-imports: local service, SQLite retention, Chrome metadata bridge, daily review
-APIs, correction controls, pause/resume, delete-local-data, and native menu bar
-packaging.
+imports: local service, native macOS recorder, SQLite retention, optional
+Chrome metadata bridge, daily review APIs, correction controls, pause/resume,
+delete-local-data, and native menu bar packaging.
 
 Why this mattered:
 
@@ -56,43 +56,76 @@ Why this mattered:
 Completed acceptance criteria:
 
 - `make beta-dev`, `make beta-status`, `make beta-stop`, `make validate-beta`,
-  and `make package-beta` are available.
-- Chrome bridge events are privacy-filtered before SQLite persistence.
+  `make package-beta`, `make install-beta-app`, `make package-extension`, and
+  `make dogfood-smoke` are available.
+- Native recorder events are privacy-filtered through the capture stack before
+  SQLite persistence.
+- Chrome bridge events are optional and privacy-filtered before SQLite
+  persistence.
 - `make validate-beta` covers APIs, persistence, correction, pause/resume,
   delete-local-data, privacy filtering, and service-backed UI loading.
-- The Swift wrapper builds locally as an unsigned dogfood app bundle when
+- The Swift wrapper builds locally as an ad-hoc signed dogfood app bundle when
   macOS Swift tools are available.
 
+Dogfood onboarding, permission UX, and real smoke.
+
+Goal: make a trusted internal user understand what is being captured, grant or
+repair local permissions, and verify real capture without relying on fixture
+rows.
+
+Why this mattered:
+
+- First-run trust and permission clarity decide whether users keep the beta
+  running.
+- The same readiness state is visible in the dashboard, service status, and
+  native menu bar.
+- Real dogfood smoke preserves the local SQLite database and records
+  blocked/pass evidence instead of asking users to manually inspect logs.
+
+Completed acceptance criteria:
+
+- Dashboard shows non-blocking first-run local-only onboarding and permission
+  health.
+- Menu bar exposes setup-needed, paused, running, capture issue, permission
+  check, settings, Chrome setup, diagnostics, and existing pause/resume/delete
+  actions.
+- `make validate-beta` covers onboarding, permission APIs, settings validation,
+  corrections, pause/resume, delete-local-data, and service-backed UI loading
+  with fake probes.
+- `make dogfood-smoke` starts beta without the fake bridge and writes real
+  smoke evidence from native recorder row growth without deleting dogfood data.
+
 Browser extension capture now exists as a Chrome-first dogfood bridge shell and
-fake harness source. The next work is install/onboarding polish and richer
-bridge health, not manual browser-history import.
+fake harness source. It is an enhancement for richer browser metadata, not a
+blocking requirement for first beta value.
 
 ## Recommended Next Slice
 
-Dogfood onboarding and permission UX.
+Launch dogfood beta with native-recorder smoke evidence.
 
-Goal: make a trusted internal user understand what is being captured, grant the
-right permissions, recover from missing permissions, and verify that pause,
-resume, correction, and delete-local-data work without reading docs.
+Goal: complete one fresh internal dogfood launch pass with native recorder
+capture, menu bar install/open, delete-local-data recovery, and clear evidence
+artifacts; then optionally run a second pass with the Chrome bridge installed.
 
 Why this is next:
 
-- The dogfood runtime is now runnable, but first-run trust and permissions will
-  decide whether users keep it installed.
-- The Chrome bridge and macOS capture paths need clear visible health states
-  when permissions are missing.
-- Corrections need to feel obvious and reversible before real feedback can
-  improve classifier quality.
+- The first beta experience should work before the user installs a browser
+  extension.
+- Chrome bridge state now distinguishes never connected, connected, stale, and
+  posting events; the launch pass should confirm those states are understandable.
+- The remaining launch question is operational confidence, not manual data
+  import support.
 
 Acceptance criteria:
 
-- Menu bar app shows first-run local-only/privacy copy and diagnostics entry.
-- Missing Accessibility, browser Automation, or extension bridge state is
-  visible in the UI and `make beta-status`.
-- The user can pause/resume, correct one segment, and delete local data from the
-  app without terminal commands.
-- Add deterministic harness tests for first-run, permission-missing, and
-  recovery states.
+- `make dogfood-smoke` passes on a dogfood machine from native recorder events
+  with the Chrome bridge absent or stale only as a warning.
+- `make package-beta`, `make install-beta-app`, and `make package-extension`
+  produce local artifacts.
+- `make beta-status` and dashboard onboarding show native recorder as primary
+  capture source and Chrome bridge as optional enhanced browser metadata.
+- A second smoke with the extension installed verifies the bridge moves to
+  connected or posting-events.
 
 ## Harness Upgrades To Keep Current
 

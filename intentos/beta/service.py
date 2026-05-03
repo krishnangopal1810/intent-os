@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from intentos.beta import recorder, review, store
+from intentos.beta import permissions, recorder, review, state, store
 from intentos.beta.extension import chrome_event_to_activity
 from intentos.capture.privacy import load_privacy_policy
 
@@ -23,6 +23,9 @@ class ServiceConfig:
     port: int
     retention_days: int = store.DEFAULT_RETENTION_DAYS
     service_log: Path | None = None
+    runtime_dir: Path | None = None
+    permission_mode: str = "real"
+    allow_system_open: bool = True
 
 
 def make_handler(config: ServiceConfig):
@@ -37,6 +40,8 @@ def make_handler(config: ServiceConfig):
                 path, query = parsed_path(self.path)
                 if path == "/api/status":
                     self.send_json(self.with_conn(lambda conn: store.status(conn, str(config.db_path))))
+                elif path == "/api/onboarding":
+                    self.send_json(self.with_conn(lambda conn: onboarding_payload(conn)))
                 elif path == "/api/daily-review":
                     date = query.get("date", [today()])[0]
                     self.send_json(
@@ -57,6 +62,8 @@ def make_handler(config: ServiceConfig):
                 payload = self.read_json()
                 if path == "/api/browser-event":
                     self.handle_browser_event(payload)
+                elif path == "/api/extension-heartbeat":
+                    self.handle_extension_heartbeat(payload)
                 elif path == "/api/corrections":
                     self.handle_correction(payload)
                 elif path == "/api/pause":
@@ -67,6 +74,18 @@ def make_handler(config: ServiceConfig):
                 elif path == "/api/delete-local-data":
                     self.with_conn(store.delete_all)
                     self.send_json({"status": "deleted"})
+                elif path == "/api/onboarding":
+                    self.handle_onboarding(payload)
+                elif path == "/api/permissions/check":
+                    self.send_json(
+                        self.with_conn(
+                            lambda conn: permissions.run_check(
+                                conn, config.permission_mode, str(config.db_path)
+                            )
+                        )
+                    )
+                elif path == "/api/open-system-settings":
+                    self.handle_open_system_settings(payload)
                 else:
                     self.send_error(404, "unknown beta endpoint")
             except ValueError as exc:
@@ -82,11 +101,23 @@ def make_handler(config: ServiceConfig):
                 return
             def write(conn: sqlite3.Connection) -> int | None:
                 row_id = recorder.record_event(conn, event)
-                store.set_status(conn, "extension_state", "connected")
+                now = store.utc_now()
+                store.set_status(conn, "extension_state", "posting_events")
+                store.set_status(conn, "extension_last_seen_at", now)
                 store.set_status(conn, "last_browser_event_at", event.started_at)
                 return row_id
             row_id = self.with_conn(write)
             self.send_json({"status": "accepted", "event_id": row_id})
+
+        def handle_extension_heartbeat(self, payload: dict[str, Any]) -> None:
+            version = payload.get("version")
+            def write(conn: sqlite3.Connection) -> None:
+                store.set_status(conn, "extension_state", "connected")
+                store.set_status(conn, "extension_last_seen_at", store.utc_now())
+                if isinstance(version, str) and version.strip():
+                    store.set_status(conn, "extension_version", version.strip())
+            self.with_conn(write)
+            self.send_json({"status": "connected"})
 
         def handle_correction(self, payload: dict[str, Any]) -> None:
             label = require_text(payload, "corrected_label")
@@ -106,6 +137,20 @@ def make_handler(config: ServiceConfig):
             ).isoformat().replace("+00:00", "Z")
             self.with_conn(lambda conn: store.set_pause(conn, paused_until))
             self.send_json({"status": "paused", "paused_until": paused_until})
+
+        def handle_onboarding(self, payload: dict[str, Any]) -> None:
+            action = require_text(payload, "action")
+            minutes = payload.get("minutes", 240)
+            if not isinstance(minutes, int):
+                raise ValueError("minutes must be an integer")
+            self.send_json(self.with_conn(lambda conn: state.update_onboarding(conn, action, minutes)))
+
+        def handle_open_system_settings(self, payload: dict[str, Any]) -> None:
+            target = require_text(payload, "target")
+            runtime_dir = config.runtime_dir or config.db_path.parent.parent
+            self.send_json(
+                permissions.open_settings_target(target, runtime_dir, config.allow_system_open)
+            )
 
         def read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length") or "0")
@@ -145,11 +190,20 @@ def serve(config: ServiceConfig) -> None:
         store.init_db(conn, config.retention_days)
         store.cleanup_old_events(conn)
         store.set_status(conn, "service_state", "running")
+        store.set_status(conn, "capture_state", "ready")
+        store.set_status(conn, "capture_note", "")
         if config.service_log:
             store.set_status(conn, "service_log", str(config.service_log))
     server = ThreadingHTTPServer(("127.0.0.1", config.port), make_handler(config))
     print(f"beta-service: serving http://127.0.0.1:{config.port}", flush=True)
     server.serve_forever()
+
+
+def onboarding_payload(conn: sqlite3.Connection) -> dict[str, Any]:
+    return {
+        "onboarding": state.onboarding(conn),
+        "status": store.status(conn),
+    }
 
 
 def parsed_path(path: str) -> tuple[str, dict[str, list[str]]]:
@@ -158,7 +212,7 @@ def parsed_path(path: str) -> tuple[str, dict[str, list[str]]]:
 
 
 def today() -> str:
-    return datetime.now(timezone.utc).date().isoformat()
+    return datetime.now().astimezone().date().isoformat()
 
 
 def require_text(payload: dict[str, Any], key: str) -> str:

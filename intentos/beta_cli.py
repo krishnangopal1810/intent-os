@@ -8,7 +8,7 @@ from pathlib import Path
 from time import sleep
 from urllib.request import Request, urlopen
 
-from intentos.beta import recorder, review, store
+from intentos.beta import native_recorder, recorder, review, store
 from intentos.beta.extension import chrome_event_to_activity
 from intentos.beta.service import ServiceConfig, serve
 from intentos.capture.privacy import load_privacy_policy
@@ -22,6 +22,9 @@ def main() -> int:
     add_common(serve_parser)
     serve_parser.add_argument("--port", type=int, required=True)
     serve_parser.add_argument("--service-log")
+    serve_parser.add_argument("--runtime-dir")
+    serve_parser.add_argument("--permission-mode", choices=["real", "fake"], default="real")
+    serve_parser.add_argument("--disable-system-open", action="store_true")
 
     seed = subparsers.add_parser("seed-fixtures", help="Persist fake Chrome bridge events.")
     add_common(seed)
@@ -32,6 +35,12 @@ def main() -> int:
     bridge.add_argument("--input", default="data/beta/fake_chrome_events.json")
     bridge.add_argument("--interval-seconds", type=int, default=60)
     bridge.add_argument("--once", action="store_true")
+
+    live = subparsers.add_parser("live-recorder", help="Record native macOS metadata to SQLite.")
+    add_common(live)
+    live.add_argument("--interval-seconds", type=int, default=5)
+    live.add_argument("--max-samples", type=int)
+    live.add_argument("--recorder-log")
 
     status = subparsers.add_parser("status", help="Print beta runtime status.")
     status.add_argument("--db", required=True)
@@ -51,6 +60,9 @@ def main() -> int:
                 port=args.port,
                 retention_days=args.retention_days,
                 service_log=Path(args.service_log) if args.service_log else None,
+                runtime_dir=Path(args.runtime_dir) if args.runtime_dir else None,
+                permission_mode=args.permission_mode,
+                allow_system_open=not args.disable_system_open,
             )
         )
         return 0
@@ -65,6 +77,18 @@ def main() -> int:
             args.interval_seconds,
             once=args.once,
         )
+    if args.command == "live-recorder":
+        result = native_recorder.run_native_recorder(
+            native_recorder.NativeRecorderConfig(
+                db_path=Path(args.db),
+                privacy_policy_path=Path(args.privacy_policy),
+                interval_seconds=args.interval_seconds,
+                max_samples=args.max_samples,
+                recorder_log=Path(args.recorder_log) if args.recorder_log else None,
+            )
+        )
+        print(f"beta-cli: native recorder wrote {result['events']} event(s)")
+        return 0
     if args.command == "status":
         with store.connect(args.db) as conn:
             store.init_db(conn)
@@ -142,13 +166,26 @@ def format_status(payload: dict[str, object]) -> str:
         f"db={payload['database']['path']}",
         f"retention_days={payload['database']['retention_days']}",
         f"capture={payload['capture']['state']}",
+        f"native_recorder={payload.get('native_recorder', {}).get('state')}",
         f"paused={payload['pause']['paused']}",
         f"extension={payload['extension']['state']}",
+        f"readiness={payload.get('readiness', {}).get('state')}",
+        f"permissions={permission_states(payload.get('permissions', {}))}",
         f"last_event_time={payload.get('last_event_time')}",
         f"row_counts={payload['row_counts']}",
         f"logs={payload['logs']}",
     ]
     return "\n".join(rows)
+
+
+def permission_states(items: object) -> dict[str, str]:
+    if not isinstance(items, dict):
+        return {}
+    return {
+        key: value.get("state", "unknown")
+        for key, value in items.items()
+        if isinstance(value, dict)
+    }
 
 
 if __name__ == "__main__":

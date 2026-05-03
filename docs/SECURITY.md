@@ -5,7 +5,8 @@ manual live commands or the UI harness background timeline are running. It does
 not use cloud storage, cloud inference, raw screenshot capture, keylogging, page
 bodies, cookies, or external network calls. The dogfood beta adds a Chrome
 extension bridge that posts bounded tab metadata only to a local
-`127.0.0.1` service.
+`127.0.0.1:58917` service, but the native macOS recorder is the default beta
+capture source.
 
 ## Baseline Rules
 
@@ -35,6 +36,12 @@ extension bridge that posts bounded tab metadata only to a local
 - Dogfood beta data is stored locally in SQLite at
   `.harness/runtime/beta/intentos.sqlite` with a 30-day default retention
   setting. Users can pause/resume capture and delete all local user data.
+- The beta native recorder samples only frontmost app/window metadata and
+  best-effort browser title/URL fallback through existing local capture
+  adapters. It writes normalized, privacy-filtered `ActivityEvent` rows to the
+  local SQLite database.
+- First-run onboarding and permission checks store only local readiness
+  timestamps and permission health strings in SQLite settings/runtime status.
 - Chrome extension bridge events are limited to URL, title, domain, tab/window
   IDs, active state, timestamp, source, and optional bounded page-kind metadata
   for YouTube/document pages. The service rejects page bodies, cookies, tokens,
@@ -62,10 +69,14 @@ slice.
 When started through `make dev`, background timeline capture is explicit in
 `.harness/runtime/app.env`, `make app-status`, and
 `.harness/runtime/logs/live-capture.log`, and it stops with `make app-stop`.
-When started through `make beta-dev`, beta service and bridge state are explicit
-in `.harness/runtime/beta/app.env`, `make beta-status`, and
+When started through `make beta-dev`, beta service, native recorder, and bridge
+state are explicit in `.harness/runtime/beta/app.env`, `make beta-status`, and
 `.harness/runtime/logs/beta-service.log`, and they stop with
 `make beta-stop`.
+When started through `make dogfood-smoke`, fake bridge rows are disabled; the
+smoke preserves the dogfood database and records a blocked result if live
+permissions or the native recorder are missing. A missing Chrome bridge is a
+warning when native recorder events are increasing.
 
 If future work adds ScreenCaptureKit, it must use Screen Recording permission
 only for low-confidence fallback capture. Raw screenshots are disabled by

@@ -130,17 +130,25 @@ def insert_event(conn: sqlite3.Connection, event: ActivityEvent, now: str | None
 
 
 def events_for_date(conn: sqlite3.Connection, date: str) -> list[ActivityEvent]:
-    start = f"{date}T00:00:00"
-    end = (datetime.fromisoformat(date) + timedelta(days=1)).date().isoformat()
+    start, end = local_day_utc_bounds(date)
     rows = conn.execute(
         """
         SELECT * FROM activity_events
         WHERE started_at >= ? AND started_at < ?
         ORDER BY started_at, id
         """,
-        (start, f"{end}T00:00:00"),
+        (start, end),
     ).fetchall()
     return [row_to_event(row) for row in rows]
+
+def local_day_utc_bounds(date: str) -> tuple[str, str]:
+    local_zone = datetime.now().astimezone().tzinfo
+    start = datetime.fromisoformat(date).replace(tzinfo=local_zone)
+    end = start + timedelta(days=1)
+    return utc_bound(start), utc_bound(end)
+
+def utc_bound(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def add_correction(
@@ -203,21 +211,9 @@ def clear_pause(conn: sqlite3.Connection) -> None:
 
 
 def status(conn: sqlite3.Connection, db_path: str | None = None) -> dict[str, Any]:
-    paused_until = setting(conn, "paused_until", "")
-    latest = conn.execute("SELECT MAX(started_at) FROM activity_events").fetchone()[0]
-    return {
-        "service": {"state": runtime_value(conn, "service_state") or "running"},
-        "database": {"path": db_path, "retention_days": int(setting(conn, "retention_days", "30"))},
-        "capture": {"state": runtime_value(conn, "capture_state") or "ready"},
-        "pause": {"paused": is_paused(paused_until), "paused_until": paused_until or None},
-        "extension": {
-            "state": runtime_value(conn, "extension_state") or "not_connected",
-            "last_event_at": runtime_value(conn, "last_browser_event_at"),
-        },
-        "last_event_time": latest,
-        "row_counts": row_counts(conn),
-        "logs": {"service_log": runtime_value(conn, "service_log")},
-    }
+    from intentos.beta import state
+
+    return state.status(conn, db_path)
 
 
 def set_status(conn: sqlite3.Connection, key: str, value: str) -> None:

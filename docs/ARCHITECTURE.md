@@ -3,8 +3,9 @@
 IntentOS currently ships a local-first Python CLI MVP for generic multi-app
 activity classification, plus the original YouTube-specific slice and a
 dogfood beta runtime. The beta adds a standard-library Python localhost
-service, SQLite persistence, a Chrome extension bridge shell, service-backed UI
-mode, and a Swift menu bar wrapper. The core product and verification path use
+service, SQLite persistence, a native macOS background recorder, an optional
+Chrome extension bridge shell, service-backed UI mode, and a Swift menu bar
+wrapper. The core product and verification path use
 only local runtime dependencies so a fresh checkout can run deterministic
 checks without network installation.
 
@@ -50,13 +51,21 @@ The current local-first slice keeps these concerns separate:
   derived labels.
 - `intentos/beta/extension.py`: Chrome extension bridge validation and privacy
   filtering for bounded tab metadata.
+- `intentos/beta/native_recorder.py`: beta native macOS recorder that samples
+  frontmost app/window metadata, uses the existing browser metadata fallback,
+  applies privacy filtering through the capture stack, and writes SQLite rows.
+- `intentos/beta/permissions.py`: explicit dogfood permission probes and local
+  repair actions for Accessibility, browser Automation, Chrome bridge setup,
+  and diagnostics.
 - `intentos/beta/recorder.py`: beta recorder rules for idle and long-gap
   handling before persistence.
 - `intentos/beta/service.py`: local `127.0.0.1` HTTP APIs for status, events,
-  daily review, corrections, pause/resume, delete-local-data, and browser
-  events.
-- `intentos/beta_cli.py`: beta service, status, fixture seeding, fake bridge,
-  and daily-review command wiring.
+  onboarding, permission checks, daily review, corrections, pause/resume,
+  delete-local-data, and browser events.
+- `intentos/beta/state.py`: shared status, permission summary, and onboarding
+  state derived from SQLite settings and runtime health.
+- `intentos/beta_cli.py`: beta service, native recorder, status, fixture
+  seeding, fake bridge, and daily-review command wiring.
 - `intentos/capture/core.py`: metadata-only capture observation validation and
   conversion to `ActivityEvent`.
 - `intentos/capture/browser.py`: browser tab URL/title/domain normalization
@@ -111,8 +120,16 @@ The current local-first slice keeps these concerns separate:
   `make verify`.
 - `scripts/product/validate-beta.sh`: deterministic beta API, persistence,
   correction, privacy, delete-data, and UI smoke validation.
-- `scripts/product/package-beta.sh`: local unsigned Swift menu bar app package
-  builder with graceful skip behavior when macOS Swift tools are unavailable.
+- `scripts/product/dogfood-smoke.sh`: real-machine beta smoke that requires
+  native recorder row growth, treats Chrome bridge as optional enhancement,
+  preserves dogfood data, and writes blocked/pass evidence.
+- `scripts/product/package-beta.sh`: local ad-hoc signed Swift menu bar app
+  package builder with graceful skip behavior when macOS Swift tools are
+  unavailable.
+- `scripts/product/install-beta-app.sh`: local install/open helper for the
+  dogfood menu bar app.
+- `scripts/product/package-extension.sh`: internal Chrome extension package
+  helper for dogfood bridge artifacts.
 - `scripts/product/dev.sh`: local artifact server for inspecting CLI output.
 - `scripts/product/start-ui.sh`: local static UI server for generated runtime
   artifacts.

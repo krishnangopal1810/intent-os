@@ -36,6 +36,7 @@ stop_pid_file() {
 }
 
 stop_pid_file "fake bridge" "$BETA_DIR/fake-bridge.pid" "INTENTOS_BETA_FAKE_BRIDGE_PID"
+stop_pid_file "native recorder" "$BETA_DIR/native-recorder.pid" "INTENTOS_BETA_NATIVE_RECORDER_PID"
 stop_pid_file "service" "$BETA_DIR/service.pid" "INTENTOS_BETA_SERVICE_PID"
 stop_pid_file "ui" "$BETA_DIR/ui.pid" "INTENTOS_BETA_UI_PID"
 
@@ -50,6 +51,7 @@ try:
     store.init_db(conn)
     store.set_status(conn, "service_state", "stopped")
     store.set_status(conn, "capture_state", "stopped")
+    store.set_status(conn, "native_recorder_state", "stopped")
 finally:
     conn.close()
 PY

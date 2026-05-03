@@ -14,9 +14,13 @@ class BetaExtensionTests(unittest.TestCase):
         manifest = json.loads(Path("extension/chrome/manifest.json").read_text())
 
         self.assertEqual(manifest["manifest_version"], 3)
+        self.assertIn("alarms", manifest["permissions"])
         self.assertIn("tabs", manifest["permissions"])
         self.assertIn("http://127.0.0.1:*/*", manifest["host_permissions"])
         self.assertIn("background.js", manifest["background"]["service_worker"])
+        background = Path("extension/chrome/background.js").read_text(encoding="utf-8")
+        self.assertIn("DEFAULT_PORT = 58917", background)
+        self.assertIn("/api/extension-heartbeat", background)
 
     def test_fake_chrome_event_becomes_activity_event(self):
         raw = json.loads(Path("data/beta/fake_chrome_events.json").read_text())[0]
