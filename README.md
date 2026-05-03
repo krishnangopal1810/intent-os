@@ -1,118 +1,115 @@
 # IntentOS
 
 <p align="center">
-  <strong>Understand what your digital time meant, privately, on your Mac.</strong>
+  <strong>The private daily review for your digital life.</strong>
+</p>
+
+<p align="center">
+  IntentOS turns local Mac activity metadata into behavior intelligence:
+  deep work, learning, admin, communication, active creation,
+  passive consumption, entertainment, and the unknowns worth reviewing.
 </p>
 
 <p align="center">
   <a href=".github/workflows/verify.yml"><img alt="verify" src="https://img.shields.io/badge/verify-make%20verify-0f766e"></a>
-  <img alt="runtime" src="https://img.shields.io/badge/runtime-local--only-1f2937">
+  <img alt="runtime" src="https://img.shields.io/badge/runtime-local--only-111827">
   <img alt="privacy" src="https://img.shields.io/badge/privacy-metadata--only-334155">
-  <img alt="status" src="https://img.shields.io/badge/status-local%20beta-b45309">
+  <img alt="status" src="https://img.shields.io/badge/status-macOS%20source%20beta-b45309">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-IntentOS is a local-first macOS app for understanding digital behavior.
+<p align="center">
+  <a href="#try-it">Try it</a>
+  ·
+  <a href="#privacy-contract">Privacy</a>
+  ·
+  <a href="#architecture">Architecture</a>
+  ·
+  <a href="#command-reference">Commands</a>
+  ·
+  <a href="#start-here-if-you-are-codex">Codex handoff</a>
+</p>
+
+![IntentOS private daily review dashboard](docs/assets/screenshots/intent-os-ui.png)
+
+## The Idea
 
 Screen Time can tell you which apps were open. IntentOS is being built to tell
-you what that time meant: deep work, learning, admin, communication, active
-creation, passive consumption, entertainment, or unknown activity.
+you what that time meant.
 
-It is not another time tracker. It is an on-device system for answering:
+It is not another timer, blocker, or cloud productivity dashboard. It is a
+local-first behavior layer for answering one uncomfortable question:
 
-> Was my time aligned with what I actually care about?
+> Was my attention aligned with what I actually care about?
 
-![IntentOS daily review dashboard](docs/assets/screenshots/intent-os-ui.png)
+The current repo is a source-based macOS beta. It is already runnable,
+inspectable, fixture-backed, service-backed, and privacy-constrained. It is not
+yet a polished public installer.
 
-## Why It Exists
+## Why This Should Exist
 
-App names are too blunt.
+App names are too blunt. The same surface can represent completely different
+intent.
 
-The same surface can represent very different behavior:
-
-| Surface | Could mean |
+| Surface | IntentOS tries to distinguish |
 | --- | --- |
-| Browser | Research, taxes, a feed loop, a lecture, shopping, documentation. |
-| ChatGPT | Debugging, learning, admin drafting, planning, entertainment. |
+| Browser | Research, taxes, documentation, shopping, feed loops, lectures. |
+| ChatGPT | Debugging, learning, admin drafting, planning, casual entertainment. |
 | Slack or WhatsApp | Coordination, relationship maintenance, reactive shallow work. |
-| Editor or writing app | Deep creation, light edits, review, or stalled context switching. |
+| Editor or writing app | Deep creation, light edits, review, stalled context switching. |
 | YouTube | Learning, passive consumption, entertainment, background noise. |
 
-IntentOS turns local metadata into a daily review that is semantic, private,
-and correctable.
+IntentOS keeps raw local events separate from user corrections, so the product
+can learn from review without rewriting history.
 
-## What It Captures
+## What Works Today
 
-IntentOS is not a Chrome extension with a dashboard attached. Chrome is one
-optional enrichment source.
+IntentOS currently ships a local macOS source beta with:
 
-| Source | Role |
+| Capability | Current status |
 | --- | --- |
-| macOS frontmost app/window metadata | Primary beta capture path. |
-| Browser title, URL, and domain | Optional local enrichment when permissions allow it. |
-| Chrome bridge | Optional richer tab metadata for the current beta. |
-| Screenshots, keystrokes, page bodies, cookies, tokens | Not captured. |
+| Native macOS capture | Frontmost app/window metadata through a local recorder. |
+| Browser enrichment | Optional title, URL, and domain when local permissions allow it. |
+| Chrome bridge | Optional MV3 metadata bridge for richer dogfood testing. |
+| Local persistence | SQLite under `.harness/runtime/beta/` with 30-day retention. |
+| Behavior classification | Deterministic, inspectable rules over the product taxonomy. |
+| Daily review UI | Service-backed dashboard plus fixture-backed demo mode. |
+| Corrections | Local relabel overlays that do not mutate raw events. |
+| User controls | Pause, resume, diagnostics, permission guidance, delete local data. |
+| Packaging | Local ad-hoc Swift menu bar app build/install path. |
+| Verification | `make verify`, UI screenshot freshness, beta validation, fixtures. |
 
-Raw events stay raw. Corrections layer on top of classification, so the system
-can become more useful without rewriting history.
+Manual imports remain useful for fixtures and regression tests, but the beta
+path is live and automated. No CSV export is required before the product can
+show value.
 
-## Who It Is For
-
-IntentOS is for people whose digital time has high opportunity cost:
-
-- founders trying to see where attention is leaking
-- engineers and builders balancing deep work, debugging, research, and chat
-- designers, researchers, writers, operators, students, and knowledge workers
-- anyone who wants a private daily review that distinguishes intent from habit
-
-The repo is friendly to developers and AI coding agents because product slices
-come with docs, commands, fixtures, and verification. The product is not only
-for developers.
-
-## Current Beta
-
-IntentOS currently ships a source-based local macOS beta that can:
-
-- capture frontmost macOS app/window metadata through a native local recorder
-- enrich browser title, URL, and domain through local browser automation when
-  available
-- store events in a local SQLite database with 30-day retention
-- classify activity into behavior labels through deterministic local rules
-- render a service-backed daily review dashboard
-- let users correct labels without mutating raw events
-- pause, resume, inspect diagnostics, and delete local data
-- package a local macOS menu bar app
-- optionally accept richer Chrome tab metadata through a local bridge
-
-The default beta path is live and automated. No manual imports. No CSV exports.
-No setup chore before the product can show value.
-
-This is not a polished public installer yet. It is a source beta for people who
-are comfortable running local developer commands.
+Manual metadata-only macOS diagnostics are available through `make observe-live`,
+`make observe-session`, and `make dev-live` when you want to inspect current
+local activity outside the deterministic CI path.
 
 ## Try It
 
 Requirements:
 
-- Python 3 and `make` for the fixture-backed demo.
+- Python 3 and `make` for the deterministic demo.
 - macOS plus Accessibility permission for live capture and the menu bar beta.
 
-Open the deterministic fixture-backed product:
+Run the fixture-backed product in one command:
 
 ```sh
 make dev
 ```
 
-Then open the URL printed as `INTENTOS_APP_URL`.
+Open the URL printed as `INTENTOS_APP_URL`.
 
-Run the live macOS beta from source:
+Run the live local beta:
 
 ```sh
 make beta-dev
 make beta-status
 ```
 
-Then open the URL printed as `INTENTOS_BETA_UI_URL`.
+Open the URL printed as `INTENTOS_BETA_UI_URL`.
 
 Stop the beta runtime:
 
@@ -120,14 +117,14 @@ Stop the beta runtime:
 make beta-stop
 ```
 
-Package and install the local menu bar app:
+Build and install the local menu bar app:
 
 ```sh
 make package-beta
 make install-beta-app
 ```
 
-Run all checks:
+Run the full local gate:
 
 ```sh
 make verify
@@ -139,13 +136,13 @@ IntentOS is intentionally boring about privacy.
 
 | Rule | Current behavior |
 | --- | --- |
-| Local first | Service binds to `127.0.0.1`; data stays under `.harness/runtime/`. |
-| Metadata only | App name, window title, bounded URL/title/domain metadata. |
+| Local first | Services bind to `127.0.0.1`; runtime data stays under `.harness/runtime/`. |
+| Metadata only | App name, window title, bounded title/URL/domain metadata. |
 | No screenshots | Raw screenshots are not captured or retained. |
 | No keylogging | Keyboard input is never captured. |
-| No page bodies | Browser page text, cookies, tokens, and bodies are rejected. |
+| No page bodies | Page text, cookies, tokens, and bodies are rejected. |
 | User control | Pause/resume and delete-local-data are built into the beta. |
-| Chrome optional | Native recorder is primary; the Chrome bridge is only enhancement. |
+| Optional Chrome | Native recorder is primary; Chrome bridge is enrichment only. |
 
 See [docs/SECURITY.md](docs/SECURITY.md) for the full security baseline.
 
@@ -157,76 +154,53 @@ flowchart LR
   C["optional browser URL/title"] --> B
   D["optional Chrome bridge"] --> B
   B --> E["privacy filter"]
-  E --> F["local SQLite"]
+  E --> F["local SQLite or fixture artifacts"]
   F --> G["rules-first classifier"]
   G --> H["daily review"]
-  H --> I["user corrections"]
+  H --> I["local corrections"]
   I --> G
 ```
 
-The classifier currently uses deterministic, inspectable rules. Local model
-inference is planned only after rules and labeled fixtures show where it is
-needed.
+The classifier is deliberately rules-first today. Local model inference is
+planned only after fixtures show where deterministic rules plateau.
+
+## Behavior Taxonomy
+
+IntentOS classifies activity into a small, inspectable set:
+
+| Label | Meaning |
+| --- | --- |
+| `deep_work` | Focused coding, writing, analysis, or problem solving. |
+| `learning` | Intentional educational or skill-building activity. |
+| `communication` | Messages, calls, coordination, relationship maintenance. |
+| `admin` | Taxes, billing, banking, forms, travel, account work. |
+| `passive_consumption` | Feed loops, low-intent browsing, clips, recommendation drift. |
+| `active_creation` | Creating personal or public output outside core work. |
+| `entertainment` | Deliberate leisure, games, shows, comedy, sports, music. |
+| `unknown` | Sparse or conflicting evidence. |
+
+The source of truth is [docs/product/TAXONOMY.md](docs/product/TAXONOMY.md).
 
 ## What It Is Not
 
 - Not a Chrome-only extension.
 - Not a keylogger.
 - Not a screenshot recorder.
-- Not a cloud productivity dashboard.
-- Not a blocker, scheduler, or automation agent yet.
+- Not a cloud analytics product.
+- Not a public installer yet.
+- Not an automation agent or blocker in the current beta.
 
-## Current Status
+## Why Star It
 
-| Area | Status |
-| --- | --- |
-| Generic activity classification | Working with fixture evaluation. |
-| Manual metadata-only macOS capture | Working locally with Accessibility permission. |
-| Background beta recorder | Working in local beta runtime. |
-| Service-backed dashboard | Working. |
-| Local corrections | Working. |
-| Menu bar app | Local ad-hoc package/install path working. |
-| Chrome bridge | Optional; packaged for beta bridge smoke. |
-| Cloud sync, auth, billing, updater | Out of scope for this local beta slice. |
+Star this repo if you care about any of these:
 
-Manual metadata-only macOS capture is available through:
+- a privacy-first alternative to app-name productivity tracking
+- local semantic classification of real digital behavior
+- macOS capture that starts with metadata instead of invasive sensors
+- an agent-readable product harness with docs, fixtures, screenshots, and CI
+- a practical path from daily review to future local intent intelligence
 
-```sh
-make observe-live
-make observe-session
-make dev-live
-```
-
-These commands are local diagnostics outside CI because they depend on the
-current macOS user, current windows, and granted permissions.
-
-Run the real 30-minute local capture gate when validating a machine:
-
-```sh
-make dogfood-smoke
-```
-
-`make validate-beta` is the deterministic beta test harness. It uses fake
-permission probes and fixture bridge rows against a temporary database. The
-normal `make beta-dev` path does not seed fake activity.
-
-## Why This Repo Is Different
-
-This is not just an app prototype. It is an agent-first product harness.
-
-Codex should be able to read the repository, understand the product state,
-make a scoped change, run the product, verify behavior, and leave durable
-context in docs.
-
-That means the repo treats harness gaps as product bugs:
-
-- UI changes need rendered evidence.
-- Capture changes need deterministic fixtures.
-- Live macOS features need fake probes for CI.
-- Privacy assumptions live in docs and tests.
-- Runtime status must be inspectable through commands and artifacts.
-
-## Architecture At A Glance
+## Architecture
 
 | Layer | Purpose |
 | --- | --- |
@@ -238,7 +212,7 @@ That means the repo treats harness gaps as product bugs:
 | `web/` | Local daily review dashboard. |
 | `macos/IntentOSBeta/` | Native menu bar wrapper. |
 | `extension/chrome/` | Optional MV3 Chrome metadata bridge. |
-| `scripts/harness/` | Agent-readable runtime and verification harness. |
+| `scripts/harness/` | Runtime, validation, linting, screenshot, and diagnostics. |
 
 The canonical architecture doc is
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -263,8 +237,7 @@ The canonical architecture doc is
 | Refresh screenshot evidence | `make update-ui-screenshot` |
 | Diagnose runtime | `make diagnose` |
 
-More commands and artifact contracts live in
-[docs/APP_RUNTIME.md](docs/APP_RUNTIME.md).
+More runtime contracts live in [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md).
 
 ## Roadmap
 
@@ -289,7 +262,8 @@ version:
 - preserve the local-only privacy contract
 - run `make verify` before handoff whenever possible
 
-Issues are welcome for bugs, product ideas, and local beta feedback.
+Issues are welcome for bugs, product ideas, local beta feedback, and
+classification examples that should become fixtures.
 
 ## Start Here If You Are Codex
 

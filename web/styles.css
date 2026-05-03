@@ -244,6 +244,12 @@ h2 {
   border-color: rgba(24, 166, 100, 0.24);
 }
 
+.source-pill.quiet:nth-child(3) {
+  color: #0f5e82;
+  background: #eef8ff;
+  border-color: rgba(0, 165, 184, 0.24);
+}
+
 .overview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 292px;
@@ -439,7 +445,7 @@ h2 {
   align-content: space-between;
   padding: 26px;
   background:
-    linear-gradient(135deg, #ffffff 0%, #fbfcfd 58%, #f4f7f9 100%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 56%, #effbf5 100%),
     var(--surface);
 }
 
