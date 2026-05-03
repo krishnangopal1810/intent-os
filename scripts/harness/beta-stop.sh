@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-BETA_DIR=".harness/runtime/beta"
+RUNTIME_DIR="${INTENTOS_RUNTIME_DIR:-.harness/runtime}"
+BETA_DIR="$RUNTIME_DIR/beta"
 BETA_ENV="$BETA_DIR/app.env"
 
 pid_from_env() {

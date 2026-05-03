@@ -147,6 +147,102 @@
     "expected_label": "entertainment"
   },
   {
+    "source_app": "Google Chrome",
+    "surface": "bazel.build",
+    "title": "BUILD Style Guide | Bazel",
+    "url": "https://bazel.build/build/style-guide",
+    "started_at": "2026-04-25T21:00:00Z",
+    "duration_seconds": 900,
+    "metadata": {
+      "domain": "bazel.build"
+    },
+    "expected_label": "learning"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "youtube.com",
+    "title": "Final | India vs Pakistan | DP World Asia Cup 2025 - YouTube",
+    "url": "https://www.youtube.com/watch?v=MAm0RLQpYas",
+    "started_at": "2026-04-25T21:20:00Z",
+    "duration_seconds": 300,
+    "metadata": {
+      "domain": "youtube.com"
+    },
+    "expected_label": "entertainment"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "google.com",
+    "title": "cafe graze brunch - Google Search",
+    "url": "https://www.google.com/search?q=cafe+graze+brunch",
+    "started_at": "2026-04-25T21:30:00Z",
+    "duration_seconds": 60,
+    "metadata": {
+      "domain": "google.com"
+    },
+    "expected_label": "admin"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "amazon.in",
+    "title": "Instant Pot Duo 6QT 7-in-1 Electric Pressure Cooker",
+    "url": "https://www.amazon.in/Instant-Pot/dp/example",
+    "started_at": "2026-04-25T21:35:00Z",
+    "duration_seconds": 180,
+    "metadata": {
+      "domain": "amazon.in"
+    },
+    "expected_label": "admin"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "github.com",
+    "title": "krishnangopal1810/intent-os",
+    "url": "https://github.com/krishnangopal1810/intent-os",
+    "started_at": "2026-04-25T21:45:00Z",
+    "duration_seconds": 300,
+    "metadata": {
+      "domain": "github.com"
+    },
+    "expected_label": "deep_work"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "127.0.0.1:62471",
+    "title": "IntentOS",
+    "url": "http://127.0.0.1:62471/site/index.html?mode=beta",
+    "started_at": "2026-04-25T21:55:00Z",
+    "duration_seconds": 300,
+    "metadata": {
+      "domain": "127.0.0.1:62471"
+    },
+    "expected_label": "deep_work"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "x.com",
+    "title": "Prem Soni on X: property thread / X",
+    "url": "https://x.com/ValueWithPrem/status/2050767004001595781",
+    "started_at": "2026-04-25T22:00:00Z",
+    "duration_seconds": 120,
+    "metadata": {
+      "domain": "x.com"
+    },
+    "expected_label": "passive_consumption"
+  },
+  {
+    "source_app": "Google Chrome",
+    "surface": "google.com",
+    "title": "Google",
+    "url": "https://www.google.com/",
+    "started_at": "2026-04-25T22:05:00Z",
+    "duration_seconds": 300,
+    "metadata": {
+      "domain": "google.com"
+    },
+    "expected_label": "unknown"
+  },
+  {
     "source_app": "Unknown App",
     "surface": "unknown",
     "title": "Untitled window",

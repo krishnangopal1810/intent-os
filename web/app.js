@@ -9,7 +9,6 @@ const paths = {
     "../artifacts/capture-summary.json",
   ],
   captureStatus: "../artifacts/live-capture-status.json",
-  youtube: "../artifacts/youtube-summary.json",
 };
 
 const labels = {
@@ -22,6 +21,10 @@ const labels = {
   entertainment: "Entertainment",
   unknown: "Unknown",
 };
+
+const focusLabels = ["deep_work", "learning", "active_creation"];
+const attentionLeakLabels = ["passive_consumption", "entertainment"];
+const reviewLabels = ["unknown"];
 
 let currentSetupGuidance = null;
 
@@ -98,7 +101,20 @@ function summaryHeadline(summary) {
     return formatNarrative(summary.narrative);
   }
   const [label, data] = rows[0];
-  return `${formatLabel(label)} led the day at ${Math.round(data.percentage)}%, with ${data.duration} captured across tracked activity.`;
+  const total = summary.total_seconds || 0;
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
+  const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
+  const unknownSeconds = sumLabelSeconds(summary, reviewLabels);
+  if (unknownSeconds && percentage(unknownSeconds, total) >= 10) {
+    return `Trust gap: ${formatDuration(unknownSeconds)} needs review before the score is useful.`;
+  }
+  if (leakSeconds && percentage(leakSeconds, total) >= 20) {
+    return `Mixed day: ${formatLabel(label)} led at ${Math.round(data.percentage)}%; ${formatDuration(leakSeconds)} needs a boundary.`;
+  }
+  if (focusSeconds && percentage(focusSeconds, total) >= 60) {
+    return `Aligned day: ${formatDuration(focusSeconds)} stayed in high-value work.`;
+  }
+  return `${formatLabel(label)} led the day at ${Math.round(data.percentage)}%; ${data.duration} captured.`;
 }
 
 function labelClass(label) {
@@ -141,6 +157,171 @@ function formatDuration(seconds) {
   return `${minutes}m`;
 }
 
+function sumLabelSeconds(summary, labelList) {
+  return labelList.reduce((sum, label) => sum + labelSeconds(summary, label), 0);
+}
+
+function sortedLabelRows(summary) {
+  return Object.entries(summary.labels || {}).sort(
+    (left, right) => right[1].seconds - left[1].seconds,
+  );
+}
+
+function compactText(text, maxLength = 74) {
+  const value = String(text || "").trim();
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 3).trim()}...`;
+}
+
+function itemDuration(item) {
+  return item.duration || formatDuration(item.duration_seconds || 0);
+}
+
+function itemSurface(item) {
+  if (!item) {
+    return "";
+  }
+  return item.url || item.surface || item.source_app || "";
+}
+
+function itemTitle(item) {
+  if (!item) {
+    return "";
+  }
+  const source = item.source_app ? `${item.source_app}: ` : "";
+  return compactText(`${source}${item.title || item.surface || "Untitled"}`);
+}
+
+function topItemForLabels(items, labelList) {
+  return [...(items || [])]
+    .filter((item) => labelList.includes(item.label))
+    .sort((left, right) => (right.duration_seconds || 0) - (left.duration_seconds || 0))[0] || null;
+}
+
+function lowConfidenceItems(items) {
+  return (items || []).filter((item) => item.label === "unknown" || item.confidence < 0.7);
+}
+
+function averageConfidence(items) {
+  if (!items.length) {
+    return 0;
+  }
+  return Math.round(
+    (items.reduce((sum, item) => sum + (item.confidence || 0), 0) /
+      items.length) *
+      100,
+  );
+}
+
+function attentionProfile(summary) {
+  const total = summary.total_seconds || 0;
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
+  const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
+  const unknownSeconds = sumLabelSeconds(summary, reviewLabels);
+  const focusPercent = percentage(focusSeconds, total);
+  const leakPercent = percentage(leakSeconds, total);
+  const unknownPercent = percentage(unknownSeconds, total);
+  if (!total) {
+    return {
+      title: "No signal yet",
+      kicker: "Waiting for local data",
+      scoreTitle: "No review yet",
+      scoreCaption: "Start capture or load fixture reports to see the day.",
+      actionCopy: "No tracked activity is available for this review.",
+    };
+  }
+  if (unknownPercent >= 10) {
+    return {
+      title: "Trust gap visible",
+      kicker: "Needs review",
+      scoreTitle: "Needs correction",
+      scoreCaption: `${formatDuration(unknownSeconds)} is still unknown or low-confidence.`,
+      actionCopy: "Clear the ambiguous rows before treating the score as truth.",
+    };
+  }
+  if (leakPercent >= 30) {
+    return {
+      title: "Attention leak",
+      kicker: "Pull here",
+      scoreTitle: "Recoverable drift",
+      scoreCaption: `${formatDuration(leakSeconds)} went to passive or entertainment surfaces.`,
+      actionCopy: "The next block needs a boundary before another open-ended tab.",
+    };
+  }
+  if (focusPercent >= 60) {
+    return {
+      title: "Aligned day",
+      kicker: "Strong signal",
+      scoreTitle: "Strong alignment",
+      scoreCaption: `${formatDuration(focusSeconds)} was focused, learning, or creation time.`,
+      actionCopy: "Repeat the block that made the day work.",
+    };
+  }
+  return {
+    title: "Mixed alignment",
+    kicker: "Today's signal",
+    scoreTitle: "Mixed alignment",
+    scoreCaption: `${formatDuration(focusSeconds)} was high-value activity and ${formatDuration(leakSeconds)} was reactive.`,
+    actionCopy: "Start the next block with one constraint, then let the review keep score.",
+  };
+}
+
+function buildNextMove(summary, items, options = {}) {
+  const total = summary.total_seconds || 0;
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
+  const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
+  const unknownSeconds = sumLabelSeconds(summary, reviewLabels);
+  const lowConfidence = lowConfidenceItems(items);
+  const topFocus = topItemForLabels(items, focusLabels);
+  const topLeak = topItemForLabels(items, attentionLeakLabels);
+
+  if (!total) {
+    return {
+      label: "unknown",
+      metric: "No rows",
+      title: options.beta ? "Check the local service" : "Start a clean review window",
+      note: options.beta
+        ? "The beta dashboard is connected, but no daily activity is available yet."
+        : "Run a local capture session or keep the dashboard open while you work.",
+    };
+  }
+  if (leakSeconds > 0 && leakSeconds >= unknownSeconds) {
+    const leakName = topLeak ? itemTitle(topLeak) : "passive surfaces";
+    return {
+      label: topLeak?.label || "passive_consumption",
+      metric: formatDuration(leakSeconds),
+      title: "Close the leak before the next block",
+      note: `${compactText(leakName, 84)} is the clearest place to set a cap or remove the surface.`,
+    };
+  }
+  if (unknownSeconds > 0 || lowConfidence.length > 0) {
+    return {
+      label: "unknown",
+      metric: unknownSeconds ? formatDuration(unknownSeconds) : `${lowConfidence.length} rows`,
+      title: "Resolve the trust gap",
+      note: "Correct or inspect ambiguous evidence before changing behavior from this review.",
+    };
+  }
+  if (focusSeconds > 0) {
+    return {
+      label: topFocus?.label || "deep_work",
+      metric: `${percentage(focusSeconds, total)}% focus`,
+      title: "Repeat the strongest block",
+      note: topFocus
+        ? `${itemTitle(topFocus)} is the behavior to protect next.`
+        : "Your highest-value labels are carrying the review.",
+    };
+  }
+  return {
+    label: "admin",
+    metric: formatDuration(total),
+    title: "Name the next intent",
+    note: "The review is populated, but it has not found a high-value block yet.",
+  };
+}
+
 function renderStats(summary) {
   const stats = document.querySelector("[data-stats]");
   const rows = Object.entries(summary.labels || {})
@@ -157,6 +338,31 @@ function renderStats(summary) {
       value.textContent = data.duration;
       wrapper.append(term, value);
       return wrapper;
+    }),
+  );
+}
+
+function renderBriefMoments(summary) {
+  const wrapper = document.querySelector("[data-brief-moments]");
+  const rows = sortedLabelRows(summary).slice(0, 3);
+  if (!rows.length) {
+    const empty = document.createElement("span");
+    empty.className = "brief-moment label-unknown";
+    empty.textContent = "No behavior signal yet";
+    wrapper.replaceChildren(empty);
+    return;
+  }
+
+  wrapper.replaceChildren(
+    ...rows.map(([label, data]) => {
+      const item = document.createElement("span");
+      item.className = `brief-moment ${labelClass(label)}`;
+      const value = document.createElement("strong");
+      value.textContent = data.duration;
+      const name = document.createElement("span");
+      name.textContent = formatLabel(label);
+      item.append(value, name);
+      return item;
     }),
   );
 }
@@ -188,56 +394,136 @@ function renderFocusMeter(summary) {
 }
 
 function focusShare(summary) {
-  const focusSeconds =
-    labelSeconds(summary, "deep_work") +
-    labelSeconds(summary, "learning") +
-    labelSeconds(summary, "active_creation");
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
   return percentage(focusSeconds, summary.total_seconds || 0);
 }
 
 function renderScore(summary) {
   const score = focusShare(summary);
+  const profile = attentionProfile(summary);
   const ring = document.querySelector("[data-focus-ring]");
   const scoreValue = document.querySelector("[data-focus-score]");
   const scoreTitle = document.querySelector("[data-score-title]");
   const scoreCaption = document.querySelector("[data-score-caption]");
-  const drift =
-    labelSeconds(summary, "passive_consumption") +
-    labelSeconds(summary, "entertainment");
 
   ring.style.setProperty("--score", `${score}%`);
   scoreValue.textContent = `${score}`;
-  scoreTitle.textContent = score >= 60 ? "Strong alignment" : "Mixed alignment";
-  scoreCaption.textContent =
-    drift > 0
-      ? `${formatDuration(drift)} of reactive activity is visible in the review.`
-      : "No reactive activity appeared in this report.";
+  scoreTitle.textContent = profile.scoreTitle;
+  scoreCaption.textContent = profile.scoreCaption;
 }
 
-function renderInsights(summary, capture, youtube, options = {}) {
+function renderNextMove(summary, items, options = {}) {
+  const profile = attentionProfile(summary);
+  const nextMove = buildNextMove(summary, items, options);
+  document.querySelector("[data-brief-kicker]").textContent = profile.kicker;
+  document.querySelector("[data-primary-action-copy]").textContent =
+    profile.actionCopy;
+  document.querySelector("[data-next-move-title]").textContent = nextMove.title;
+  document.querySelector("[data-next-move-note]").textContent =
+    `${nextMove.metric} - ${nextMove.note}`;
+}
+
+function renderActionDeck(summary, items, options = {}) {
+  const deck = document.querySelector("[data-action-deck]");
+  const reviewItems = items || [];
+  const topFocus = topItemForLabels(reviewItems, focusLabels);
+  const topLeak = topItemForLabels(reviewItems, attentionLeakLabels);
+  const lowConfidence = lowConfidenceItems(reviewItems);
+  const nextMove = buildNextMove(summary, reviewItems, options);
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
+  const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
+  const confidence = averageConfidence(reviewItems);
+
+  const cards = [
+    topFocus
+      ? {
+          label: topFocus.label,
+          kicker: "Repeat",
+          metric: itemDuration(topFocus),
+          title: itemTitle(topFocus),
+          note: `Best high-value block from ${itemSurface(topFocus)}.`,
+        }
+      : {
+          label: "deep_work",
+          kicker: "Repeat",
+          metric: formatDuration(focusSeconds),
+          title: "No focus block found yet",
+          note: "The review has not seen deep work, learning, or creation.",
+        },
+    topLeak
+      ? {
+          label: topLeak.label,
+          kicker: "Contain",
+          metric: itemDuration(topLeak),
+          title: itemTitle(topLeak),
+          note: `${formatDuration(leakSeconds)} total attention leak is visible.`,
+        }
+      : {
+          label: "active_creation",
+          kicker: "Contain",
+          metric: "Clean",
+          title: "No passive loop in the evidence",
+          note: "The current review is not dominated by consumption or entertainment.",
+        },
+    lowConfidence.length
+      ? {
+          label: "unknown",
+          kicker: "Trust",
+          metric: `${lowConfidence.length} rows`,
+          title: itemTitle(lowConfidence[0]),
+          note: "Correct the label so future reviews feel sharper.",
+        }
+      : {
+          label: "learning",
+          kicker: "Trust",
+          metric: reviewItems.length ? `${confidence}%` : "No rows",
+          title: reviewItems.length ? "Evidence is readable" : "Waiting for evidence",
+          note: reviewItems.length
+            ? "No low-confidence segment is asking for review."
+            : "Open the dashboard during a work session to collect local metadata.",
+        },
+    {
+      label: nextMove.label,
+      kicker: "Next",
+      metric: nextMove.metric,
+      title: nextMove.title,
+      note: nextMove.note,
+    },
+  ];
+
+  deck.replaceChildren(...cards.map(renderDecisionCard));
+}
+
+function renderDecisionCard(card) {
+  const wrapper = document.createElement("article");
+  wrapper.className = `decision-card ${labelClass(card.label || "unknown")}`;
+  const kicker = document.createElement("p");
+  kicker.className = "decision-kicker";
+  kicker.textContent = card.kicker;
+  const metric = document.createElement("div");
+  metric.className = "decision-metric";
+  metric.textContent = card.metric;
+  const title = document.createElement("h3");
+  title.textContent = card.title;
+  const note = document.createElement("p");
+  note.className = "decision-note";
+  note.textContent = card.note;
+  wrapper.append(kicker, metric, title, note);
+  return wrapper;
+}
+
+function renderInsights(summary, capture, options = {}) {
   const insights = document.querySelector("[data-insights]");
-  const focusSeconds =
-    labelSeconds(summary, "deep_work") +
-    labelSeconds(summary, "learning") +
-    labelSeconds(summary, "active_creation");
-  const driftSeconds =
-    labelSeconds(summary, "passive_consumption") +
-    labelSeconds(summary, "entertainment");
+  const focusSeconds = sumLabelSeconds(summary, focusLabels);
+  const driftSeconds = sumLabelSeconds(summary, attentionLeakLabels);
   const total = summary.total_seconds || 0;
   const captureItems = capture.items || [];
-  const averageConfidence = captureItems.length
-    ? Math.round(
-        (captureItems.reduce((sum, item) => sum + item.confidence, 0) /
-          captureItems.length) *
-          100,
-      )
-    : 0;
-  const youtubeLearning = Math.round(youtube.summary?.learning_percentage || 0);
+  const replayConfidence = averageConfidence(captureItems);
   const replayNote = options.beta
     ? `${captureItems.length} live service segment${captureItems.length === 1 ? "" : "s"} loaded from SQLite.`
     : options.live
       ? `${captureItems.length} live capture segment${captureItems.length === 1 ? "" : "s"} loaded.`
-      : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`;
+      : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded from local fixture replay.`;
   const rows = [
     {
       label: "Focused work",
@@ -253,7 +539,7 @@ function renderInsights(summary, capture, youtube, options = {}) {
     },
     {
       label: "Replay confidence",
-      value: captureItems.length ? `${averageConfidence}%` : "No rows",
+      value: captureItems.length ? `${replayConfidence}%` : "No rows",
       note: replayNote,
       className: "label-learning",
     },
@@ -437,41 +723,6 @@ function renderQueue(selector, items) {
   );
 }
 
-function renderYoutubeMeter(summary) {
-  const meter = document.querySelector("[data-youtube-meter]");
-  const learning = summary.learning_percentage || 0;
-  const passive = summary.passive_consumption_percentage || 0;
-  const unknown = summary.unknown_percentage || 0;
-  const entertainment = Math.max(0, 100 - learning - passive - unknown);
-  const rows = [
-    ["learning", learning],
-    ["passive_consumption", passive],
-    ["entertainment", entertainment],
-    ["unknown", unknown],
-  ].filter((row) => row[1] > 0);
-
-  meter.replaceChildren(
-    ...rows.map(([label, value]) => {
-      const segment = document.createElement("div");
-      segment.className = `meter-segment meter-${label}`;
-      segment.style.width = `${Math.max(2, Math.round(value))}%`;
-      segment.title = `${formatLabel(label)}: ${Math.round(value)}%`;
-      return segment;
-    }),
-  );
-}
-
-function setDomainSliceVisible(visible) {
-  const youtubePanel = document.querySelector(".youtube-panel");
-  const youtubeNav = document.querySelector('a[href="#youtube-title"]');
-  if (youtubePanel) {
-    youtubePanel.hidden = !visible;
-  }
-  if (youtubeNav) {
-    youtubeNav.hidden = !visible;
-  }
-}
-
 function captureStatusText(isLiveCapture, status) {
   if (!isLiveCapture) {
     return "Fixture reports loaded";
@@ -505,10 +756,9 @@ async function boot() {
 }
 
 function renderBetaUnavailable(message) {
-  setDomainSliceVisible(false);
+  const emptySummary = { labels: {}, total_seconds: 0 };
   document.querySelector("[data-primary-total]").textContent = "--";
   document.querySelector("[data-primary-narrative]").textContent = message;
-  document.querySelector("[data-youtube-narrative]").textContent = "";
   document.querySelector("[data-status]").textContent =
     "Live beta service unavailable";
   document.querySelector("[data-activity-source]").textContent =
@@ -518,19 +768,20 @@ function renderBetaUnavailable(message) {
   document.querySelector("[data-stats]").replaceChildren();
   document.querySelector("[data-insights]").replaceChildren();
   document.querySelector("[data-activity-bars]").replaceChildren();
-  renderFocusMeter({ labels: {}, total_seconds: 0 });
-  renderScore({ labels: {}, total_seconds: 0 });
+  renderBriefMoments(emptySummary);
+  renderFocusMeter(emptySummary);
+  renderScore(emptySummary);
+  renderNextMove(emptySummary, [], { beta: true });
+  renderActionDeck(emptySummary, [], { beta: true });
   renderTimelineWithOptions([], null);
-  renderYoutubeMeter({});
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
 }
 
 function renderLiveUnavailable(message) {
-  setDomainSliceVisible(false);
+  const emptySummary = { labels: {}, total_seconds: 0 };
   document.querySelector("[data-primary-total]").textContent = "--";
   document.querySelector("[data-primary-narrative]").textContent = message;
-  document.querySelector("[data-youtube-narrative]").textContent = "";
   document.querySelector("[data-status]").textContent =
     "Live capture unavailable";
   document.querySelector("[data-activity-source]").textContent =
@@ -540,17 +791,18 @@ function renderLiveUnavailable(message) {
   document.querySelector("[data-stats]").replaceChildren();
   document.querySelector("[data-insights]").replaceChildren();
   document.querySelector("[data-activity-bars]").replaceChildren();
-  renderFocusMeter({ labels: {}, total_seconds: 0 });
-  renderScore({ labels: {}, total_seconds: 0 });
+  renderBriefMoments(emptySummary);
+  renderFocusMeter(emptySummary);
+  renderScore(emptySummary);
+  renderNextMove(emptySummary, [], { live: true });
+  renderActionDeck(emptySummary, [], { live: true });
   renderTimelineWithOptions([], null);
-  renderYoutubeMeter({});
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
 }
 
 async function bootArtifacts(options = {}) {
   const requiredLivePaths = options.requiredLivePaths || null;
-  setDomainSliceVisible(!requiredLivePaths);
   if (requiredLivePaths) {
     let captureResult;
     try {
@@ -561,19 +813,18 @@ async function bootArtifacts(options = {}) {
       );
       return;
     }
-    await renderArtifactReport(captureResult, null, null, { live: true });
+    await renderArtifactReport(captureResult, null, { live: true });
     return;
   }
 
-  const [activity, captureResult, youtube] = await Promise.all([
+  const [activity, captureResult] = await Promise.all([
     loadJson(paths.activity),
     loadFirst([...paths.liveCapture, ...paths.fixtureCapture]),
-    loadJson(paths.youtube),
   ]);
-  await renderArtifactReport(captureResult, activity, youtube, { live: false });
+  await renderArtifactReport(captureResult, activity, { live: false });
 }
 
-async function renderArtifactReport(captureResult, activity, youtube, options) {
+async function renderArtifactReport(captureResult, activity, options) {
   const capture = captureResult.data;
   const isLiveSession = captureResult.path.includes("live-session");
   const isSession = captureResult.path.includes("session-capture");
@@ -588,6 +839,9 @@ async function renderArtifactReport(captureResult, activity, youtube, options) {
   const primarySummary = isLiveSession || isLiveCapture
     ? capture.summary
     : activity?.summary;
+  const dayItems = isLiveSession || isLiveCapture
+    ? capture.items || []
+    : activity?.items || capture.items || [];
   const primarySource = isLiveSession || isLiveCapture
     ? captureSource
     : "Daily activity report";
@@ -604,8 +858,6 @@ async function renderArtifactReport(captureResult, activity, youtube, options) {
     primarySummary.total_duration || formatDuration(primarySummary.total_seconds || 0);
   document.querySelector("[data-primary-narrative]").textContent =
     summaryHeadline(primarySummary);
-  document.querySelector("[data-youtube-narrative]").textContent =
-    youtube ? formatNarrative(youtube.summary.narrative) : "";
   const statusText = isLiveCapture
     ? captureStatusText(isLiveCapture, status)
     : isLiveSession
@@ -619,32 +871,25 @@ async function renderArtifactReport(captureResult, activity, youtube, options) {
   document.querySelector("[data-activity-source]").textContent = primarySource;
   document.querySelector("[data-capture-source]").textContent = captureLabel;
 
+  renderBriefMoments(primarySummary);
   renderFocusMeter(primarySummary);
   renderScore(primarySummary);
-  renderInsights(primarySummary, capture, youtube || {}, options);
+  renderNextMove(primarySummary, dayItems, options);
+  renderActionDeck(primarySummary, dayItems, options);
+  renderInsights(primarySummary, capture, options);
   renderStats(primarySummary);
   renderBars(primarySummary);
   renderTimeline(capture.items || []);
-  renderYoutubeMeter(youtube?.summary || {});
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
 }
 
 async function bootBeta(betaConfig) {
-  setDomainSliceVisible(false);
   const date = betaConfig.date || new Date().toISOString().slice(0, 10);
   const [review, onboarding] = await Promise.all([
     loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
     loadJson(apiUrl(betaConfig, "/api/onboarding")),
   ]);
-  const betaContext = {
-    summary: {
-      narrative: "",
-      learning_percentage: 0,
-      passive_consumption_percentage: 0,
-      unknown_percentage: 0,
-    },
-  };
   const status = review.status || {};
   const scopeLabel = review.scope?.label || "Today since midnight";
   const extensionState = status.extension?.state || "not connected";
@@ -656,7 +901,6 @@ async function bootBeta(betaConfig) {
     review.summary.total_duration || formatDuration(review.summary.total_seconds || 0);
   document.querySelector("[data-primary-narrative]").textContent =
     summaryHeadline(review.summary);
-  document.querySelector("[data-youtube-narrative]").textContent = "";
   document.querySelector("[data-status]").textContent =
     `${readiness} - ${paused} - Native recorder ${recorderState} - Chrome bridge ${extensionState}`;
   document.querySelector("[data-activity-source]").textContent =
@@ -666,11 +910,13 @@ async function bootBeta(betaConfig) {
 
   renderFocusMeter(review.summary);
   renderScore(review.summary);
-  renderInsights(review.summary, review, betaContext, { beta: true });
+  renderBriefMoments(review.summary);
+  renderNextMove(review.summary, review.items || [], { beta: true });
+  renderActionDeck(review.summary, review.items || [], { beta: true });
+  renderInsights(review.summary, review, { beta: true });
   renderStats(review.summary);
   renderBars(review.summary);
   renderTimelineWithOptions(review.items || [], betaConfig);
-  renderYoutubeMeter(betaContext.summary);
   renderBetaQueues(review);
   renderOnboarding(betaConfig, onboarding.onboarding, status);
 }

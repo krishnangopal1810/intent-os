@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from intentos.activity import ActivityEvent, event_text
+from intentos.activity import ActivityEvent
+from intentos.classifier_context import classification_text, context_cues
 
 
 class BehaviorLabel(str, Enum):
@@ -41,8 +42,13 @@ LABEL_CUES: dict[BehaviorLabel, dict[str, int]] = {
         "vscode": 2,
         "vs code": 2,
         "sublime": 2,
-        "test": 1,
+        "tests": 1,
+        "unit test": 2,
         "unittest": 2,
+        "pull request": 2,
+        "github repository": 3,
+        "intent-os": 3,
+        "intentos": 3,
     },
     BehaviorLabel.SHALLOW_WORK: {
         "inbox": 3,
@@ -64,6 +70,12 @@ LABEL_CUES: dict[BehaviorLabel, dict[str, int]] = {
         "transformers": 2,
         "attention": 2,
         "examples": 1,
+        "bazel": 3,
+        "documentation": 2,
+        "docs": 1,
+        "external dependencies": 2,
+        "guide": 2,
+        "style guide": 3,
     },
     BehaviorLabel.COMMUNICATION: {
         "whatsapp": 3,
@@ -85,6 +97,21 @@ LABEL_CUES: dict[BehaviorLabel, dict[str, int]] = {
         "payment": 3,
         "bank": 2,
         "portal": 1,
+        "amazon": 2,
+        "brunch": 2,
+        "cafe": 2,
+        "fitbit": 2,
+        "locations": 2,
+        "murukku": 2,
+        "pixel watch": 2,
+        "pressure cooker": 2,
+        "restaurant": 2,
+        "rice cooker": 2,
+        "secondary market": 3,
+        "share price": 2,
+        "shopping": 2,
+        "stock": 2,
+        "visa": 3,
     },
     BehaviorLabel.PASSIVE_CONSUMPTION: {
         "feed": 3,
@@ -95,6 +122,9 @@ LABEL_CUES: dict[BehaviorLabel, dict[str, int]] = {
         "timeline": 2,
         "short video": 3,
         "x.com/home": 2,
+        "x.com/status": 2,
+        "instagram": 2,
+        "stories": 2,
         "linkedin.com/feed": 2,
     },
     BehaviorLabel.ACTIVE_CREATION: {
@@ -114,15 +144,21 @@ LABEL_CUES: dict[BehaviorLabel, dict[str, int]] = {
         "funny": 2,
         "gaming": 3,
         "highlights": 2,
+        "asia cup": 3,
+        "cricket": 3,
+        "england v india": 3,
+        "india vs pakistan": 3,
+        "ipl": 3,
+        "lord's test": 3,
+        "nail-biting": 2,
         "reaction": 2,
         "entertainment": 3,
     },
 }
 
-
 def classify_event(event: ActivityEvent) -> ActivityClassification:
-    text = event_text(event)
-    matches = score_labels(text)
+    text = classification_text(event)
+    matches = score_event(event, text)
     scores = {label: sum(cues.values()) for label, cues in matches.items()}
     nonzero = {label: score for label, score in scores.items() if score > 0}
 
@@ -163,6 +199,15 @@ def score_labels(text: str) -> dict[BehaviorLabel, dict[str, int]]:
         label: {cue: weight for cue, weight in cues.items() if cue in text}
         for label, cues in LABEL_CUES.items()
     }
+
+
+def score_event(event: ActivityEvent, text: str) -> dict[BehaviorLabel, dict[str, int]]:
+    matches = score_labels(text)
+    for label_value, cues in context_cues(event, text).items():
+        label = BehaviorLabel(label_value)
+        for cue, weight in cues.items():
+            matches[label][cue] = max(matches[label].get(cue, 0), weight)
+    return matches
 
 
 def format_top_scores(ranked: list[tuple[BehaviorLabel, int]]) -> str:

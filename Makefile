@@ -1,4 +1,4 @@
-.PHONY: app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot cleanup-check dev dev-live diagnose dogfood-smoke harness-check harness-lint harness-status install-beta-app observe observe-live observe-session package-beta package-extension update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
+.PHONY: adapter-fixture-check app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot chrome-bridge-smoke cleanup-check dev dev-live diagnose diagnose-json dogfood-smoke feedback-fixture-candidates harness-check harness-lint harness-status install-beta-app new-feature observe observe-live observe-session package-beta package-extension review-status update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -8,6 +8,9 @@ dev-live:
 
 diagnose:
 	@scripts/harness/diagnose.sh
+
+diagnose-json:
+	@scripts/harness/diagnose-json.py
 
 app-status:
 	@scripts/harness/app-status.sh
@@ -45,6 +48,18 @@ package-extension:
 dogfood-smoke:
 	@scripts/product/dogfood-smoke.sh
 
+chrome-bridge-smoke:
+	@scripts/product/chrome-bridge-smoke.sh
+
+adapter-fixture-check:
+	@scripts/harness/adapter-fixture-check.py
+
+feedback-fixture-candidates:
+	@scripts/harness/feedback-fixture-candidates.py
+
+review-status:
+	@scripts/harness/review-status.py
+
 update-ui-screenshot:
 	@scripts/product/update-ui-screenshot.sh
 
@@ -78,3 +93,7 @@ verify-harness:
 new-plan:
 	@if [ -z "$(name)" ]; then echo "usage: make new-plan name=short-slug"; exit 2; fi
 	@scripts/harness/new-plan.sh "$(name)"
+
+new-feature:
+	@if [ -z "$(name)" ] || [ -z "$(class)" ]; then echo "usage: make new-feature name=short-slug class=data-source|classifier|report|ui-workflow|permissioned-live|long-running-process|integration-export|agent-workflow"; exit 2; fi
+	@scripts/harness/new-feature.sh "$(name)" "$(class)"

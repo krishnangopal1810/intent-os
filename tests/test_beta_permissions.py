@@ -16,7 +16,32 @@ class BetaPermissionTests(unittest.TestCase):
 
             self.assertEqual(payload["permissions"]["accessibility"]["state"], "ok")
             self.assertEqual(payload["permissions"]["browser_automation"]["state"], "ok")
-            self.assertEqual(payload["readiness"]["state"], "setup_needed")
+            self.assertEqual(payload["readiness"]["state"], "ready")
+
+    def test_fake_permission_scenarios_cover_blocked_and_stale_states(self):
+        scenarios = {
+            "accessibility_blocked": ("blocked", "unchecked", "running", "never_connected", False, "setup_needed"),
+            "automation_blocked": ("ok", "blocked", "running", "never_connected", False, "setup_needed"),
+            "chrome_bridge_missing": ("ok", "ok", "running", "never_connected", False, "ready"),
+            "recorder_stale": ("ok", "ok", "stale", "connected", False, "setup_needed"),
+            "paused_capture": ("ok", "ok", "running", "connected", True, "setup_needed"),
+            "setup_needed": ("needs_action", "unchecked", "not_started", "never_connected", False, "setup_needed"),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for scenario, expected in scenarios.items():
+                db = Path(tmp) / f"{scenario}.sqlite"
+                with store.connect(db) as conn:
+                    store.init_db(conn)
+                    payload = permissions.apply_fake_scenario(conn, scenario, str(db))
+                actual = (
+                    payload["permissions"]["accessibility"]["state"],
+                    payload["permissions"]["browser_automation"]["state"],
+                    payload["native_recorder"]["state"],
+                    payload["extension"]["state"],
+                    payload["pause"]["paused"],
+                    payload["readiness"]["state"],
+                )
+                self.assertEqual(actual, expected, scenario)
 
     def test_onboarding_state_is_shared_through_settings(self):
         with tempfile.TemporaryDirectory() as tmp:

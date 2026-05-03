@@ -155,18 +155,41 @@ def main() -> int:
             failures.append("missing data-ui-root")
         if int(probe.get("body_text_length", 0)) < 200:
             failures.append("rendered page has too little text")
-        if int(probe.get("panel_count", 0)) < 3:
-            failures.append("expected at least three rendered panels")
+        if int(probe.get("panel_count", 0)) < 2:
+            failures.append("expected rendered activity and timeline panels")
         if int(probe.get("stat_count", 0)) < min_stat_count:
             failures.append("expected rendered behavior stats")
+        if int(probe.get("decision_count", 0)) < 4:
+            failures.append("expected rendered daily decision cards")
         if int(probe.get("event_count", 0)) < 1:
             failures.append("expected rendered capture events")
+        if len(str(probe.get("next_move_text", "")).strip()) < 4:
+            failures.append("expected rendered next move text")
         if probe.get("horizontal_overflow"):
             failures.append("page has horizontal overflow")
         if int(probe.get("out_of_view_count", 0)) > 0:
             failures.append("visible elements extend outside the viewport")
         if int(probe.get("clipped_text_count", 0)) > 0:
             failures.append("visible text is clipped")
+        if probe.get("youtube_visible"):
+            failures.append("beta dashboard must hide the legacy YouTube panel")
+        workflow = probe.get("workflow_probe")
+        if isinstance(workflow, dict):
+            clicked = set(workflow.get("clicked") or [])
+            for selector in [
+                "[data-onboarding-check]",
+                "[data-open-accessibility]",
+                "[data-open-automation]",
+                "[data-open-chrome]",
+            ]:
+                if selector not in clicked:
+                    failures.append(f"beta workflow probe did not click {selector}")
+            if not workflow.get("setup_guidance_visible"):
+                failures.append("beta workflow probe did not render setup guidance")
+            if int(probe.get("correction_controls", 0)) < 1 or not workflow.get(
+                "correction_changed"
+            ):
+                failures.append("beta workflow probe did not exercise correction controls")
     if failures:
         raise SystemExit("; ".join(failures))
 
@@ -191,6 +214,7 @@ def main() -> int:
                 f"unique_pixel_sample_count={unique_pixels}",
                 f"probe_available={str(probe is not None).lower()}",
                 f"panel_count={(probe or {}).get('panel_count')}",
+                f"decision_count={(probe or {}).get('decision_count')}",
                 f"event_count={(probe or {}).get('event_count')}",
             ]
         )

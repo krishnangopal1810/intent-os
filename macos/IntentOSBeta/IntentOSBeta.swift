@@ -68,11 +68,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func restartBeta() {
-        startBetaIfNeeded(openWhenReady: true)
+        startBetaIfNeeded(openWhenReady: true, forceRestart: true)
     }
 
     @objc private func stopBeta() {
-        runMake("beta-stop")
+        runMake("beta-stop") { _ in
+            self.refreshStatus()
+        }
     }
 
     @objc private func runPermissionCheck() {
@@ -97,14 +99,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings(_ target: String) {
         post("/api/open-system-settings", body: #"{"target":"\#(target)"}"#) { payload in
+            self.refreshStatus()
+            guard let payload else {
+                self.showActionFailed("Open Settings Failed")
+                return
+            }
             self.showSetupGuidance(payload)
         }
     }
 
     @objc private func openDashboard() {
-        if let url = envValue("INTENTOS_BETA_UI_URL"), let dashboard = URL(string: url) {
-            NSWorkspace.shared.open(dashboard)
-        } else {
+        if !openRecordedDashboard() {
             startBetaIfNeeded(openWhenReady: true)
         }
     }
@@ -117,44 +122,79 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func startBetaIfNeeded(openWhenReady: Bool) {
-        guard !isStartingBeta else { return }
+    private func startBetaIfNeeded(
+        openWhenReady: Bool,
+        forceRestart: Bool = false,
+        completion: ((Bool) -> Void)? = nil
+    ) {
+        guard !isStartingBeta else {
+            completion?(false)
+            return
+        }
+        if !forceRestart && isBetaRecordedRunning() && (!openWhenReady || openRecordedDashboard()) {
+            refreshStatus()
+            completion?(true)
+            return
+        }
         isStartingBeta = true
         runMake("beta-dev") { success in
             self.isStartingBeta = false
             self.refreshStatus()
             guard success else {
                 self.updateMenuStatus("Capture Issue")
+                completion?(false)
                 return
             }
             if openWhenReady {
-                self.openDashboard()
+                _ = self.openRecordedDashboard()
             }
+            completion?(true)
         }
     }
 
     @objc private func pause15() {
-        post("/api/pause", body: #"{"minutes":15}"#)
+        pause(minutes: 15)
     }
 
     @objc private func pauseHour() {
-        post("/api/pause", body: #"{"minutes":60}"#)
+        pause(minutes: 60)
     }
 
     @objc private func pauseTomorrow() {
-        post("/api/pause", body: #"{"minutes":1440}"#)
+        pause(minutes: minutesUntilTomorrow())
+    }
+
+    private func pause(minutes: Int) {
+        post("/api/pause", body: #"{"minutes":\#(minutes)}"#) { _ in
+            self.refreshStatus()
+        }
     }
 
     @objc private func resume() {
-        post("/api/resume", body: "{}")
+        post("/api/resume", body: "{}") { _ in
+            self.refreshStatus()
+        }
     }
 
     @objc private func deleteLocalData() {
-        post("/api/delete-local-data", body: "{}")
+        guard confirmDeleteLocalData() else { return }
+        post("/api/delete-local-data", body: "{}") { payload in
+            self.refreshStatus()
+            guard payload?["status"] as? String == "deleted" else {
+                self.showActionFailed("Delete Local Data Failed")
+                return
+            }
+            self.showAlert(
+                "Local Data Deleted",
+                "IntentOS local activity data, corrections, and generated beta reports were cleared."
+            )
+        }
     }
 
     @objc private func openDiagnostics() {
-        NSWorkspace.shared.open(repoRoot.appendingPathComponent(".harness/runtime"))
+        let diagnostics = runtimeRoot()
+        try? FileManager.default.createDirectory(at: diagnostics, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(diagnostics)
     }
 
     @objc private func quit() {
@@ -188,17 +228,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func post(
         _ path: String,
         body: String,
-        completion: (([String: Any]?) -> Void)? = nil
+        completion: (([String: Any]?) -> Void)? = nil,
+        retryAfterStart: Bool = true
     ) {
-        guard let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + path) else {
-            runMake("beta-dev") { _ in completion?(nil) }
+        guard isBetaRecordedRunning(),
+              let base = envValue("INTENTOS_BETA_SERVICE_URL"),
+              let url = URL(string: base + path)
+        else {
+            retryPostAfterStart(
+                path,
+                body: body,
+                completion: completion,
+                retryAfterStart: retryAfterStart,
+                forceRestart: isBetaRecordedRunning()
+            )
             return
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        URLSession.shared.dataTask(with: request) { data, _, error in
+            if error != nil && retryAfterStart {
+                DispatchQueue.main.async {
+                    self.retryPostAfterStart(
+                        path,
+                        body: body,
+                        completion: completion,
+                        retryAfterStart: retryAfterStart,
+                        forceRestart: true
+                    )
+                }
+                return
+            }
             var payload: [String: Any]?
             if let data,
                let object = try? JSONSerialization.jsonObject(with: data),
@@ -211,6 +273,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }.resume()
+    }
+
+    private func retryPostAfterStart(
+        _ path: String,
+        body: String,
+        completion: (([String: Any]?) -> Void)?,
+        retryAfterStart: Bool,
+        forceRestart: Bool
+    ) {
+        guard retryAfterStart else {
+            completion?(nil)
+            return
+        }
+        startBetaIfNeeded(openWhenReady: false, forceRestart: forceRestart) { success in
+            guard success else {
+                completion?(nil)
+                return
+            }
+            self.post(path, body: body, completion: completion, retryAfterStart: false)
+        }
     }
 
     private func showSetupGuidance(_ payload: [String: Any]?) {
@@ -309,9 +391,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
+    private func showActionFailed(_ title: String) {
+        showAlert(
+            title,
+            "IntentOS could not complete this action. Run Start Beta or make beta-status, then try again."
+        )
+    }
+
+    private func confirmDeleteLocalData() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Delete Local Data?"
+        alert.informativeText = "This clears local IntentOS activity data, corrections, " +
+            "and generated beta reports from this Mac. This cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     private func refreshStatus() {
-        let state = envValue("INTENTOS_BETA_STATUS") ?? "stopped"
-        guard state == "running", let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + "/api/status") else {
+        guard isBetaRecordedRunning(), let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + "/api/status") else {
             updateMenuStatus("Stopped")
             return
         }
@@ -357,7 +457,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func envValue(_ key: String) -> String? {
-        let path = repoRoot.appendingPathComponent(".harness/runtime/beta/app.env")
+        let path = runtimeRoot().appendingPathComponent("beta/app.env")
         guard let text = try? String(contentsOf: path, encoding: .utf8) else { return nil }
         for line in text.split(separator: "\n").reversed() {
             let prefix = key + "="
@@ -366,6 +466,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         return nil
+    }
+
+    private func isBetaRecordedRunning() -> Bool {
+        envValue("INTENTOS_BETA_STATUS") == "running"
+    }
+
+    private func openRecordedDashboard() -> Bool {
+        guard isBetaRecordedRunning(),
+              let url = envValue("INTENTOS_BETA_UI_URL"),
+              let dashboard = URL(string: url)
+        else {
+            return false
+        }
+        NSWorkspace.shared.open(dashboard)
+        return true
+    }
+
+    private func minutesUntilTomorrow(now: Date = Date()) -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else {
+            return 1440
+        }
+        let seconds = tomorrow.timeIntervalSince(now)
+        return max(1, Int((seconds / 60.0).rounded(.up)))
+    }
+
+    private func runtimeRoot() -> URL {
+        if let explicit = ProcessInfo.processInfo.environment["INTENTOS_RUNTIME_DIR"], !explicit.isEmpty {
+            if explicit.hasPrefix("/") {
+                return URL(fileURLWithPath: explicit)
+            }
+            return repoRoot.appendingPathComponent(explicit)
+        }
+        return repoRoot.appendingPathComponent(".harness/runtime")
     }
 
     private func findRepoRoot() -> URL {

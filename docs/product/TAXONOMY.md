@@ -8,10 +8,10 @@ only when evaluation examples show that existing labels are insufficient.
 - `deep_work`: focused creation, coding, writing, analysis, or problem solving.
 - `shallow_work`: low-depth work such as inbox triage, lightweight editing, or
   routine tool use.
-- `learning`: intentional educational or skill-building activity.
+- `learning`: intentional educational, reference, or skill-building activity.
 - `communication`: messages, calls, coordination, or relationship maintenance.
 - `admin`: necessary operational work such as taxes, billing, banking, forms,
-  travel, or account management.
+  travel, product research, personal logistics, or account management.
 - `passive_consumption`: feed scrolling, recommendation loops, clips, short
   videos, or low-intent browsing.
 - `active_creation`: creating public or personal output outside core work, such
@@ -37,6 +37,16 @@ These are not primary labels yet, but future classifiers should expose them:
 - Treat ChatGPT by conversation intent, not by app name. Coding, learning, admin
   drafting, and casual/fun conversations should classify differently.
 - Treat admin work as valuable but not deep work.
+- Treat developer reference sites as `learning` unless the surrounding metadata
+  shows active implementation or review.
+- Treat local development dashboards and repository pages as `deep_work` when
+  the app or title clearly points at the current project.
+- Treat shopping, restaurant, visa, and similar planning surfaces as `admin`
+  when the metadata shows an explicit lookup rather than feed browsing.
+- Treat sports clips and match highlights as `entertainment`.
+- Treat social feeds, stories, and individual low-context status pages as
+  `passive_consumption` unless stronger research or communication evidence is
+  present.
 
 ## Example Surfaces
 
@@ -45,9 +55,14 @@ These are not primary labels yet, but future classifiers should expose them:
 | ChatGPT | Debugging a failing Python test | `deep_work` |
 | ChatGPT | Asking for a quick joke thread | `entertainment` |
 | VS Code | Implementing an IntentOS classifier | `deep_work` |
+| Localhost | Reviewing the IntentOS beta dashboard during development | `deep_work` |
+| Bazel docs | Reading the BUILD style guide | `learning` |
 | WhatsApp | Coordinating a family errand | `communication` |
 | Income tax website | Filing a return | `admin` |
+| Amazon | Comparing a rice cooker purchase | `admin` |
+| Google Search | Looking up a brunch venue | `admin` |
 | LinkedIn | Researching a founder profile | `learning` |
 | LinkedIn | Scrolling the feed without a search goal | `passive_consumption` |
 | YouTube | System design lecture | `learning` |
+| YouTube | Cricket match highlights | `entertainment` |
 | YouTube | Comedy compilation | `entertainment` |

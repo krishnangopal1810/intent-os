@@ -16,15 +16,15 @@
         </div>
 
         <div class="brand">
-          <p class="eyebrow">Local intelligence</p>
+          <p class="eyebrow">Private local review</p>
           <h1>IntentOS</h1>
         </div>
 
         <nav class="nav-list" aria-label="Sections">
           <a class="nav-item active" href="#summary-title"><span aria-hidden="true"></span>Review</a>
-          <a class="nav-item" href="#activity-title"><span aria-hidden="true"></span>Activity</a>
+          <a class="nav-item" href="#decision-title"><span aria-hidden="true"></span>Decisions</a>
           <a class="nav-item" href="#timeline-title"><span aria-hidden="true"></span>Timeline</a>
-          <a class="nav-item" href="#youtube-title"><span aria-hidden="true"></span>YouTube</a>
+          <a class="nav-item" href="#activity-title"><span aria-hidden="true"></span>Activity</a>
         </nav>
 
         <div class="sidebar-status">
@@ -36,8 +36,8 @@
       <section class="workspace">
         <header class="toolbar">
           <div>
-            <p class="eyebrow">Private daily review</p>
-            <h2>Daily Review</h2>
+            <p class="eyebrow">Today</p>
+            <h2>Review Board</h2>
           </div>
           <div class="toolbar-meta" aria-label="Loaded report sources">
             <span class="source-pill" data-activity-source>Fixture replay</span>
@@ -72,12 +72,14 @@
           <article class="brief">
             <div class="brief-topline">
               <span class="status-dot" aria-hidden="true"></span>
-              <span>Today’s signal</span>
+              <span data-brief-kicker>Today's signal</span>
             </div>
             <div class="brief-copy">
               <p class="brief-total" data-primary-total>--</p>
               <h2 id="summary-title" data-primary-narrative>Preparing behavior summary</h2>
+              <p class="brief-subtext" data-primary-action-copy>Loading local evidence</p>
             </div>
+            <div class="brief-moments" aria-label="Top behavior signals" data-brief-moments></div>
             <div class="focus-meter" aria-label="Intent mix">
               <div class="focus-meter-track" data-focus-meter></div>
               <div class="focus-meter-labels">
@@ -96,8 +98,23 @@
               <h2 data-score-title>Loading</h2>
               <p class="score-note" data-score-caption>Reading local behavior reports</p>
             </div>
+            <div class="next-move">
+              <p class="eyebrow">Next move</p>
+              <h3 data-next-move-title>Waiting for evidence</h3>
+              <p data-next-move-note>IntentOS is reading local reports.</p>
+            </div>
           </article>
         </section>
+
+        <section class="section-heading decision-heading" aria-label="Daily decisions">
+          <div>
+            <p class="eyebrow">What to do with this</p>
+            <h2 id="decision-title">Action Queue</h2>
+            <p class="section-note">A short operating list for the next block, derived from local evidence.</p>
+          </div>
+        </section>
+
+        <section class="decision-deck" aria-label="Actionable daily review" data-action-deck></section>
 
         <dl class="metric-strip" data-stats></dl>
 
@@ -122,6 +139,7 @@
           <div>
             <p class="eyebrow">Evidence</p>
             <h2>Behavior Reports</h2>
+            <p class="section-note">Inspect the labels, source surfaces, and replay rows behind the recommendation.</p>
           </div>
         </section>
 
@@ -140,26 +158,12 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Replay</p>
-                <h2 id="timeline-title">Capture Timeline</h2>
+                <h2 id="timeline-title">Capture Replay</h2>
               </div>
               <span class="source-label" data-capture-source>Privacy filtered</span>
             </div>
             <div class="correction-controls" data-correction-controls hidden></div>
             <ol class="event-list" data-capture-events></ol>
-          </article>
-
-          <article class="panel youtube-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Domain slice</p>
-                <h2 id="youtube-title">YouTube</h2>
-              </div>
-              <span class="source-label">MVP slice</span>
-            </div>
-            <div class="youtube-content">
-              <p class="narrative" data-youtube-narrative>Loading YouTube report</p>
-              <div class="youtube-meter" aria-label="YouTube behavior mix" data-youtube-meter></div>
-            </div>
           </article>
         </section>
       </section>

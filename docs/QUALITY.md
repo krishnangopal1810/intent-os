@@ -10,21 +10,28 @@ Use this document to keep quality visible to future Codex runs.
 | Architecture | Yellow | Local-first Python CLI/UI stack, beta service/SQLite boundaries, MVP boundaries, and capture adapter boundaries are documented and linted. |
 | Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, beta validation, UI validation, and labeled fixture evaluation. |
 | Security | Yellow | Local-only defaults, live-capture privacy rules, beta SQLite retention, Chrome bridge filtering, background timeline visibility, and manual macOS permission handling are documented; permission actions now include local setup guidance. |
-| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, artifact runtime, local packaging, installed app smoke evidence, and a passing 30-minute native-recorder dogfood smoke exist; richer observability is pending. |
-| UX | Yellow | The source beta is ready for trusted Mac friend testing with menu bar launch, service-backed daily review, correction controls, and permission setup guidance; public installer polish is still pending. |
+| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, artifact runtime, local packaging, installed app smoke evidence, adapter fixture manifest checks, JSON diagnostics, and a passing 30-minute native-recorder dogfood smoke exist; richer observability is pending. |
+| UX | Yellow | The source beta is ready for trusted Mac friend testing with menu bar launch, service-backed daily review, decision cards, next-move guidance, correction controls, permission setup guidance, and desktop/mobile UI validation; public installer polish is still pending. |
 
 ## Known Gaps
 
 - Architecture lints cover the current Python layer map but need expansion as
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
-  richer DOM automation is still pending.
+  rendered desktop/mobile DOM probes now cover decision cards, next move text,
+  overflow, clipped text, and capture events; richer workflow automation is
+  still pending.
 - Dogfood beta packaging exists as a local ad-hoc signed menu bar app with
   install/open smoke evidence and target-specific setup guidance, but
   notarization and public distribution are out of scope.
 - Fresh dogfood smoke evidence exists for native recorder row growth and pause
   privacy; the Chrome extension bridge still needs an installed-extension smoke
   that reaches connected or posting-events state.
+- `make chrome-bridge-smoke` now records installed Chrome bridge smoke evidence
+  without fake bridge rows; fresh trusted-machine evidence still needs to be
+  captured after the extension is installed.
+- The adapter fixture manifest covers the current capture fixtures and replay
+  path; future adapters must add manifest entries before completion.
 - Browser/app capture for beta v1 is Chrome-first and metadata-only; richer
   cross-browser adapters are pending.
 - Session timeline fixtures, merge tests, replay checks, and UI timeline

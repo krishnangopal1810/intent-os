@@ -21,6 +21,10 @@ artifacts.
 - Upcoming automated source, narrative, fallback-capture, model, and UI
   automation slices should satisfy `docs/HARNESS_FEATURES.md` before depending
   on manual inspection.
+- New adapters should be registered in the adapter fixture manifest and pass
+  `make adapter-fixture-check` before relying on live behavior.
+- Runtime handoffs should include `make diagnose-json` when text diagnostics
+  are not enough; the artifact is `.harness/runtime/artifacts/diagnose.json`.
 
 ## Verification Targets
 
@@ -47,6 +51,13 @@ artifacts.
   recorder row growth, permission preflight, pause privacy behavior, SQLite
   health, and dashboard evidence. It preserves the dogfood database and must
   report exact blockers when permissions or capture health are not ready.
+- `make chrome-bridge-smoke` validates that an installed Chrome bridge reaches
+  connected or posting-events without enabling fake bridge rows.
+- `make adapter-fixture-check` validates the capture adapter fixture manifest,
+  privacy exclusions, JSONL output, and replay behavior.
+- `make diagnose-json`, `make feedback-fixture-candidates`, and `make
+  review-status` provide structured diagnostics, privacy-redacted correction
+  candidates, and optional PR/check triage evidence.
 - `make check-ui-screenshot` verifies that checked-in screenshot evidence is
   present and fresh for the current UI/report inputs.
 
@@ -170,6 +181,11 @@ Current artifacts:
 - `ui-render-validation.txt`
 - `beta-validation.json`
 - `beta-daily-review.json`
+- `beta-chrome-bridge-smoke.json`
+- `adapter-fixture-check.json`
+- `diagnose.json`
+- `feedback-fixture-candidates.json`
+- `review-status.json`
 - `beta-package.json`
 - `IntentOSBeta.app`
 - `docs/assets/screenshots/intent-os-ui.png`

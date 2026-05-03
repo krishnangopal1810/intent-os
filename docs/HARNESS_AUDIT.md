@@ -16,12 +16,14 @@ JSONL events, `make diagnose`, and a manual macOS metadata-only frontmost
 app/window adapter with best-effort browser tab enrichment plus bounded session
 timeline capture. It now also has a dogfood beta harness with local SQLite,
 localhost service APIs, fake Chrome bridge validation, service-backed UI
-corrections, beta diagnostics, and local Swift menu bar packaging. It also
-defines next-feature harness contracts for imports, daily narratives, fallback
-capture, local models, and richer UI automation, and validates a
-harness-readable long-term architecture graph under `docs/architecture/`. It
-does not yet include rich DOM automation, rich metrics/traces, public always-on
-distribution, or autonomous agent-to-agent review.
+corrections, beta diagnostics, local Swift menu bar packaging, an adapter
+fixture manifest, feature-class plan scaffolding, JSON diagnostics,
+privacy-redacted correction candidate export, installed Chrome bridge smoke,
+and optional review-status evidence. It also defines next-feature harness
+contracts for imports, daily narratives, fallback capture, local models, and
+richer UI automation, and validates a harness-readable long-term architecture
+graph under `docs/architecture/`. It does not yet include rich metrics/traces,
+public always-on distribution, or autonomous agent-to-agent review.
 
 ## Self-Sufficiency Verdict
 
@@ -87,13 +89,14 @@ permissions.
 
 ## Next Harness Upgrades
 
-- Expand browser automation in `make validate-ui` when the UI becomes
-  interactive enough to require click, filter, and navigation checks.
+- Keep expanding browser automation in `make validate-ui` and `make
+  validate-beta` as UI workflows gain clicks, filters, and navigation.
 - Keep `docs/HARNESS_FEATURES.md` current as automated source, parser fixture,
   narrative, ScreenCaptureKit/OCR, and local model slices land.
 - Keep deterministic capture fixtures for each real adapter. CI must exercise
   parser, normalization, privacy exclusion, and replay behavior without reading
-  live user state.
+  live user state. The current baseline is indexed by the adapter fixture manifest
+  and checked by `make adapter-fixture-check`.
 - Extend structured runtime events as new capture, classification, reporting,
   and UI workflows are added.
 - Keep `make observe-live` as the manual live sensor diagnostic and expand it

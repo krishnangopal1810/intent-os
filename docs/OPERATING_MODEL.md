@@ -24,6 +24,8 @@ hidden human coordination.
 
 When working on a PR or review feedback:
 
+- Run `make review-status` when local GitHub tooling is available so branch,
+  PR, and check state are captured in `.harness/runtime/artifacts/review-status.json`.
 - Fetch unresolved review threads and CI status.
 - Address actionable findings in code, tests, or docs.
 - Reply with the exact change made and verification run.
@@ -63,3 +65,5 @@ Entropy should be handled continuously:
 - Promote repeated manual review comments into automated checks.
 - Keep `AGENTS.md` short and move detail into indexed docs.
 - Run `make cleanup-check` before creating cleanup PRs.
+- Run `make diagnose-json` before handing off confusing runtime failures so
+  the next agent has structured status, log summaries, and artifact paths.

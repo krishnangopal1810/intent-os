@@ -25,7 +25,9 @@ service stores normalized activity in SQLite for 30 days, runs a native macOS
 background recorder as the default automated source, accepts optional bounded
 Chrome tab metadata through a localhost extension bridge, serves daily review
 APIs, lets users correct labels locally, guides first-run permissions without
-blocking the dashboard, and can be launched through a native macOS menu bar wrapper.
+blocking the dashboard, and can be launched through a native macOS menu bar
+wrapper. The daily review UI should turn evidence into a verdict, decision
+cards, and a next move, so users see what to repeat, contain, or correct.
 Manual imports remain fixture/parser-only; beta users should not have to export
 data to see value.
 
@@ -115,8 +117,8 @@ The current beta target is a trusted internal macOS dogfood build:
   URL/title fallback
 - optional Chrome bridge for richer URL/title/domain/tab metadata
 - service-backed daily review UI with capture health, intent mix, merged
-  timeline, deep-work highlights, reactive surfaces, low-confidence segments,
-  and local correction controls
+  timeline, daily verdict, next move, decision cards, deep-work highlights,
+  reactive surfaces, low-confidence segments, and local correction controls
 - pause/resume and delete-local-data controls
 - first-run local-only onboarding plus target-specific Accessibility, browser
   Automation, native recorder, optional Chrome bridge, capture, and database
