@@ -21,11 +21,13 @@ samples separate from merged user-facing activity segments, without adding
 manual imports, screenshots, OCR, or model-backed classification.
 
 The dogfood beta slice adds a local service-backed product loop: a Python
-service stores normalized activity in SQLite for 30 days, accepts bounded Chrome
-tab metadata through a localhost extension bridge, serves daily review APIs,
-lets users correct labels locally, and can be launched through a native macOS
-menu bar wrapper. Manual imports remain fixture/parser-only; beta users should
-not have to export data to see value.
+service stores normalized activity in SQLite for 30 days, runs a native macOS
+background recorder as the default automated source, accepts optional bounded
+Chrome tab metadata through a localhost extension bridge, serves daily review
+APIs, lets users correct labels locally, guides first-run permissions without
+blocking the dashboard, and can be launched through a native macOS menu bar wrapper.
+Manual imports remain fixture/parser-only; beta users should not have to export
+data to see value.
 
 ## Product Definition
 
@@ -109,12 +111,18 @@ The current beta target is a trusted internal macOS dogfood build:
 - local Python service bound to `127.0.0.1`
 - SQLite database under `.harness/runtime/beta/intentos.sqlite`
 - 30-day retention with startup cleanup
-- Chrome-first extension bridge for URL/title/domain/tab metadata
+- native macOS recorder for frontmost app/window metadata and existing browser
+  URL/title fallback
+- optional Chrome bridge for richer URL/title/domain/tab metadata
 - service-backed daily review UI with capture health, intent mix, merged
   timeline, deep-work highlights, reactive surfaces, low-confidence segments,
   and local correction controls
 - pause/resume and delete-local-data controls
+- first-run local-only onboarding plus visible Accessibility, browser
+  Automation, native recorder, optional Chrome bridge, capture, and database health
 - local Swift menu bar wrapper that launches/stops the beta harness
+- real dogfood smoke evidence that observes live local capture without seeding
+  fake rows or deleting user data
 
 Run:
 
@@ -123,6 +131,8 @@ make beta-dev
 make beta-status
 make validate-beta
 make package-beta
+make install-beta-app
+make package-extension
 ```
 
 The beta remains local-only: no cloud sync, telemetry, page bodies,

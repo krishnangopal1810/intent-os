@@ -19,7 +19,7 @@ fi
 
 runtime_status="$(value_from_env INTENTOS_BETA_STATUS || true)"
 cat "$BETA_ENV"
-for key in INTENTOS_BETA_SERVICE_PID INTENTOS_BETA_FAKE_BRIDGE_PID INTENTOS_BETA_UI_PID; do
+for key in INTENTOS_BETA_SERVICE_PID INTENTOS_BETA_NATIVE_RECORDER_PID INTENTOS_BETA_FAKE_BRIDGE_PID INTENTOS_BETA_UI_PID; do
   pid="$(value_from_env "$key" || true)"
   if [ -n "${pid:-}" ] && kill -0 "$pid" >/dev/null 2>&1; then
     echo "$key=running"

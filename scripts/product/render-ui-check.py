@@ -132,6 +132,7 @@ def main() -> int:
     dom_path = Path(sys.argv[2])
     json_output = Path(sys.argv[3])
     text_output = Path(sys.argv[4])
+    min_stat_count = int(sys.argv[5]) if len(sys.argv) > 5 else 3
 
     wait_for_stable_file(screenshot)
     if dom_path.exists():
@@ -156,7 +157,7 @@ def main() -> int:
             failures.append("rendered page has too little text")
         if int(probe.get("panel_count", 0)) < 3:
             failures.append("expected at least three rendered panels")
-        if int(probe.get("stat_count", 0)) < 3:
+        if int(probe.get("stat_count", 0)) < min_stat_count:
             failures.append("expected rendered behavior stats")
         if int(probe.get("event_count", 0)) < 1:
             failures.append("expected rendered capture events")
@@ -177,6 +178,7 @@ def main() -> int:
         "height": height,
         "unique_pixel_sample_count": unique_pixels,
         "probe_available": probe is not None,
+        "min_stat_count": min_stat_count,
         "probe": probe or {},
     }
     json_output.write_text(json.dumps(validation, indent=2) + "\n", encoding="utf-8")

@@ -45,6 +45,27 @@
           </div>
         </header>
 
+        <section class="onboarding-panel" aria-label="Beta setup" data-onboarding hidden>
+          <div class="onboarding-copy">
+            <p class="eyebrow">First run</p>
+            <h2>Local beta setup</h2>
+            <p>
+              IntentOS captures metadata only on this Mac. No screenshots,
+              keylogging, page bodies, cookies, cloud sync, or telemetry.
+            </p>
+          </div>
+          <div class="permission-list" data-permission-checklist></div>
+          <div class="onboarding-actions">
+            <button type="button" data-onboarding-check>Run checks</button>
+            <button type="button" data-open-accessibility>Accessibility</button>
+            <button type="button" data-open-automation>Automation</button>
+            <button type="button" data-open-chrome>Chrome bridge</button>
+            <button type="button" data-open-diagnostics>Diagnostics</button>
+            <button type="button" class="primary-action" data-onboarding-complete>Done</button>
+            <button type="button" class="quiet-action" data-onboarding-dismiss>Later</button>
+          </div>
+        </section>
+
         <section class="overview" aria-labelledby="summary-title">
           <article class="brief">
             <div class="brief-topline">

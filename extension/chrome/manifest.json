@@ -3,7 +3,7 @@
   "name": "IntentOS Beta Bridge",
   "version": "0.1.0",
   "description": "Posts bounded active-tab metadata to the local IntentOS beta service.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["alarms", "storage", "tabs"],
   "host_permissions": ["http://127.0.0.1:*/*"],
   "background": {
     "service_worker": "background.js"

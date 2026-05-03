@@ -35,8 +35,15 @@ swiftc macos/IntentOSBeta/IntentOSBeta.swift \
   -module-cache-path "$MODULE_CACHE" \
   -framework Cocoa
 cp macos/IntentOSBeta/Info.plist "$APP_BUNDLE/Contents/Info.plist"
+printf '%s\n' "$ROOT" > "$APP_BUNDLE/Contents/Resources/repo-root.txt"
 
-python3 - "$PACKAGE_JSON" "$APP_BUNDLE" <<'PY'
+signed="unsigned"
+if command -v codesign >/dev/null 2>&1; then
+  codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null
+  signed="ad-hoc"
+fi
+
+python3 - "$PACKAGE_JSON" "$APP_BUNDLE" "$signed" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -44,8 +51,8 @@ from pathlib import Path
 payload = {
     "status": "built",
     "app_bundle": sys.argv[2],
-    "signed": "ad-hoc/unsigned local dogfood artifact",
+    "signed": sys.argv[3],
 }
 Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-print(f"package-beta: built {sys.argv[2]}")
+print(f"package-beta: built {sys.argv[2]} signed={sys.argv[3]}")
 PY

@@ -6,10 +6,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private lazy var repoRoot = findRepoRoot()
     private var statusMenuItem: NSMenuItem?
+    private var didOpenDashboardAfterLaunch = false
+    private var isStartingBeta = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         rebuildMenu()
         refreshStatus()
+        openDashboardAfterLaunch()
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in self.refreshStatus() }
     }
 
@@ -23,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(item("Open Dashboard", #selector(openDashboard)))
         menu.addItem(item("Start Beta", #selector(startBeta)))
         menu.addItem(item("Stop Beta", #selector(stopBeta)))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(item("Run Permission Check", #selector(runPermissionCheck)))
+        menu.addItem(item("Open Accessibility Settings", #selector(openAccessibilitySettings)))
+        menu.addItem(item("Open Automation Settings", #selector(openAutomationSettings)))
+        menu.addItem(item("Open Chrome Extension Setup", #selector(openChromeSetup)))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Pause 15 min", #selector(pause15)))
         menu.addItem(item("Pause 1 hour", #selector(pauseHour)))
@@ -43,19 +51,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func startBeta() {
-        runMake("beta-dev")
+        startBetaIfNeeded(openWhenReady: false)
     }
 
     @objc private func stopBeta() {
         runMake("beta-stop")
     }
 
+    @objc private func runPermissionCheck() {
+        post("/api/permissions/check", body: "{}")
+    }
+
+    @objc private func openAccessibilitySettings() {
+        post("/api/open-system-settings", body: #"{"target":"accessibility"}"#)
+    }
+
+    @objc private func openAutomationSettings() {
+        post("/api/open-system-settings", body: #"{"target":"automation"}"#)
+    }
+
+    @objc private func openChromeSetup() {
+        post("/api/open-system-settings", body: #"{"target":"chrome_extensions"}"#)
+    }
+
     @objc private func openDashboard() {
         if let url = envValue("INTENTOS_BETA_UI_URL"), let dashboard = URL(string: url) {
             NSWorkspace.shared.open(dashboard)
         } else {
-            runMake("beta-dev")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openDashboard() }
+            startBetaIfNeeded(openWhenReady: true)
+        }
+    }
+
+    private func openDashboardAfterLaunch() {
+        guard !didOpenDashboardAfterLaunch else { return }
+        didOpenDashboardAfterLaunch = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.openDashboard()
+        }
+    }
+
+    private func startBetaIfNeeded(openWhenReady: Bool) {
+        guard !isStartingBeta else { return }
+        isStartingBeta = true
+        runMake("beta-dev") { success in
+            self.isStartingBeta = false
+            self.refreshStatus()
+            guard success else {
+                self.updateMenuStatus("Capture Issue")
+                return
+            }
+            if openWhenReady {
+                self.openDashboard()
+            }
         }
     }
 
@@ -84,18 +131,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func quit() {
-        runMake("beta-stop")
-        NSApp.terminate(nil)
+        runMake("beta-stop") { _ in
+            NSApp.terminate(nil)
+        }
     }
 
-    private func runMake(_ target: String) {
+    private func runMake(_ target: String, completion: ((Bool) -> Void)? = nil) {
         DispatchQueue.global(qos: .utility).async {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/make")
             process.currentDirectoryURL = self.repoRoot
             process.arguments = [target]
-            try? process.run()
-            process.waitUntilExit()
+            let success: Bool
+            do {
+                try process.run()
+                process.waitUntilExit()
+                success = process.terminationStatus == 0
+            } catch {
+                success = false
+            }
+            if let completion {
+                DispatchQueue.main.async {
+                    completion(success)
+                }
+            }
         }
     }
 
@@ -113,9 +172,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refreshStatus() {
         let state = envValue("INTENTOS_BETA_STATUS") ?? "stopped"
-        let capture = state == "running" ? "Running" : "Stopped"
-        statusItem.button?.title = "IntentOS \(capture)"
-        statusMenuItem?.title = "Capture: \(capture)"
+        guard state == "running", let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + "/api/status") else {
+            updateMenuStatus("Stopped")
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            let label = self.statusLabel(from: data) ?? "Running"
+            DispatchQueue.main.async {
+                self.updateMenuStatus(label)
+            }
+        }.resume()
+    }
+
+    private func updateMenuStatus(_ label: String) {
+        statusItem.button?.title = "IntentOS \(label)"
+        statusMenuItem?.title = "Capture: \(label)"
+    }
+
+    private func statusLabel(from data: Data?) -> String? {
+        guard let data,
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let json = object as? [String: Any]
+        else {
+            return nil
+        }
+        if let pause = json["pause"] as? [String: Any], pause["paused"] as? Bool == true {
+            return "Paused"
+        }
+        if let readiness = json["readiness"] as? [String: Any],
+           readiness["state"] as? String == "setup_needed" {
+            return "Setup Needed"
+        }
+        if let capture = json["capture"] as? [String: Any],
+           let captureState = capture["state"] as? String,
+           ["error", "stopped"].contains(captureState) {
+            return "Capture Issue"
+        }
+        if let recorder = json["native_recorder"] as? [String: Any],
+           let recorderState = recorder["state"] as? String,
+           recorderState != "running" {
+            return recorderState == "not_started" ? "Setup Needed" : "Capture Issue"
+        }
+        return "Running"
     }
 
     private func envValue(_ key: String) -> String? {
@@ -132,7 +230,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func findRepoRoot() -> URL {
         if let explicit = ProcessInfo.processInfo.environment["INTENTOS_REPO_ROOT"] {
-            return URL(fileURLWithPath: explicit)
+            let explicitURL = URL(fileURLWithPath: explicit)
+            if FileManager.default.fileExists(atPath: explicitURL.appendingPathComponent("Makefile").path) {
+                return explicitURL
+            }
+        }
+        if let resource = Bundle.main.url(forResource: "repo-root", withExtension: "txt"),
+           let text = try? String(contentsOf: resource, encoding: .utf8) {
+            let path = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resourceURL = URL(fileURLWithPath: path)
+            if FileManager.default.fileExists(atPath: resourceURL.appendingPathComponent("Makefile").path) {
+                return resourceURL
+            }
         }
         var url = Bundle.main.bundleURL
         for _ in 0..<4 {

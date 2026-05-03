@@ -1,8 +1,14 @@
 const DEFAULT_PORT = 58917;
+const BRIDGE_VERSION = "0.1.0";
+const HEARTBEAT_ALARM = "intentos-heartbeat";
 
-async function serviceUrl() {
+async function serviceBaseUrl() {
   const data = await chrome.storage.local.get({ servicePort: DEFAULT_PORT });
-  return `http://127.0.0.1:${data.servicePort}/api/browser-event`;
+  return `http://127.0.0.1:${data.servicePort}`;
+}
+
+async function serviceUrl(path) {
+  return `${await serviceBaseUrl()}${path}`;
 }
 
 function eventFromTab(tab, extra = {}) {
@@ -23,13 +29,30 @@ function eventFromTab(tab, extra = {}) {
   };
 }
 
+async function postHeartbeat() {
+  try {
+    await fetch(await serviceUrl("/api/extension-heartbeat"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: BRIDGE_VERSION,
+        timestamp: new Date().toISOString(),
+        source: "chrome_extension_bridge",
+      }),
+    });
+  } catch (error) {
+    console.debug("IntentOS beta heartbeat unavailable", error);
+  }
+}
+
 async function postTab(tab, extra = {}) {
   const payload = eventFromTab(tab, extra);
   if (!payload) {
     return;
   }
   try {
-    await fetch(await serviceUrl(), {
+    await postHeartbeat();
+    await fetch(await serviceUrl("/api/browser-event"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -40,11 +63,30 @@ async function postTab(tab, extra = {}) {
 }
 
 async function postActiveTab(windowId) {
-  const tabs = await chrome.tabs.query({ active: true, windowId });
+  const query = windowId
+    ? { active: true, windowId }
+    : { active: true, lastFocusedWindow: true };
+  const tabs = await chrome.tabs.query(query);
   if (tabs[0]) {
     await postTab(tabs[0]);
   }
 }
+
+function startHeartbeat() {
+  chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
+  postHeartbeat();
+  postActiveTab();
+}
+
+chrome.runtime.onInstalled.addListener(startHeartbeat);
+chrome.runtime.onStartup.addListener(startHeartbeat);
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === HEARTBEAT_ALARM) {
+    postHeartbeat();
+    postActiveTab();
+  }
+});
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   postActiveTab(activeInfo.windowId);
