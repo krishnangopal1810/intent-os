@@ -20,6 +20,7 @@ from intentos.youtube import format_duration, percentage
 
 def daily_review(conn: sqlite3.Connection, date: str, db_path: str | None = None) -> dict[str, Any]:
     events = store.events_for_date(conn, date)
+    start_at, end_at = store.local_day_utc_bounds(date)
     classified: list[ClassifiedEvent] = []
     corrected_keys = corrected_segment_keys(conn)
     for event in events:
@@ -42,6 +43,13 @@ def daily_review(conn: sqlite3.Connection, date: str, db_path: str | None = None
     return {
         "date": date,
         "generated_at": store.utc_now(),
+        "scope": {
+            "mode": "day",
+            "label": "Today since midnight",
+            "started_at": start_at,
+            "ended_at": end_at,
+            "service_started_at": store.runtime_value(conn, "service_started_at"),
+        },
         "status": store.status(conn, db_path),
         "summary": {
             "total_seconds": total_seconds,

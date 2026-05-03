@@ -43,6 +43,10 @@ artifacts.
 - `make validate-beta` validates beta APIs, SQLite persistence, Chrome bridge
   privacy filtering, correction layering, pause/resume, delete-local-data, and
   service-backed UI loading against a temp DB.
+- `make dogfood-smoke` validates the real dogfood runtime with live native
+  recorder row growth, permission preflight, pause privacy behavior, SQLite
+  health, and dashboard evidence. It preserves the dogfood database and must
+  report exact blockers when permissions or capture health are not ready.
 - `make check-ui-screenshot` verifies that checked-in screenshot evidence is
   present and fresh for the current UI/report inputs.
 
@@ -66,6 +70,7 @@ artifacts.
 - `make beta-dev`
 - `make beta-status`
 - `make validate-beta`
+- `make dogfood-smoke`
 - `make package-beta`
 - `scripts/product/verify.sh`
 - `make verify`
@@ -110,11 +115,27 @@ duration, interval, output path, and replay artifact.
 `make beta-dev` writes `.harness/runtime/beta/app.env`, starts the beta service
 and native recorder, and serves an isolated dashboard in service-backed beta
 mode. The dashboard is launched with `?mode=beta`; if service config is missing
-or broken, the UI shows a live-service problem instead of fixture reports. The
-service status reports DB path, retention, pause state, extension state, latest
-event time, row counts, and log paths. `make validate-beta` uses the same API
-surface with a temporary DB and writes `beta-validation.json` plus
+or broken, the UI shows a live-service problem instead of fixture reports.
+Explicit live-session URLs follow the same rule for live artifacts. The service
+status reports DB path, retention, pause state, extension state, latest event
+time, row counts, SQLite `quick_check`, WAL/SHM file sizes, native-recorder
+heartbeat freshness, and log paths. A running recorder whose heartbeat goes
+stale is reported as a capture issue instead of silently looking healthy.
+`make validate-beta` uses the same API surface
+with a temporary DB and writes `beta-validation.json` plus
 `beta-daily-review.json` as reproducible evidence.
+
+The beta pause control is treated as a privacy control. While pause is active,
+the native recorder must keep health heartbeats fresh but must not persist new
+activity rows. `make dogfood-smoke` verifies that row counts remain stable
+while paused, then resumes capture before measuring live row growth.
+
+The beta service enables SQLite WAL mode for local durability. Startup and
+retention cleanup run passive checkpoints, and delete-local-data clears user
+tables plus generated beta review/smoke artifacts while preserving runtime
+status rows that explain the service state. The delete path finishes with a
+truncate checkpoint so a user-visible reset does not leave old user data sitting
+in the WAL file.
 
 Future persistent runtime code should emit structured, line-oriented logs with
 stable fields for `component`, `event`, `mode`, `artifact_path`, `duration_ms`,

@@ -83,6 +83,9 @@ if [ -x scripts/product/dev.sh ]; then
   if [ -x scripts/product/start-ui.sh ]; then
     port="$(choose_port)"
     url="http://127.0.0.1:$port/site/index.html"
+    if [ "$DATA_MODE" = "live_session" ]; then
+      url="${url}?mode=live-session"
+    fi
     pid="$(
       python3 - "$RUNTIME_DIR" "$port" "$LOG_DIR/app.log" <<'PY'
 import os

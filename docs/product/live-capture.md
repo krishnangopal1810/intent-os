@@ -114,7 +114,9 @@ The dogfood beta recorder adds local SQLite persistence on the same
 `ActivityEvent` boundary. It treats idle samples over five minutes as away time,
 records long timestamp gaps as status notes instead of inventing activity, and
 stores Chrome extension bridge events only after service-side privacy filtering.
-Corrections are derived overlays and never mutate raw events.
+Pause is a privacy control: while paused, the recorder should emit health
+heartbeats but must not persist new activity rows. Corrections are derived
+overlays and never mutate raw events.
 
 ScreenCaptureKit and Vision OCR are deferred until metadata-only capture shows
 clear gaps. On-device model inference is a second-pass classifier, not a
@@ -182,10 +184,11 @@ transcripts.
 
 Use `make dev-live` when the UI should show a fresh live session. It runs this
 bounded session command first, preserves the live replay artifact, and then
-starts the UI. The resulting session timeline reflects only the activity
-captured during that bounded command window, not historical macOS usage. The UI
-prefers `live-session-capture-summary.json` over continuous live-capture
-artifacts when both exist.
+starts the UI with a strict `?mode=live-session` URL. The resulting session
+timeline reflects only the activity captured during that bounded command
+window, not historical macOS usage. The UI must show a live-capture error when
+that live session artifact is unavailable; it must not fall back to fixture
+capture summaries from an explicit live URL.
 
 ## Current Background Timeline
 
@@ -222,11 +225,19 @@ The beta service stores accepted events in
 `/api/resume`, `/api/delete-local-data`, and `/api/browser-event`, and serves
 the dashboard from `.harness/runtime/beta/site/` with service-backed beta mode
 required. If the beta service config is missing, the UI must show a live
-service problem rather than fixture reports. The Chrome MV3 bridge shell
+service problem rather than fixture reports. The live beta dashboard does not
+show a separate YouTube domain panel; real YouTube activity is folded into the
+normal activity mix, timeline, and review queues. The Chrome MV3 bridge shell
 captures only bounded tab metadata: URL, title, domain, tab/window id, active
 state, timestamp, source, and optional YouTube/document page-kind metadata. It
 does not send page bodies, cookies, tokens, screenshots, keystrokes, or
 clipboard contents.
+
+Daily review APIs summarize the requested local day, labeled in the UI as
+“Today since midnight” for the current day, and include the beta service start
+timestamp separately. Recorder health is based on both process state and fresh
+heartbeat updates so a stalled recorder does not appear healthy just because an
+old PID or last event remains in SQLite.
 
 ## Harness Requirements
 

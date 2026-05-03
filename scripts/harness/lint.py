@@ -19,6 +19,7 @@ EXPECTED_LAYERS = {
     "intentos/activity_cli.py",
     "intentos/activity_evaluate.py",
     "intentos/beta/__init__.py",
+    "intentos/beta/db_health.py",
     "intentos/beta/extension.py",
     "intentos/beta/native_recorder.py",
     "intentos/beta/permissions.py",
@@ -71,6 +72,7 @@ ALLOWED_IMPORTS = {
     "intentos/activity_cli.py": {"intentos.activity", "intentos.reporting"},
     "intentos/activity_evaluate.py": {"intentos.activity", "intentos.classifier"},
     "intentos/beta/__init__.py": set(),
+    "intentos/beta/db_health.py": set(),
     "intentos/beta/extension.py": {
         "intentos.activity",
         "intentos.capture.browser",
@@ -108,6 +110,7 @@ ALLOWED_IMPORTS = {
         "intentos.beta",
     },
     "intentos/beta/store.py": {
+        "intentos.beta.db_health",
         "intentos.beta",
         "intentos.activity",
         "intentos.classifier",
@@ -624,6 +627,7 @@ def check_beta_harness_contract(failures: list[str]) -> None:
 
     required_paths = [
         "intentos/beta/store.py",
+        "intentos/beta/db_health.py",
         "intentos/beta/service.py",
         "intentos/beta/state.py",
         "intentos/beta/permissions.py",

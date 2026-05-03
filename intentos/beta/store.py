@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from intentos.activity import ActivityEvent
+from intentos.beta.db_health import checkpoint, db_file_stats, quick_check
 from intentos.classifier import BehaviorLabel
 from intentos.reporting import event_sample_count
 
@@ -126,6 +127,8 @@ def insert_event(conn: sqlite3.Connection, event: ActivityEvent, now: str | None
         ),
     )
     conn.commit()
+    if cursor.lastrowid and int(cursor.lastrowid) % 100 == 0:
+        checkpoint(conn, "PASSIVE")
     return int(cursor.lastrowid or existing_event_id(conn, key))
 
 
@@ -190,14 +193,17 @@ def cleanup_old_events(conn: sqlite3.Connection, now: datetime | None = None) ->
     cursor = conn.execute("DELETE FROM activity_events WHERE started_at < ?", (cutoff,))
     conn.execute("DELETE FROM classified_segments WHERE started_at < ?", (cutoff,))
     conn.commit()
+    if cursor.rowcount:
+        checkpoint(conn, "PASSIVE")
     return int(cursor.rowcount)
 
 
 def delete_all(conn: sqlite3.Connection) -> None:
-    for table in ["activity_events", "classified_segments", "corrections", "runtime_status"]:
+    for table in ["activity_events", "classified_segments", "corrections"]:
         conn.execute(f"DELETE FROM {table}")
     set_status(conn, "data_state", "deleted")
     conn.commit()
+    checkpoint(conn, "TRUNCATE")
 
 
 def set_pause(conn: sqlite3.Connection, paused_until: str) -> None:

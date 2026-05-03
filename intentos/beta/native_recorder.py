@@ -97,6 +97,7 @@ def run_native_recorder(
                 written = persist_events(conn, events)
                 events_written += written
                 store.set_status(conn, "native_recorder_state", "running")
+                mark_heartbeat(conn)
                 store.set_status(conn, "native_recorder_samples", str(samples))
                 store.set_status(conn, "native_recorder_events", str(events_written))
             print(
@@ -174,6 +175,7 @@ def mark_running(conn: sqlite3.Connection, config: NativeRecorderConfig) -> None
     store.set_status(conn, "native_recorder_pid", str(os.getpid()))
     store.set_status(conn, "native_recorder_last_error", "")
     store.set_status(conn, "native_recorder_interval_seconds", str(config.interval_seconds))
+    mark_heartbeat(conn)
     if config.recorder_log:
         store.set_status(conn, "native_recorder_log", str(config.recorder_log))
 
@@ -191,6 +193,7 @@ def mark_paused(conn: sqlite3.Connection, samples: int, events_written: int) -> 
     store.set_status(conn, "capture_state", "paused")
     store.set_status(conn, "capture_note", "capture paused by user")
     store.set_status(conn, "native_recorder_state", "running")
+    mark_heartbeat(conn)
     store.set_status(conn, "native_recorder_samples", str(samples))
     store.set_status(conn, "native_recorder_events", str(events_written))
 
@@ -203,5 +206,10 @@ def mark_away(conn: sqlite3.Connection, idle_seconds: int, samples: int, events_
         f"ignored idle sample after {idle_seconds}s idle",
     )
     store.set_status(conn, "native_recorder_state", "running")
+    mark_heartbeat(conn)
     store.set_status(conn, "native_recorder_samples", str(samples))
     store.set_status(conn, "native_recorder_events", str(events_written))
+
+
+def mark_heartbeat(conn: sqlite3.Connection) -> None:
+    store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())

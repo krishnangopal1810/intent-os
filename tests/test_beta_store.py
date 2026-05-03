@@ -26,6 +26,7 @@ class BetaStoreTests(unittest.TestCase):
                 report = review.daily_review(conn, "2026-04-27", str(db))
 
             self.assertEqual(report["status"]["row_counts"]["activity_events"], 1)
+            self.assertEqual(report["scope"]["label"], "Today since midnight")
             self.assertEqual(report["items"][0]["label"], "deep_work")
 
     def test_correction_layers_without_mutating_raw_event(self):
@@ -68,6 +69,23 @@ class BetaStoreTests(unittest.TestCase):
             self.assertEqual(removed, 1)
             with store.connect(db) as conn:
                 self.assertEqual(store.row_counts(conn)["activity_events"], 1)
+
+    def test_delete_all_preserves_runtime_status_and_checkpoints(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "beta.sqlite"
+            with store.connect(db) as conn:
+                store.init_db(conn)
+                store.set_status(conn, "service_state", "running")
+                store.insert_event(
+                    conn,
+                    ActivityEvent("App", "Surface", "Implement", "2026-04-27T09:00:00Z", 60),
+                )
+                store.delete_all(conn)
+                status = store.status(conn, str(db))
+
+            self.assertEqual(status["row_counts"]["activity_events"], 0)
+            self.assertEqual(status["service"]["state"], "running")
+            self.assertEqual(status["database"]["quick_check"], "ok")
 
     def test_idle_samples_are_not_counted_and_long_gaps_are_not_faked(self):
         with tempfile.TemporaryDirectory() as tmp:

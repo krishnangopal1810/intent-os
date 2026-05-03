@@ -362,6 +362,43 @@ h2 {
   color: #a42b24;
 }
 
+.setup-guidance {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.setup-guidance[hidden] {
+  display: none;
+}
+
+.setup-guidance h3 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.setup-guidance p,
+.setup-guidance ol {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.42;
+}
+
+.setup-guidance ol {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.setup-guidance .setup-verify {
+  margin-top: 8px;
+  color: var(--muted-strong);
+  font-weight: 650;
+}
+
 .onboarding-actions {
   display: flex;
   grid-column: 1 / -1;

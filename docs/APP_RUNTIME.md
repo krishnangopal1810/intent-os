@@ -63,10 +63,12 @@ browser, or Codex activity.
 
 `make dev-live` is the explicit live-data path: it runs the bounded
 `make observe-session` workflow first, preserves the fresh live session replay
-artifacts, then starts the UI with `INTENTOS_APP_DATA_MODE=live_session`.
-The bounded session artifact stays preferred in the UI even though the
-automated background timeline also starts and remains visible in runtime
-status.
+artifacts, then starts the UI with `INTENTOS_APP_DATA_MODE=live_session` and a
+`?mode=live-session` URL. That URL is strict: if the live session artifact is
+missing or broken, the UI shows a live-capture error instead of falling back to
+fixture reports. The bounded session artifact stays preferred in the UI even
+though the automated background timeline also starts and remains visible in
+runtime status.
 `make observe-live` and `make observe-session` exercise manual macOS
 metadata-only adapters outside CI and write replay artifacts under
 `.harness/runtime/`. CI uses fixtures or fake runners for session behavior.
@@ -77,20 +79,27 @@ macOS metadata recorder, stores normalized activity in
 `.harness/runtime/beta/intentos.sqlite`, writes an isolated
 `.harness/runtime/beta/site/beta-config.json`, and starts a local dashboard
 with `?mode=beta` so missing service config cannot fall back to fixture
-reports. It does not seed fake rows by default, does not require manual imports
-or Chrome extension setup for first beta value, and does not read page bodies,
-cookies, screenshots, keystrokes, or cloud services. Use
+reports. Beta and live views hide the legacy YouTube domain panel; YouTube
+activity appears in the normal timeline, activity mix, and reactive surfaces
+instead of a separate bottom section. It does not seed fake rows by default,
+does not require manual imports or Chrome extension setup for first beta value,
+and does not read page bodies, cookies, screenshots, keystrokes, or cloud
+services. Use
 `INTENTOS_BETA_FAKE_BRIDGE=1 make beta-dev` only for explicit fixture bridge
 testing.
 
 `make dogfood-smoke` is the explicit real-machine beta path. It starts the same
 local service, dashboard, and native recorder with `INTENTOS_BETA_FAKE_BRIDGE=0`,
-runs `/api/permissions/check`, observes real SQLite row growth for 30 minutes by
+runs `/api/permissions/check`, verifies that pause stops row persistence without
+stopping recorder heartbeats, observes real SQLite row growth for 30 minutes by
 default, and writes `beta-dogfood-smoke.json`,
 `beta-dogfood-smoke-daily-review.json`, `beta-dogfood-smoke-dashboard.png`, and
 `logs/beta-dogfood-smoke.log`. It does not seed fake rows, create fake
 corrections, or call delete-local-data against the dogfood database. Missing
 Chrome bridge metadata is a warning when native recorder events are increasing.
+The daily review is explicitly scoped as “Today since midnight”; the service
+also reports its own start timestamp so the UI can distinguish day totals from
+the current app session.
 
 ## Runtime State
 
@@ -102,7 +111,8 @@ Expected artifacts after product code exists:
 - `.harness/runtime/beta/app.env`: beta service/UI/native-recorder/fake-bridge
   PID, DB path, service URL, dashboard URL, daily review artifact, and log paths.
 - `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
-  30-day retention.
+  30-day retention, WAL durability, service-visible `quick_check` health, and
+  truncate checkpointing after delete-local-data.
 - `.harness/runtime/beta/site/`: isolated beta dashboard shell and service
   config. This keeps dogfood live data separate from fixture UI builds under
   `.harness/runtime/site/`.
@@ -194,9 +204,9 @@ image is stale.
 
 `make validate-beta` covers service-backed UI mode. It writes a temporary
 `beta-config.json`, confirms the dashboard shell loads while service APIs are
-available, checks that correction controls are present, and verifies that a
-relabel operation changes the next daily-review response without changing raw
-events.
+available, checks that correction and setup guidance controls are present, and
+verifies that a relabel operation changes the next daily-review response
+without changing raw events.
 
 ## Observability Contract
 

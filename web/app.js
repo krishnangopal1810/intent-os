@@ -1,8 +1,10 @@
 const paths = {
   activity: "../artifacts/activity-summary.json",
-  capture: [
+  liveCapture: [
     "../artifacts/live-session-capture-summary.json",
     "../artifacts/live-capture-summary.json",
+  ],
+  fixtureCapture: [
     "../artifacts/session-capture-summary.json",
     "../artifacts/capture-summary.json",
   ],
@@ -20,6 +22,8 @@ const labels = {
   entertainment: "Entertainment",
   unknown: "Unknown",
 };
+
+let currentSetupGuidance = null;
 
 async function loadJson(path) {
   const response = await fetch(path, { cache: "no-store" });
@@ -41,9 +45,27 @@ function apiUrl(config, path) {
   return `${config.serviceUrl}${path}`;
 }
 
-function requiresBetaServiceMode() {
+function dashboardMode() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("mode") === "beta" || params.get("beta") === "1";
+  return params.get("mode") || "";
+}
+
+function requiresBetaServiceMode() {
+  return dashboardMode() === "beta" ||
+    new URLSearchParams(window.location.search).get("beta") === "1";
+}
+
+function liveCapturePaths(mode) {
+  if (mode === "live-session") {
+    return ["../artifacts/live-session-capture-summary.json"];
+  }
+  if (mode === "live-capture") {
+    return ["../artifacts/live-capture-summary.json"];
+  }
+  if (mode === "live") {
+    return paths.liveCapture;
+  }
+  return null;
 }
 
 async function loadFirst(pathsToTry) {
@@ -210,12 +232,12 @@ function renderInsights(summary, capture, youtube, options = {}) {
           100,
       )
     : 0;
-  const youtubeLearning = Math.round(
-    youtube.summary?.learning_percentage || 0,
-  );
+  const youtubeLearning = Math.round(youtube.summary?.learning_percentage || 0);
   const replayNote = options.beta
     ? `${captureItems.length} live service segment${captureItems.length === 1 ? "" : "s"} loaded from SQLite.`
-    : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`;
+    : options.live
+      ? `${captureItems.length} live capture segment${captureItems.length === 1 ? "" : "s"} loaded.`
+      : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded. YouTube learning mix is ${youtubeLearning}%.`;
   const rows = [
     {
       label: "Focused work",
@@ -439,14 +461,14 @@ function renderYoutubeMeter(summary) {
   );
 }
 
-function setBetaServiceMode(enabled) {
+function setDomainSliceVisible(visible) {
   const youtubePanel = document.querySelector(".youtube-panel");
   const youtubeNav = document.querySelector('a[href="#youtube-title"]');
   if (youtubePanel) {
-    youtubePanel.hidden = enabled;
+    youtubePanel.hidden = !visible;
   }
   if (youtubeNav) {
-    youtubeNav.hidden = enabled;
+    youtubeNav.hidden = !visible;
   }
 }
 
@@ -465,7 +487,9 @@ function captureStatusText(isLiveCapture, status) {
 }
 
 async function boot() {
+  const mode = dashboardMode();
   const betaRequired = requiresBetaServiceMode();
+  const requiredLivePaths = liveCapturePaths(mode);
   const betaConfig = await loadOptionalJson("./beta-config.json");
   if (betaConfig?.serviceUrl) {
     await bootBeta(betaConfig);
@@ -477,11 +501,11 @@ async function boot() {
     );
     return;
   }
-  await bootArtifacts();
+  await bootArtifacts({ requiredLivePaths });
 }
 
 function renderBetaUnavailable(message) {
-  setBetaServiceMode(true);
+  setDomainSliceVisible(false);
   document.querySelector("[data-primary-total]").textContent = "--";
   document.querySelector("[data-primary-narrative]").textContent = message;
   document.querySelector("[data-youtube-narrative]").textContent = "";
@@ -502,13 +526,54 @@ function renderBetaUnavailable(message) {
   renderOnboarding(null, null, null);
 }
 
-async function bootArtifacts() {
-  setBetaServiceMode(false);
+function renderLiveUnavailable(message) {
+  setDomainSliceVisible(false);
+  document.querySelector("[data-primary-total]").textContent = "--";
+  document.querySelector("[data-primary-narrative]").textContent = message;
+  document.querySelector("[data-youtube-narrative]").textContent = "";
+  document.querySelector("[data-status]").textContent =
+    "Live capture unavailable";
+  document.querySelector("[data-activity-source]").textContent =
+    "Live capture";
+  document.querySelector("[data-capture-source]").textContent =
+    "No fixture fallback";
+  document.querySelector("[data-stats]").replaceChildren();
+  document.querySelector("[data-insights]").replaceChildren();
+  document.querySelector("[data-activity-bars]").replaceChildren();
+  renderFocusMeter({ labels: {}, total_seconds: 0 });
+  renderScore({ labels: {}, total_seconds: 0 });
+  renderTimelineWithOptions([], null);
+  renderYoutubeMeter({});
+  renderBetaQueues(null);
+  renderOnboarding(null, null, null);
+}
+
+async function bootArtifacts(options = {}) {
+  const requiredLivePaths = options.requiredLivePaths || null;
+  setDomainSliceVisible(!requiredLivePaths);
+  if (requiredLivePaths) {
+    let captureResult;
+    try {
+      captureResult = await loadFirst(requiredLivePaths);
+    } catch (error) {
+      renderLiveUnavailable(
+        `Live capture data is missing. Start a live session with make dev-live or start the beta app so IntentOS can load real local data. ${error.message}`,
+      );
+      return;
+    }
+    await renderArtifactReport(captureResult, null, null, { live: true });
+    return;
+  }
+
   const [activity, captureResult, youtube] = await Promise.all([
     loadJson(paths.activity),
-    loadFirst(paths.capture),
+    loadFirst([...paths.liveCapture, ...paths.fixtureCapture]),
     loadJson(paths.youtube),
   ]);
+  await renderArtifactReport(captureResult, activity, youtube, { live: false });
+}
+
+async function renderArtifactReport(captureResult, activity, youtube, options) {
   const capture = captureResult.data;
   const isLiveSession = captureResult.path.includes("live-session");
   const isSession = captureResult.path.includes("session-capture");
@@ -522,7 +587,7 @@ async function bootArtifacts() {
           : "Fixture replay";
   const primarySummary = isLiveSession || isLiveCapture
     ? capture.summary
-    : activity.summary;
+    : activity?.summary;
   const primarySource = isLiveSession || isLiveCapture
     ? captureSource
     : "Daily activity report";
@@ -540,7 +605,7 @@ async function bootArtifacts() {
   document.querySelector("[data-primary-narrative]").textContent =
     summaryHeadline(primarySummary);
   document.querySelector("[data-youtube-narrative]").textContent =
-    formatNarrative(youtube.summary.narrative);
+    youtube ? formatNarrative(youtube.summary.narrative) : "";
   const statusText = isLiveCapture
     ? captureStatusText(isLiveCapture, status)
     : isLiveSession
@@ -556,17 +621,17 @@ async function bootArtifacts() {
 
   renderFocusMeter(primarySummary);
   renderScore(primarySummary);
-  renderInsights(primarySummary, capture, youtube);
+  renderInsights(primarySummary, capture, youtube || {}, options);
   renderStats(primarySummary);
   renderBars(primarySummary);
   renderTimeline(capture.items || []);
-  renderYoutubeMeter(youtube.summary);
+  renderYoutubeMeter(youtube?.summary || {});
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
 }
 
 async function bootBeta(betaConfig) {
-  setBetaServiceMode(true);
+  setDomainSliceVisible(false);
   const date = betaConfig.date || new Date().toISOString().slice(0, 10);
   const [review, onboarding] = await Promise.all([
     loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
@@ -581,6 +646,7 @@ async function bootBeta(betaConfig) {
     },
   };
   const status = review.status || {};
+  const scopeLabel = review.scope?.label || "Today since midnight";
   const extensionState = status.extension?.state || "not connected";
   const recorderState = status.native_recorder?.state || "not started";
   const paused = status.pause?.paused ? "Paused" : "Running";
@@ -594,9 +660,9 @@ async function bootBeta(betaConfig) {
   document.querySelector("[data-status]").textContent =
     `${readiness} - ${paused} - Native recorder ${recorderState} - Chrome bridge ${extensionState}`;
   document.querySelector("[data-activity-source]").textContent =
-    "Local beta service";
+    `Local beta service - ${scopeLabel}`;
   document.querySelector("[data-capture-source]").textContent =
-    "SQLite daily timeline";
+    `SQLite daily timeline - ${scopeLabel}`;
 
   renderFocusMeter(review.summary);
   renderScore(review.summary);
@@ -621,6 +687,7 @@ function renderOnboarding(betaConfig, onboarding, status) {
   panel.hidden = Boolean(onboarding.dismissed) ||
     (Boolean(onboarding.completed) && readiness !== "setup_needed");
   renderPermissionChecklist(status);
+  renderSetupGuidance(currentSetupGuidance);
   bindOnboardingActions(betaConfig);
 }
 
@@ -678,6 +745,33 @@ function permissionStateLabel(state) {
   return "Check";
 }
 
+function renderSetupGuidance(guidance) {
+  const wrapper = document.querySelector("[data-setup-guidance]");
+  if (!wrapper) {
+    return;
+  }
+  if (!guidance) {
+    wrapper.hidden = true;
+    wrapper.replaceChildren();
+    return;
+  }
+  const title = document.createElement("h3");
+  title.textContent = guidance.title || "Setup";
+  const summary = document.createElement("p");
+  summary.textContent = guidance.summary || "";
+  const steps = document.createElement("ol");
+  (guidance.steps || []).forEach((step) => {
+    const row = document.createElement("li");
+    row.textContent = step;
+    steps.append(row);
+  });
+  const verify = document.createElement("p");
+  verify.className = "setup-verify";
+  verify.textContent = guidance.verify || "Run checks again after making changes.";
+  wrapper.replaceChildren(title, summary, steps, verify);
+  wrapper.hidden = false;
+}
+
 function bindOnboardingActions(betaConfig) {
   const bindings = [
     ["[data-onboarding-check]", async () => postJson(betaConfig, "/api/permissions/check", {})],
@@ -700,8 +794,11 @@ function bindOnboardingActions(betaConfig) {
   });
 }
 
-function openSetting(betaConfig, target) {
-  return postJson(betaConfig, "/api/open-system-settings", { target });
+async function openSetting(betaConfig, target) {
+  const result = await postJson(betaConfig, "/api/open-system-settings", { target });
+  currentSetupGuidance = result.guidance || null;
+  renderSetupGuidance(currentSetupGuidance);
+  return result;
 }
 
 boot().catch((error) => {

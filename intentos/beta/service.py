@@ -77,7 +77,8 @@ def make_handler(config: ServiceConfig):
                     self.send_json({"status": "resumed"})
                 elif path == "/api/delete-local-data":
                     self.with_conn(store.delete_all)
-                    self.send_json({"status": "deleted"})
+                    removed = clear_generated_artifacts(config.runtime_dir)
+                    self.send_json({"status": "deleted", "cleared_artifacts": removed})
                 elif path == "/api/onboarding":
                     self.handle_onboarding(payload)
                 elif path == "/api/permissions/check":
@@ -193,7 +194,9 @@ def serve(config: ServiceConfig) -> None:
     with store.connect(config.db_path) as conn:
         store.init_db(conn, config.retention_days)
         store.cleanup_old_events(conn)
+        store.checkpoint(conn, "PASSIVE")
         store.set_status(conn, "service_state", "running")
+        store.set_status(conn, "service_started_at", store.utc_now())
         store.set_status(conn, "capture_state", "ready")
         store.set_status(conn, "capture_note", "")
         if config.service_log:
@@ -211,6 +214,24 @@ def onboarding_payload(conn: sqlite3.Connection) -> dict[str, Any]:
         "onboarding": state.onboarding(conn),
         "status": store.status(conn),
     }
+
+
+def clear_generated_artifacts(runtime_dir: Path | None) -> list[str]:
+    if runtime_dir is None:
+        return []
+    artifacts = runtime_dir / "artifacts"
+    removed: list[str] = []
+    for name in [
+        "beta-daily-review.json",
+        "beta-dogfood-smoke.json",
+        "beta-dogfood-smoke-daily-review.json",
+        "beta-dogfood-smoke-dashboard.png",
+    ]:
+        path = artifacts / name
+        if path.exists():
+            path.unlink()
+            removed.append(str(path))
+    return removed
 
 
 def parsed_path(path: str) -> tuple[str, dict[str, list[str]]]:
