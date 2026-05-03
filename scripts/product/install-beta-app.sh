@@ -37,6 +37,11 @@ if [ ! -d "$SOURCE_APP" ]; then
   exit 2
 fi
 
+if pgrep -x IntentOSBeta >/dev/null 2>&1; then
+  pkill -x IntentOSBeta >/dev/null 2>&1 || true
+  sleep 1
+fi
+
 mkdir -p "$INSTALL_DIR"
 rm -rf "$INSTALLED_APP"
 if command -v ditto >/dev/null 2>&1; then
