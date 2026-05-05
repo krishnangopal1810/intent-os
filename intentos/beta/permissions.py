@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from intentos.beta import state, store
+from intentos.beta import setup_flow, state, store
 from intentos.capture import browser, macos
 
 
@@ -18,8 +18,8 @@ SETTINGS_TARGETS = {
         "command": ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"],
         "summary": "Grant access so IntentOS can read the current app and focused window title.",
         "steps": [
-            "In Privacy & Security > Accessibility, enable IntentOSBeta if it is listed.",
-            "If macOS lists Terminal, Python, osascript, or Codex instead, enable the entry that launched the beta.",
+            "In Privacy & Security > Accessibility, enable IntentOS if it is listed.",
+            "If macOS also lists an older Terminal, Python, osascript, or Codex entry, leave it alone unless IntentOS still cannot verify capture.",
             "Return to IntentOS and run the permission check again.",
         ],
         "verify": "Accessibility should show Ready, and the native recorder should keep writing current app/window metadata.",
@@ -30,7 +30,7 @@ SETTINGS_TARGETS = {
         "summary": "Allow local browser title and URL enrichment when a supported browser is frontmost.",
         "steps": [
             "Put Chrome, Safari, Edge, Brave, or Arc in front, then run the permission check to trigger the macOS prompt.",
-            "In Privacy & Security > Automation, find IntentOSBeta, Python, osascript, Terminal, or Codex and enable the browser entry.",
+            "In Privacy & Security > Automation, find IntentOS and enable the browser entry.",
             "If no browser entry exists yet, switch to the browser and run the permission check again so macOS creates it.",
         ],
         "verify": "Browser Automation should show Ready when a supported browser tab is frontmost.",
@@ -44,7 +44,6 @@ SETTINGS_TARGETS = {
         "optional": True,
     },
 }
-
 
 def run_check(conn: sqlite3.Connection, mode: str, db_path: str | None = None) -> dict[str, Any]:
     if mode == "fake":
@@ -70,14 +69,22 @@ def apply_fake_scenario(
     store.set_status(conn, "native_recorder_pid", "fixture")
     store.set_status(conn, "native_recorder_log", "fixture")
 
-    if scenario == "all_ok":
+    if scenario in {"all_ok", "accessibility_granted", "capture_preview_success", "browser_detail_granted"}:
         record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
         record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        fake_capture_preview(conn, browser=scenario == "browser_detail_granted")
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
         store.set_status(conn, "extension_state", "connected")
         store.set_status(conn, "extension_last_seen_at", store.utc_now())
-    elif scenario == "accessibility_blocked":
+        if scenario == "browser_detail_granted":
+            state.update_onboarding(conn, "enable_browser_detail")
+    elif scenario in {"accessibility_blocked", "accessibility_missing", "duplicate_permission_identity"}:
+        detail = "Fake Accessibility probe is blocked."
+        if scenario == "accessibility_missing":
+            detail = "IntentOS is not enabled in Accessibility yet."
+        elif scenario == "duplicate_permission_identity":
+            detail = "An older Terminal/Python permission may exist; enable IntentOS for the stable app identity."
         record(conn, "accessibility_permission", "blocked", "Fake Accessibility probe is blocked.")
         record(
             conn,
@@ -85,6 +92,8 @@ def apply_fake_scenario(
             "unchecked",
             "Not tested because Accessibility is blocked.",
         )
+        record(conn, "accessibility_permission", "blocked", detail)
+        setup_flow.record_capture_preview_blocked(conn, detail)
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
         store.set_status(conn, "extension_state", "never_connected")
@@ -97,13 +106,28 @@ def apply_fake_scenario(
             "blocked",
             "Fake Browser Automation probe is blocked.",
         )
+        fake_capture_preview(conn)
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
         store.set_status(conn, "extension_state", "never_connected")
         store.set_status(conn, "extension_last_seen_at", "")
-    elif scenario == "chrome_bridge_missing":
+    elif scenario in {"chrome_bridge_missing", "browser_detail_skipped"}:
         record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
-        record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        record(conn, "browser_automation_permission", "not_applicable", "Browser detail was skipped for first value.")
+        fake_capture_preview(conn)
+        store.set_status(conn, "native_recorder_state", "running")
+        store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
+        store.set_status(conn, "extension_state", "never_connected")
+        store.set_status(conn, "extension_last_seen_at", "")
+        if scenario == "browser_detail_skipped":
+            state.update_onboarding(conn, "skip_browser_detail")
+    elif scenario == "capture_preview_blocked":
+        record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
+        record(conn, "browser_automation_permission", "unchecked", "Browser detail waits until capture is verified.")
+        setup_flow.mark_milestone(conn, "accessibility_verified")
+        setup_flow.record_capture_preview_blocked(conn, "Fake capture preview could not read the current window.")
+        store.set_status(conn, "capture_state", "blocked")
+        store.set_status(conn, "capture_note", "Capture preview failed.")
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
         store.set_status(conn, "extension_state", "never_connected")
@@ -111,6 +135,7 @@ def apply_fake_scenario(
     elif scenario == "recorder_stale":
         record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
         record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        fake_capture_preview(conn)
         stale = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", stale)
@@ -119,15 +144,17 @@ def apply_fake_scenario(
     elif scenario == "paused_capture":
         record(conn, "accessibility_permission", "ok", "Fake Accessibility probe passed.")
         record(conn, "browser_automation_permission", "ok", "Fake Browser Automation probe passed.")
+        fake_capture_preview(conn)
         store.set_status(conn, "native_recorder_state", "running")
         store.set_status(conn, "native_recorder_heartbeat_at", store.utc_now())
         store.set_status(conn, "extension_state", "connected")
         store.set_status(conn, "extension_last_seen_at", store.utc_now())
         paused_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat().replace("+00:00", "Z")
         store.set_pause(conn, paused_until)
-    elif scenario == "setup_needed":
+    elif scenario in {"setup_needed", "fresh_install"}:
         record(conn, "accessibility_permission", "needs_action", "Fake setup requires Accessibility.")
         record(conn, "browser_automation_permission", "unchecked", "Run checks after Accessibility is ready.")
+        setup_flow.record_capture_preview_blocked(conn, "IntentOS has not verified current app/window metadata yet.")
         store.set_status(conn, "native_recorder_state", "not_started")
         store.set_status(conn, "native_recorder_heartbeat_at", "")
         store.set_status(conn, "extension_state", "never_connected")
@@ -144,12 +171,20 @@ def check_accessibility(conn: sqlite3.Connection) -> macos.MacOSAppSnapshot | No
         snapshot = macos.frontmost_app_snapshot()
     except macos.MacOSCaptureError as exc:
         record(conn, "accessibility_permission", "needs_action", clean_detail(str(exc)))
+        setup_flow.record_capture_preview_blocked(conn, str(exc))
         return None
     record(
         conn,
         "accessibility_permission",
         "ok",
         f"Frontmost app metadata is available from {snapshot.app_name}.",
+    )
+    setup_flow.mark_milestone(conn, "accessibility_verified")
+    setup_flow.record_capture_preview(
+        conn,
+        app_name=snapshot.app_name,
+        bundle_id=snapshot.bundle_id,
+        window_title=snapshot.window_title,
     )
     return snapshot
 
@@ -192,6 +227,16 @@ def check_browser_automation(
         "browser_automation_permission",
         "ok",
         f"Browser metadata fallback can read {tab.domain}.",
+    )
+    setup_flow.record_capture_preview(
+        conn,
+        app_name=snapshot.app_name,
+        bundle_id=snapshot.bundle_id,
+        window_title=tab.title or snapshot.window_title,
+        url=tab.url,
+        domain=tab.domain,
+        source="browser_detail",
+        detail=f"IntentOS can read current app/window metadata and browser detail for {tab.domain}.",
     )
 
 
@@ -257,6 +302,19 @@ def record(conn: sqlite3.Connection, key: str, value: str, detail: str) -> None:
     store.set_status(conn, key, value)
     store.set_status(conn, f"{key}_detail", detail)
 
+
+def fake_capture_preview(conn: sqlite3.Connection, browser: bool = False) -> None:
+    setup_flow.mark_milestone(conn, "accessibility_verified")
+    setup_flow.record_capture_preview(
+        conn,
+        app_name="IntentOS",
+        bundle_id=setup_flow.APP_BUNDLE_ID,
+        window_title="IntentOS Review Board",
+        url="http://127.0.0.1:58917/site/index.html?mode=beta" if browser else None,
+        domain="127.0.0.1" if browser else None,
+        source="fake_permission_probe",
+        detail="Fake setup probe verified app/window metadata.",
+    )
 
 def clean_detail(value: str) -> str:
     return " ".join(value.split())

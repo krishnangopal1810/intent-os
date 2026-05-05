@@ -41,7 +41,10 @@ capture source.
   adapters. It writes normalized, privacy-filtered `ActivityEvent` rows to the
   local SQLite database.
 - First-run onboarding and permission checks store only local readiness
-  timestamps and permission health strings in SQLite settings/runtime status.
+  timestamps, capture-preview health, optional browser-detail state, and
+  permission health strings in SQLite settings/runtime status.
+- Redacted setup reports intentionally omit raw window titles, full URLs,
+  SQLite rows, screenshots, page bodies, cookies, tokens, and keystrokes.
 - Chrome extension bridge events are limited to URL, title, domain, tab/window
   IDs, active state, timestamp, source, and optional bounded page-kind metadata
   for YouTube/document pages. The service rejects page bodies, cookies, tokens,
@@ -91,11 +94,12 @@ precise location coordinates inside otherwise ordinary browser metadata.
 
 ## Trusted Beta Boundary
 
-The current repo can be shared with trusted Mac friends as a source beta when
-they understand that it runs a local recorder, writes local SQLite data under
-`.harness/runtime/beta/`, and may need Accessibility and browser Automation
-permissions. Testers should share `make beta-status`, permission-check output,
-or generated smoke evidence for debugging instead of sharing raw SQLite data.
+Trusted Mac friends should receive the bundled IntentOS artifact when possible.
+It runs a local recorder, writes local SQLite data under the configured runtime
+directory, requires Accessibility for first value, and treats browser detail as
+optional enrichment. Testers should share the redacted setup report,
+permission-check output, or generated smoke evidence for debugging instead of
+sharing raw SQLite data.
 
 ## Required Before Public Users
 

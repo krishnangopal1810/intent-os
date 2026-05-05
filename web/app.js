@@ -27,6 +27,7 @@ const attentionLeakLabels = ["passive_consumption", "entertainment"];
 const reviewLabels = ["unknown"];
 
 let currentSetupGuidance = null;
+let navScrollFrame = null;
 
 async function loadJson(path) {
   const response = await fetch(path, { cache: "no-store" });
@@ -46,6 +47,185 @@ async function loadOptionalJson(path) {
 
 function apiUrl(config, path) {
   return `${config.serviceUrl}${path}`;
+}
+
+function weekStartDate(dateString) {
+  const parts = String(dateString || "").split("-").map((part) => Number(part));
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return dateString;
+  }
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+  const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+  return date.toISOString().slice(0, 10);
+}
+
+function bindServiceNotice() {
+  const button = document.querySelector("[data-service-retry]");
+  if (!button || button.dataset.bound) {
+    return;
+  }
+  button.dataset.bound = "true";
+  button.addEventListener("click", () => {
+    boot().catch(renderLoadProblem);
+  });
+}
+
+function renderServiceNotice(title, body, action = "Open the current dashboard from the menu bar.") {
+  const panel = document.querySelector("[data-service-notice]");
+  if (!panel) {
+    return;
+  }
+  bindServiceNotice();
+  panel.hidden = false;
+  document.querySelector("[data-service-notice-title]").textContent = title;
+  document.querySelector("[data-service-notice-body]").textContent = body;
+  document.querySelector("[data-service-notice-action]").textContent = action;
+}
+
+function hideServiceNotice() {
+  const panel = document.querySelector("[data-service-notice]");
+  if (panel) {
+    panel.hidden = true;
+  }
+}
+
+function renderLoadProblem(error) {
+  console.error(error);
+  if (requiresBetaServiceMode()) {
+    renderBetaUnavailable(
+      "This dashboard is not connected to IntentOS right now. Open the current dashboard from the menu bar, or restart IntentOS and try again.",
+    );
+    return;
+  }
+  renderLiveUnavailable(
+    "IntentOS could not load local review data. Restart the local dashboard and try again.",
+  );
+}
+
+function bindSectionNavigation() {
+  const links = Array.from(
+    document.querySelectorAll(".nav-item[href^='#'], [data-scroll-link][href^='#']"),
+  );
+  const workspace = document.querySelector(".workspace");
+  if (!links.length || !workspace) {
+    return;
+  }
+  if (!document.body.dataset.sectionNavBound) {
+    document.body.dataset.sectionNavBound = "true";
+    links.forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const hash = link.getAttribute("href") || "";
+        const target = hash.startsWith("#")
+          ? document.getElementById(hash.slice(1))
+          : null;
+        if (!target) {
+          return;
+        }
+        event.preventDefault();
+        openDisclosureForTarget(target);
+        setActiveNav(navHashForTarget(hash));
+        history.pushState(null, "", hash);
+        scrollTargetIntoWorkspace(target);
+        window.setTimeout(() => scrollTargetIntoWorkspace(target), 60);
+      });
+    });
+    workspace.addEventListener("scroll", () => {
+      if (navScrollFrame) {
+        return;
+      }
+      navScrollFrame = requestAnimationFrame(() => {
+        navScrollFrame = null;
+        updateActiveNavFromScroll();
+      });
+    }, { passive: true });
+    window.addEventListener("hashchange", () => {
+      setActiveNav(window.location.hash || "#summary-title");
+    });
+  }
+  const initialHash = window.location.hash || "#summary-title";
+  setActiveNav(initialHash);
+  if (window.location.hash) {
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (target) {
+      openDisclosureForTarget(target);
+      scrollTargetIntoWorkspace(target);
+    }
+  }
+}
+
+function openDisclosureForTarget(target) {
+  const disclosure = target.closest("details");
+  if (disclosure && !disclosure.open) {
+    disclosure.open = true;
+  }
+}
+
+function scrollTargetIntoWorkspace(target) {
+  const workspace = document.querySelector(".workspace");
+  if (!workspace || !target) {
+    return;
+  }
+  openDisclosureForTarget(target);
+  const workspaceRect = workspace.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const nextTop = workspace.scrollTop + targetRect.top - workspaceRect.top - 18;
+  workspace.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
+function setActiveNav(hash) {
+  const selected = navHashForTarget(hash || "#summary-title");
+  document.querySelectorAll(".nav-item[href^='#']").forEach((link) => {
+    link.classList.toggle("active", link.getAttribute("href") === selected);
+  });
+}
+
+function navHashForTarget(hash) {
+  if (document.querySelector(`.nav-item[href="${hash}"]`)) {
+    return hash;
+  }
+  if (hash === "#daily-loop-title") {
+    return "#summary-title";
+  }
+  return hash || "#summary-title";
+}
+
+function updateActiveNavFromScroll() {
+  const workspace = document.querySelector(".workspace");
+  const links = Array.from(document.querySelectorAll(".nav-item[href^='#']"));
+  if (!workspace || !links.length) {
+    return;
+  }
+  const anchorTop = workspace.getBoundingClientRect().top + 24;
+  const hashTarget = window.location.hash
+    ? document.getElementById(window.location.hash.slice(1))
+    : null;
+  if (hashTarget) {
+    const workspaceRect = workspace.getBoundingClientRect();
+    const targetRect = hashTarget.getBoundingClientRect();
+    const targetVisible =
+      targetRect.top >= workspaceRect.top - 1 &&
+      targetRect.bottom <= workspaceRect.bottom + 1;
+    if (targetVisible || Math.abs(targetRect.top - anchorTop) < 80) {
+      setActiveNav(window.location.hash);
+      return;
+    }
+  }
+  let current = links[0].getAttribute("href") || "#summary-title";
+  links.forEach((link) => {
+    const hash = link.getAttribute("href") || "";
+    const target = hash.startsWith("#")
+      ? document.getElementById(hash.slice(1))
+      : null;
+    if (target && target.getBoundingClientRect().top <= anchorTop) {
+      current = hash;
+    }
+  });
+  setActiveNav(current);
 }
 
 function dashboardMode() {
@@ -85,6 +265,17 @@ async function loadFirst(pathsToTry) {
 
 function formatLabel(label) {
   return labels[label] || label.replaceAll("_", " ");
+}
+
+function friendlyState(value) {
+  const state = String(value || "").replaceAll("_", " ").toLowerCase();
+  if (state === "never connected") {
+    return "not connected";
+  }
+  if (state === "posting events") {
+    return "connected";
+  }
+  return state || "unknown";
 }
 
 function formatNarrative(text) {
@@ -264,11 +455,21 @@ function attentionProfile(summary) {
     kicker: "Today's signal",
     scoreTitle: "Mixed alignment",
     scoreCaption: `${formatDuration(focusSeconds)} was high-value activity and ${formatDuration(leakSeconds)} was reactive.`,
-    actionCopy: "Start the next block with one constraint, then let the review keep score.",
+    actionCopy: "Start the next block with one constraint, then check the evidence tonight.",
   };
 }
 
 function buildNextMove(summary, items, options = {}) {
+  if (options.loop?.next_block) {
+    const block = options.loop.next_block;
+    const confidence = Math.round((block.confidence || 0) * 100);
+    return {
+      label: nextBlockLabel(block),
+      metric: confidence ? `${confidence}% match` : "Next",
+      title: block.title || "Choose the next block",
+      note: [block.detail, block.suggested_constraint].filter(Boolean).join(" "),
+    };
+  }
   const total = summary.total_seconds || 0;
   const focusSeconds = sumLabelSeconds(summary, focusLabels);
   const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
@@ -280,10 +481,12 @@ function buildNextMove(summary, items, options = {}) {
   if (!total) {
     return {
       label: "unknown",
-      metric: "No rows",
-      title: options.beta ? "Check the local service" : "Start a clean review window",
+      metric: "Waiting",
+      title: options.beta ? "Waiting for today's activity" : "Start a clean review window",
       note: options.beta
-        ? "The beta dashboard is connected, but no daily activity is available yet."
+        ? options.unavailable
+          ? "Reconnect IntentOS to continue today's review."
+          : "Keep IntentOS running while you work; the review will fill in automatically."
         : "Run a local capture session or keep the dashboard open while you work.",
     };
   }
@@ -320,6 +523,20 @@ function buildNextMove(summary, items, options = {}) {
     title: "Name the next intent",
     note: "The review is populated, but it has not found a high-value block yet.",
   };
+}
+
+function nextBlockLabel(block) {
+  const text = `${block.title || ""} ${block.detail || ""}`.toLowerCase();
+  if (text.includes("trust") || text.includes("unclear") || text.includes("correct")) {
+    return "unknown";
+  }
+  if (text.includes("close") || text.includes("leak") || text.includes("cap")) {
+    return "passive_consumption";
+  }
+  if (text.includes("start")) {
+    return "deep_work";
+  }
+  return "admin";
 }
 
 function renderStats(summary) {
@@ -423,68 +640,357 @@ function renderNextMove(summary, items, options = {}) {
     `${nextMove.metric} - ${nextMove.note}`;
 }
 
+function renderCommandCenter(summary, items, loop, options = {}) {
+  const reviewItems = items || [];
+  const nextMove = buildNextMove(summary, reviewItems, { ...options, loop });
+  const rescue = loop?.focus_rescue || null;
+  const lowConfidence = lowConfidenceItems(reviewItems);
+  const confidence = averageConfidence(reviewItems);
+  const correctionCount = loop?.correction_count || 0;
+  if (rescue && ["recovery_available", "avoid_leaking"].includes(rescue.state)) {
+    setCommandStep("now", {
+      title: rescue.label || "Recovery available",
+      note: rescue.reason || "The avoid pattern is active enough to rescue this block.",
+      action: "Open rescue",
+      href: "#summary-title",
+    });
+  } else {
+    setCommandStep("now", {
+      title: nextMove.title,
+      note: `${nextMove.metric} - ${nextMove.note}`,
+      action: "Open next block",
+      href: "#decision-title",
+    });
+  }
+
+  let trustTitle = "Waiting for evidence";
+  let trustNote = "IntentOS will show unclear rows here when the review needs correction.";
+  let trustAction = "Review evidence";
+  if (options.unavailable) {
+    trustTitle = "Reconnect first";
+    trustNote = "The review needs local activity data before it can show trust gaps.";
+    trustAction = "Open timeline";
+  } else if (lowConfidence.length) {
+    trustTitle = `${lowConfidence.length} row${lowConfidence.length === 1 ? "" : "s"} need review`;
+    trustNote = `Start with ${itemTitle(lowConfidence[0])}; corrections make future reviews sharper.`;
+    trustAction = "Fix labels";
+  } else if (correctionCount) {
+    trustTitle = `${correctionCount} correction${correctionCount === 1 ? "" : "s"} applied`;
+    trustNote = "Future reviews will classify these surfaces better.";
+    trustAction = "Check evidence";
+  } else if (reviewItems.length) {
+    trustTitle = `${confidence}% readable evidence`;
+    trustNote = "No low-confidence segment is asking for review right now.";
+    trustAction = "Review evidence";
+  }
+  setCommandStep("trust", {
+    title: trustTitle,
+    note: trustNote,
+    action: trustAction,
+    href: "#timeline-title",
+  });
+
+  const prompt = loop?.prompt || {};
+  const plan = loop?.plan_vs_actual || {};
+  const checkin = loop?.review_checkin || null;
+  let tonightTitle = "Set today's intent";
+  let tonightNote = "Pick one focus and one thing to avoid so tonight's review has a plan to compare.";
+  let tonightAction = "Set intent";
+  if (options.unavailable) {
+    tonightTitle = "Reconnect to plan";
+    tonightNote = "Today's intent and evening review will appear once IntentOS reconnects.";
+    tonightAction = "Open intent";
+  } else if (prompt.state === "review_due") {
+    tonightTitle = "Evening review is ready";
+    tonightNote = plan.actual_summary || "The day has enough signal to compare plan with reality.";
+    tonightAction = "Review today";
+  } else if (prompt.state === "review_complete") {
+    tonightTitle = "Tomorrow is sharper";
+    tonightNote = checkin?.next_adjustment
+      ? `Next adjustment: ${checkin.next_adjustment}`
+      : "Today's reflection and corrections will carry into the next review.";
+    tonightAction = "Open review";
+  } else if (["running", "tracking"].includes(prompt.state)) {
+    tonightTitle = "Intent is set";
+    tonightNote = plan.actual_summary || "Keep working; the evening review will unlock after enough signal.";
+    tonightAction = "Open intent";
+  }
+  setCommandStep("tonight", {
+    title: tonightTitle,
+    note: tonightNote,
+    action: tonightAction,
+    href: "#daily-loop-title",
+  });
+}
+
+function setCommandStep(key, values) {
+  const title = document.querySelector(`[data-command-${key}-title]`);
+  const note = document.querySelector(`[data-command-${key}-note]`);
+  const action = document.querySelector(`[data-command-${key}-action]`);
+  if (!title || !note || !action) {
+    return;
+  }
+  title.textContent = values.title;
+  note.textContent = values.note;
+  action.textContent = values.action;
+  action.setAttribute("href", values.href);
+}
+
+function renderCoachHero(summary, items, loop, options = {}) {
+  const hero = document.querySelector("[data-coach-hero]");
+  if (!hero) {
+    return;
+  }
+  const plan = loop?.plan_vs_actual || {};
+  const contract = loop?.intent_contract || {};
+  const rescue = loop?.focus_rescue || null;
+  const rescueMessage = rescueHeroMessage(rescue);
+  const profile = attentionProfile(summary);
+  const nextMove = buildNextMove(summary, items || [], { ...options, loop });
+  const verdict = rescueMessage?.title || plan.verdict || (summary.total_seconds
+    ? profile.actionCopy
+    : "Work normally for 20 minutes; IntentOS will compare activity to today's plan.");
+  const actual = rescueMessage?.note || plan.actual_summary || nextMove.note ||
+    "IntentOS will compare local activity against the plan once evidence appears.";
+  const focusSide = plan.protected_focus || {};
+  const avoidSide = plan.avoid_target || {};
+
+  document.querySelector("[data-coach-verdict]").textContent = verdict;
+  document.querySelector("[data-coach-actual]").textContent = actual;
+  document.querySelector("[data-coach-focus]").textContent =
+    contract.focus_text || focusSide.text || "Set one focus";
+  document.querySelector("[data-coach-focus-detail]").textContent =
+    focusSide.matched_signal
+      ? `${focusSide.duration} matched ${surfaceName(focusSide.matched_signal)}.`
+      : contract.focus_tokens?.length
+        ? `Watching ${quotedList(contract.focus_tokens)} in app, title, domain, URL, and label signals.`
+        : "Add a focus so tonight's review has something to protect.";
+  document.querySelector("[data-coach-avoid]").textContent =
+    contract.avoid_text || avoidSide.text || "Set one thing to avoid";
+  document.querySelector("[data-coach-avoid-detail]").textContent =
+    avoidSide.matched_signal
+      ? `${avoidSide.duration} touched ${surfaceName(avoidSide.matched_signal)}.`
+      : contract.avoid_tokens?.length
+        ? `Watching ${quotedList(contract.avoid_tokens)} as avoid-side signals.`
+        : "Add an avoid target so leaks are easy to spot.";
+  renderCoachReceipts(plan.receipts || [], nextMove);
+  renderFocusRescue(rescue, options.betaConfig || null);
+}
+
+function rescueHeroMessage(rescue) {
+  if (!rescue?.state) {
+    return null;
+  }
+  if (rescue.state === "recovery_available") {
+    return {
+      title: rescue.label || "Recovery available",
+      note: rescue.reason || "The avoid pattern is active enough to rescue this block.",
+    };
+  }
+  if (rescue.state === "avoid_leaking") {
+    return {
+      title: rescue.label || "Avoid leaking",
+      note: rescue.reason || "You chose to continue intentionally; the receipt will keep that visible.",
+    };
+  }
+  if (rescue.state === "focus_protected") {
+    return {
+      title: rescue.label || "Focus protected",
+      note: rescue.reason || "The focus pattern is visible and avoid evidence is below the rescue threshold.",
+    };
+  }
+  if (rescue.state === "intent_needed") {
+    return {
+      title: "Name today's focus",
+      note: rescue.reason || "Set one focus and one thing to avoid before the day gets noisy.",
+    };
+  }
+  return {
+    title: rescue.label || "Need evidence",
+    note: rescue.reason || "IntentOS needs more strict focus or avoid evidence before making a rescue call.",
+  };
+}
+
+function renderFocusRescue(rescue, betaConfig) {
+  const panel = document.querySelector("[data-focus-rescue]");
+  const label = document.querySelector("[data-focus-rescue-label]");
+  const reason = document.querySelector("[data-focus-rescue-reason]");
+  const actions = document.querySelector("[data-focus-rescue-actions]");
+  if (!panel || !label || !reason || !actions) {
+    return;
+  }
+  if (!rescue?.state) {
+    panel.hidden = true;
+    actions.replaceChildren();
+    window.__intentosFocusRescue = null;
+    return;
+  }
+  window.__intentosFocusRescue = rescue;
+  panel.hidden = false;
+  label.textContent = rescue.label || loopStatusLabel(rescue.state);
+  reason.textContent = rescue.reason || "IntentOS is waiting for strict focus or avoid evidence.";
+  actions.replaceChildren(
+    ...(rescue.available_choices || []).map((choice) => renderFocusRescueAction(choice, rescue, betaConfig)),
+  );
+  recordFocusRescueShown(rescue, betaConfig);
+}
+
+function renderFocusRescueAction(choice, rescue, betaConfig) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.action = choice.action;
+  button.dataset.kind = choice.kind || "secondary";
+  button.textContent = choice.label || choice.action;
+  button.addEventListener("click", async () => {
+    if (choice.action === "correct_evidence") {
+      openEvidenceForCorrection();
+      return;
+    }
+    if (!betaConfig) {
+      return;
+    }
+    await postFocusRescueAction(betaConfig, rescue, choice.action, choice.label || "");
+    await boot();
+  });
+  return button;
+}
+
+function openEvidenceForCorrection() {
+  const target = document.getElementById("timeline-title");
+  if (!target) {
+    return;
+  }
+  openDisclosureForTarget(target);
+  setActiveNav("#activity-title");
+  history.pushState(null, "", "#timeline-title");
+  scrollTargetIntoWorkspace(target);
+}
+
+async function postFocusRescueAction(betaConfig, rescue, action, note = "", evidenceId = "") {
+  if (!betaConfig || !rescue?.rescue_key) {
+    return null;
+  }
+  return postJson(betaConfig, "/api/focus-rescue-action", {
+    date: rescue.date || betaConfig.date,
+    rescue_key: rescue.rescue_key,
+    action,
+    evidence_id: evidenceId || rescue.primary_evidence?.evidence_id || "",
+    note,
+  });
+}
+
+function recordFocusRescueShown(rescue, betaConfig) {
+  if (
+    !betaConfig ||
+    rescue.state !== "recovery_available" ||
+    rescue.latest_action ||
+    !rescue.rescue_key
+  ) {
+    return;
+  }
+  window.__intentosShownRescues = window.__intentosShownRescues || new Set();
+  if (window.__intentosShownRescues.has(rescue.rescue_key)) {
+    return;
+  }
+  window.__intentosShownRescues.add(rescue.rescue_key);
+  postFocusRescueAction(betaConfig, rescue, "shown", "Recovery card rendered.").catch((error) => {
+    console.error(error);
+  });
+}
+
+function renderCoachReceipts(receipts, fallbackMove) {
+  const wrapper = document.querySelector("[data-coach-receipts]");
+  if (!wrapper) {
+    return;
+  }
+  const rows = receipts.length
+    ? receipts.slice(0, 3)
+    : [
+        {
+          label: "Preview",
+          title: fallbackMove.title,
+          duration: fallbackMove.metric,
+          surface: fallbackMove.note,
+        },
+      ];
+  wrapper.replaceChildren(...rows.map((receipt) => {
+    const card = document.createElement("article");
+    card.className = `receipt-card ${labelClass(receipt.label || receipt.kind || "unknown")}`;
+    const label = document.createElement("span");
+    label.textContent = receipt.label || "Evidence";
+    const title = document.createElement("strong");
+    title.textContent = receipt.title || receipt.surface || "Local activity";
+    const note = document.createElement("p");
+    const detail = receipt.surface && receipt.title !== receipt.surface
+      ? `${receipt.surface} - ${receipt.duration || ""}`.trim()
+      : receipt.duration || receipt.label || "";
+    note.textContent = detail || "Evidence will appear as activity is captured.";
+    card.append(label, title, note);
+    return card;
+  }));
+}
+
+function renderWeeklyPatterns(weekly) {
+  const detail = document.querySelector("[data-weekly-details]");
+  const narrative = document.querySelector("[data-weekly-narrative]");
+  const wrapper = document.querySelector("[data-weekly-patterns]");
+  if (!detail || !narrative || !wrapper) {
+    return;
+  }
+  if (!weekly) {
+    detail.hidden = true;
+    detail.open = false;
+    wrapper.replaceChildren();
+    return;
+  }
+  detail.hidden = false;
+  narrative.textContent = weekly.narrative || "Weekly patterns will appear after local activity accumulates.";
+  wrapper.replaceChildren(...(weekly.patterns || []).slice(0, 3).map((pattern) => {
+    const card = document.createElement("article");
+    card.className = "weekly-card";
+    const label = document.createElement("span");
+    label.textContent = pattern.title || "Pattern";
+    const value = document.createElement("strong");
+    value.textContent = pattern.value || "Building";
+    const note = document.createElement("p");
+    note.textContent = pattern.detail || "Keep IntentOS running while you work.";
+    card.append(label, value, note);
+    return card;
+  }));
+}
+
+function quotedList(tokens) {
+  return tokens.slice(0, 4).map((token) => `"${token}"`).join(", ");
+}
+
+function surfaceName(item) {
+  return item?.surface || item?.title || item?.source_app || "the matching surface";
+}
+
+function sidebarStatusText(status) {
+  const readiness = status.readiness?.label || "Review";
+  if (status.pause?.paused) {
+    return `${readiness}. Capture paused`;
+  }
+  const recorderState = friendlyState(status.native_recorder?.state || "not started");
+  if (recorderState === "running") {
+    return `${readiness}. Capture running`;
+  }
+  if (recorderState === "not started") {
+    return `${readiness}. Capture waiting`;
+  }
+  return `${readiness}. Capture ${recorderState}`;
+}
+
 function renderActionDeck(summary, items, options = {}) {
   const deck = document.querySelector("[data-action-deck]");
   const reviewItems = items || [];
-  const topFocus = topItemForLabels(reviewItems, focusLabels);
-  const topLeak = topItemForLabels(reviewItems, attentionLeakLabels);
-  const lowConfidence = lowConfidenceItems(reviewItems);
   const nextMove = buildNextMove(summary, reviewItems, options);
-  const focusSeconds = sumLabelSeconds(summary, focusLabels);
-  const leakSeconds = sumLabelSeconds(summary, attentionLeakLabels);
-  const confidence = averageConfidence(reviewItems);
 
   const cards = [
-    topFocus
-      ? {
-          label: topFocus.label,
-          kicker: "Repeat",
-          metric: itemDuration(topFocus),
-          title: itemTitle(topFocus),
-          note: `Best high-value block from ${itemSurface(topFocus)}.`,
-        }
-      : {
-          label: "deep_work",
-          kicker: "Repeat",
-          metric: formatDuration(focusSeconds),
-          title: "No focus block found yet",
-          note: "The review has not seen deep work, learning, or creation.",
-        },
-    topLeak
-      ? {
-          label: topLeak.label,
-          kicker: "Contain",
-          metric: itemDuration(topLeak),
-          title: itemTitle(topLeak),
-          note: `${formatDuration(leakSeconds)} total attention leak is visible.`,
-        }
-      : {
-          label: "active_creation",
-          kicker: "Contain",
-          metric: "Clean",
-          title: "No passive loop in the evidence",
-          note: "The current review is not dominated by consumption or entertainment.",
-        },
-    lowConfidence.length
-      ? {
-          label: "unknown",
-          kicker: "Trust",
-          metric: `${lowConfidence.length} rows`,
-          title: itemTitle(lowConfidence[0]),
-          note: "Correct the label so future reviews feel sharper.",
-        }
-      : {
-          label: "learning",
-          kicker: "Trust",
-          metric: reviewItems.length ? `${confidence}%` : "No rows",
-          title: reviewItems.length ? "Evidence is readable" : "Waiting for evidence",
-          note: reviewItems.length
-            ? "No low-confidence segment is asking for review."
-            : "Open the dashboard during a work session to collect local metadata.",
-        },
     {
       label: nextMove.label,
-      kicker: "Next",
+      kicker: "Do next",
       metric: nextMove.metric,
       title: nextMove.title,
       note: nextMove.note,
@@ -520,7 +1026,7 @@ function renderInsights(summary, capture, options = {}) {
   const captureItems = capture.items || [];
   const replayConfidence = averageConfidence(captureItems);
   const replayNote = options.beta
-    ? `${captureItems.length} live service segment${captureItems.length === 1 ? "" : "s"} loaded from SQLite.`
+    ? `${captureItems.length} timeline segment${captureItems.length === 1 ? "" : "s"} loaded from local activity.`
     : options.live
       ? `${captureItems.length} live capture segment${captureItems.length === 1 ? "" : "s"} loaded.`
       : `${captureItems.length} capture event${captureItems.length === 1 ? "" : "s"} loaded from local fixture replay.`;
@@ -539,8 +1045,10 @@ function renderInsights(summary, capture, options = {}) {
     },
     {
       label: "Replay confidence",
-      value: captureItems.length ? `${replayConfidence}%` : "No rows",
-      note: replayNote,
+      value: captureItems.length ? `${replayConfidence}%` : "Waiting",
+      note: captureItems.length
+        ? replayNote
+        : "No captured activity yet. IntentOS will fill this in as local metadata arrives.",
       className: "label-learning",
     },
   ];
@@ -605,7 +1113,7 @@ function renderTimelineWithOptions(items, betaConfig) {
   if (!items.length) {
     const row = document.createElement("li");
     row.className = "timeline-empty";
-    row.textContent = "No capture rows available";
+    row.textContent = "Activity evidence will appear after about 20 minutes of normal work.";
     list.replaceChildren(row);
     return;
   }
@@ -677,6 +1185,16 @@ async function postCorrection(betaConfig, item, correctedLabel, applyToFuture) {
       apply_to_future: applyToFuture,
       endpoint: endpointNote,
     });
+  const rescue = window.__intentosFocusRescue;
+  if (rescue?.rescue_key && ["recovery_available", "avoid_leaking"].includes(rescue.state)) {
+    await postFocusRescueAction(
+      betaConfig,
+      rescue,
+      "corrected_evidence",
+      "Correction submitted from the evidence timeline.",
+      item.segment_key || "",
+    );
+  }
 }
 
 async function postJson(betaConfig, path, payload) {
@@ -691,15 +1209,327 @@ async function postJson(betaConfig, path, payload) {
   return response.json();
 }
 
+function renderDailyLoop(loop, betaConfig) {
+  const panel = document.querySelector("[data-daily-loop]");
+  const status = document.querySelector("[data-loop-status]");
+  const summary = document.querySelector("[data-loop-summary]");
+  const current = document.querySelector("[data-intent-current]");
+  const intentForm = document.querySelector("[data-intent-form]");
+  const contract = document.querySelector("[data-intent-contract]");
+  const reviewForm = document.querySelector("[data-review-form]");
+  if (!panel || !status || !summary || !current || !intentForm || !contract || !reviewForm) {
+    return;
+  }
+  bindDailyLoopForms(betaConfig);
+  bindIntentContractPreview();
+  intentForm.dataset.date = loop?.date || new Date().toISOString().slice(0, 10);
+  reviewForm.dataset.date = intentForm.dataset.date;
+
+  if (!betaConfig) {
+    status.textContent = "Preview";
+    summary.textContent =
+      "Start IntentOS to set today's focus and complete an evening review.";
+    current.hidden = true;
+    intentForm.hidden = true;
+    contract.hidden = true;
+    reviewForm.hidden = true;
+    return;
+  }
+
+  const prompt = loop?.prompt || {};
+  const intent = loop?.intent || null;
+  const checkin = loop?.review_checkin || null;
+  const rescue = loop?.focus_rescue || null;
+  status.textContent = rescue?.label || loopStatusLabel(prompt.state);
+  summary.textContent = loopSummary(loop);
+  current.hidden = !intent;
+  intentForm.hidden = Boolean(intent);
+  contract.hidden = false;
+  reviewForm.hidden = !(intent && prompt.review_due && !checkin);
+
+  if (intent) {
+    current.replaceChildren(...intentChips(loop));
+    document.querySelector("[data-intent-focus]").value = intent.focus_text || "";
+    document.querySelector("[data-intent-avoid]").value = intent.avoid_text || "";
+    document.querySelector("[data-intent-note]").value = intent.note || "";
+    renderIntentContract(loop.intent_contract || {});
+  } else {
+    current.replaceChildren();
+    renderIntentContractPreview();
+  }
+}
+
+function bindDailyLoopForms(betaConfig) {
+  const intentForm = document.querySelector("[data-intent-form]");
+  const reviewForm = document.querySelector("[data-review-form]");
+  if (intentForm && !intentForm.dataset.bound) {
+    intentForm.dataset.bound = "true";
+    intentForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!window.__intentosBetaConfig) {
+        return;
+      }
+      await postJson(window.__intentosBetaConfig, "/api/daily-intent", {
+        date: intentForm.dataset.date,
+        focus_text: document.querySelector("[data-intent-focus]").value,
+        avoid_text: document.querySelector("[data-intent-avoid]").value,
+        note: document.querySelector("[data-intent-note]").value,
+      });
+      await boot();
+    });
+  }
+  if (reviewForm && !reviewForm.dataset.bound) {
+    reviewForm.dataset.bound = "true";
+    reviewForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!window.__intentosBetaConfig) {
+        return;
+      }
+      await postJson(window.__intentosBetaConfig, "/api/review-checkin", {
+        date: reviewForm.dataset.date,
+        outcome: document.querySelector("[data-review-outcome]").value,
+        reflection_text: document.querySelector("[data-review-reflection]").value,
+        next_adjustment: document.querySelector("[data-review-next-adjustment]").value,
+      });
+      await boot();
+    });
+  }
+  window.__intentosBetaConfig = betaConfig || null;
+}
+
+function bindIntentContractPreview() {
+  const intentForm = document.querySelector("[data-intent-form]");
+  if (!intentForm || intentForm.dataset.previewBound) {
+    return;
+  }
+  intentForm.dataset.previewBound = "true";
+  ["data-intent-focus", "data-intent-avoid", "data-intent-note"].forEach((attribute) => {
+    const input = document.querySelector(`[${attribute}]`);
+    if (input) {
+      input.addEventListener("input", renderIntentContractPreview);
+    }
+  });
+  renderIntentContractPreview();
+}
+
+function renderIntentContractPreview() {
+  const focusInput = document.querySelector("[data-intent-focus]");
+  const avoidInput = document.querySelector("[data-intent-avoid]");
+  const noteInput = document.querySelector("[data-intent-note]");
+  const focusTarget = document.querySelector("[data-contract-focus]");
+  const avoidTarget = document.querySelector("[data-contract-avoid]");
+  const reviewTarget = document.querySelector("[data-contract-review]");
+  const questionTarget = document.querySelector("[data-contract-question]");
+  if (!focusInput || !avoidInput || !focusTarget || !avoidTarget || !reviewTarget || !questionTarget) {
+    return;
+  }
+  const focus = cleanIntentText(focusInput.value, focusInput.placeholder, "today's focus");
+  const avoid = cleanIntentText(avoidInput.value, avoidInput.placeholder, "the avoid surface");
+  const note = cleanIntentText(noteInput?.value || "", "", "");
+  const focusSubject = contractSubject(focus, ["protect", "preserve", "keep"]);
+  const avoidSubject = contractSubject(avoid, ["avoid", "cap", "limit", "reduce", "bound"]);
+  const focusTerms = contractTerms(focus, ["deep work", "IntentOS", "code", "docs"]);
+  const avoidTerms = contractTerms(avoid, ["LinkedIn feed", "scrolling", "reactive surface"]);
+  focusTarget.textContent =
+    `Look for ${focusTerms} in captured high-value app, page, title, URL, and label evidence.`;
+  avoidTarget.textContent =
+    `Flag ${avoidTerms} when it appears as reactive time or a matching surface.`;
+  reviewTarget.textContent = note
+    ? `Tonight's check-in compares that plan with actual behavior and carries this context forward: ${note}.`
+    : "Tonight's check-in compares that plan with actual behavior and carries one adjustment into tomorrow.";
+  questionTarget.textContent =
+    `Tonight: did "${focusSubject}" stay protected while "${avoidSubject}" stayed bounded?`;
+}
+
+function renderIntentContract(contract) {
+  const focusTarget = document.querySelector("[data-contract-focus]");
+  const avoidTarget = document.querySelector("[data-contract-avoid]");
+  const reviewTarget = document.querySelector("[data-contract-review]");
+  const questionTarget = document.querySelector("[data-contract-question]");
+  if (!focusTarget || !avoidTarget || !reviewTarget || !questionTarget) {
+    return;
+  }
+  const focusTerms = quotedList(contract.focus_tokens || []);
+  const avoidTerms = quotedList(contract.avoid_tokens || []);
+  const focusMatches = signalSummary(contract.matched_focus_signals || []);
+  const avoidMatches = signalSummary(contract.matched_avoid_signals || []);
+  focusTarget.textContent = focusMatches
+    ? `Matched ${focusMatches}; still watching ${focusTerms || "the focus words"}.`
+    : `Watching ${focusTerms || "the focus words"} in app, domain, title, URL, and label evidence.`;
+  avoidTarget.textContent = avoidMatches
+    ? `Matched ${avoidMatches}; treat this as the avoid side.`
+    : `Watching ${avoidTerms || "the avoid words"} for reactive app, domain, title, URL, and label evidence.`;
+  reviewTarget.textContent = contract.explanation ||
+    "Tonight's check-in compares the plan with actual behavior and carries one adjustment into tomorrow.";
+  questionTarget.textContent =
+    `Tonight: did "${contract.focus_text || "today's focus"}" stay protected while "${contract.avoid_text || "the avoid target"}" stayed bounded?`;
+}
+
+function signalSummary(signals) {
+  return signals
+    .slice(0, 3)
+    .map((signal) => `${signal.kind}: ${signal.value}`)
+    .join("; ");
+}
+
+function cleanIntentText(value, fallback, emptyFallback) {
+  const text = String(value || "").trim() || String(fallback || "").trim();
+  return text || emptyFallback;
+}
+
+function contractSubject(value, commands) {
+  let subject = String(value || "").trim();
+  commands.forEach((command) => {
+    subject = subject.replace(new RegExp(`^${command}\\s+`, "i"), "");
+  });
+  return subject || value;
+}
+
+function contractTerms(value, fallback) {
+  const ignored = new Set([
+    "and",
+    "cap",
+    "for",
+    "from",
+    "one",
+    "protect",
+    "the",
+    "this",
+    "that",
+    "today",
+    "with",
+  ]);
+  const terms = String(value || "")
+    .split(/[^a-z0-9]+/i)
+    .filter((term) => term.length >= 3 && !ignored.has(term.toLowerCase()))
+    .slice(0, 4);
+  const selected = terms.length ? terms : fallback;
+  return selected.map((term) => `"${term}"`).join(", ");
+}
+
+function loopStatusLabel(state) {
+  if (state === "recovery_available") {
+    return "Recovery available";
+  }
+  if (state === "avoid_leaking") {
+    return "Avoid leaking";
+  }
+  if (state === "focus_protected") {
+    return "Focus protected";
+  }
+  if (state === "evidence_insufficient") {
+    return "Need evidence";
+  }
+  if (state === "intent_needed") {
+    return "Intent needed";
+  }
+  if (state === "intent_due") {
+    return "Intent due";
+  }
+  if (state === "review_due") {
+    return "Review due";
+  }
+  if (state === "review_complete") {
+    return "Review complete";
+  }
+  return "Tracking";
+}
+
+function loopSummary(loop) {
+  if (!loop) {
+    return "Your focus and evening review will appear here once IntentOS reconnects.";
+  }
+  const prompt = loop.prompt || {};
+  const plan = loop.plan_vs_actual || {};
+  const rescue = loop.focus_rescue || null;
+  if (rescue?.reason) {
+    return rescue.reason;
+  }
+  if (prompt.state === "intent_due") {
+    return prompt.reason || "Set one focus and one thing to avoid for today's review.";
+  }
+  if (prompt.state === "review_due") {
+    return `${plan.actual_summary || "The day has enough signal."} Complete the evening review to carry one adjustment forward.`;
+  }
+  if (prompt.state === "review_complete") {
+    const checkin = loop.review_checkin || {};
+    return checkin.next_adjustment
+      ? `Review complete. Next adjustment: ${checkin.next_adjustment}`
+      : "Review complete. Tomorrow's review will use today's corrections.";
+  }
+  return plan.actual_summary || "Intent is set; keep the dashboard open while the day unfolds.";
+}
+
+function intentChips(loop) {
+  const intent = loop.intent || {};
+  const checkin = loop.review_checkin || null;
+  const plan = loop.plan_vs_actual || {};
+  const reward = loop.correction_reward || {};
+  const rescue = loop.focus_rescue || {};
+  const chips = [
+    {
+      label: "Rescue state",
+      value: rescue.label || "Need evidence",
+      note: rescue.reason || "IntentOS is waiting for strict focus or avoid evidence.",
+    },
+    {
+      label: "Protected focus",
+      value: intent.focus_text,
+      note: plan.matched_focus
+        ? `${plan.matched_focus.duration} matched ${plan.matched_focus.title}.`
+        : `${plan.focus_duration || "0s"} high-value activity so far.`,
+    },
+    {
+      label: "Avoided surface",
+      value: intent.avoid_text,
+      note: plan.matched_avoid
+        ? `${plan.matched_avoid.duration} touched ${plan.matched_avoid.title}.`
+        : `${plan.reactive_duration || "0s"} reactive time is visible.`,
+    },
+    {
+      label: "Accuracy",
+      value: `${reward.correction_count || loop.correction_count || 0} corrections`,
+      note: reward.message || plan.accuracy_note || "Corrections make future reviews sharper.",
+    },
+    {
+      label: checkin ? "Handoff" : "Tonight",
+      value: checkin ? checkin.outcome : loopStatusLabel(loop.prompt?.state),
+      note: checkin?.next_adjustment || loop.prompt?.reason || "Evening review is not due yet.",
+    },
+  ];
+  return chips.map(renderIntentChip);
+}
+
+function renderIntentChip(item) {
+  const chip = document.createElement("div");
+  chip.className = "intent-chip";
+  const label = document.createElement("span");
+  label.textContent = item.label;
+  const value = document.createElement("strong");
+  value.textContent = item.value || "Not set";
+  const note = document.createElement("p");
+  note.textContent = item.note || "";
+  chip.append(label, value, note);
+  return chip;
+}
+
 function renderBetaQueues(review) {
   const wrapper = document.querySelector("[data-beta-review-queues]");
+  const disclosure = document.querySelector("[data-queue-details]");
   const correctionMarker = document.querySelector("[data-correction-controls]");
   if (!review) {
     wrapper.hidden = true;
+    if (disclosure) {
+      disclosure.hidden = true;
+      disclosure.open = false;
+    }
     correctionMarker.hidden = true;
     return;
   }
   wrapper.hidden = false;
+  if (disclosure) {
+    disclosure.hidden = false;
+  }
   correctionMarker.hidden = false;
   renderQueue("[data-top-deep-work]", review.top_deep_work || []);
   renderQueue("[data-top-reactive-surfaces]", review.top_reactive_surfaces || []);
@@ -738,17 +1568,25 @@ function captureStatusText(isLiveCapture, status) {
 }
 
 async function boot() {
+  bindSectionNavigation();
   const mode = dashboardMode();
   const betaRequired = requiresBetaServiceMode();
   const requiredLivePaths = liveCapturePaths(mode);
   const betaConfig = await loadOptionalJson("./beta-config.json");
   if (betaConfig?.serviceUrl) {
-    await bootBeta(betaConfig);
+    try {
+      await bootBeta(betaConfig);
+    } catch (error) {
+      console.error(error);
+      renderBetaUnavailable(
+        "This dashboard is not connected to IntentOS right now. Open the current dashboard from the menu bar, or restart IntentOS and try again.",
+      );
+    }
     return;
   }
   if (betaRequired) {
     renderBetaUnavailable(
-      "Live beta configuration is missing. Start Beta from the menu bar or run make beta-dev so the dashboard can connect to local SQLite data.",
+      "This dashboard needs a fresh IntentOS connection. Open the current dashboard from the menu bar or restart IntentOS.",
     );
     return;
   }
@@ -757,22 +1595,32 @@ async function boot() {
 
 function renderBetaUnavailable(message) {
   const emptySummary = { labels: {}, total_seconds: 0 };
+  renderServiceNotice(
+    "Reconnect IntentOS",
+    message,
+    "After reconnecting, use Try again or open the current dashboard link.",
+  );
   document.querySelector("[data-primary-total]").textContent = "--";
-  document.querySelector("[data-primary-narrative]").textContent = message;
+  document.querySelector("[data-primary-narrative]").textContent =
+    "IntentOS needs to reconnect before it can show today's review.";
   document.querySelector("[data-status]").textContent =
-    "Live beta service unavailable";
+    "Waiting for reconnect";
   document.querySelector("[data-activity-source]").textContent =
-    "Local beta service";
+    "Local review";
   document.querySelector("[data-capture-source]").textContent =
-    "No fixture fallback";
+    "Reconnect needed";
   document.querySelector("[data-stats]").replaceChildren();
   document.querySelector("[data-insights]").replaceChildren();
   document.querySelector("[data-activity-bars]").replaceChildren();
   renderBriefMoments(emptySummary);
   renderFocusMeter(emptySummary);
   renderScore(emptySummary);
-  renderNextMove(emptySummary, [], { beta: true });
-  renderActionDeck(emptySummary, [], { beta: true });
+  renderCoachHero(emptySummary, [], null, { beta: true, unavailable: true });
+  renderNextMove(emptySummary, [], { beta: true, unavailable: true });
+  renderCommandCenter(emptySummary, [], null, { beta: true, unavailable: true });
+  renderActionDeck(emptySummary, [], { beta: true, unavailable: true });
+  renderDailyLoop(null, null);
+  renderWeeklyPatterns(null);
   renderTimelineWithOptions([], null);
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
@@ -780,22 +1628,32 @@ function renderBetaUnavailable(message) {
 
 function renderLiveUnavailable(message) {
   const emptySummary = { labels: {}, total_seconds: 0 };
+  renderServiceNotice(
+    "Start a local review session",
+    message,
+    "Start IntentOS again, then use Try again.",
+  );
   document.querySelector("[data-primary-total]").textContent = "--";
-  document.querySelector("[data-primary-narrative]").textContent = message;
+  document.querySelector("[data-primary-narrative]").textContent =
+    "IntentOS is waiting for local review data.";
   document.querySelector("[data-status]").textContent =
     "Live capture unavailable";
   document.querySelector("[data-activity-source]").textContent =
     "Live capture";
   document.querySelector("[data-capture-source]").textContent =
-    "No fixture fallback";
+    "Waiting for data";
   document.querySelector("[data-stats]").replaceChildren();
   document.querySelector("[data-insights]").replaceChildren();
   document.querySelector("[data-activity-bars]").replaceChildren();
   renderBriefMoments(emptySummary);
   renderFocusMeter(emptySummary);
   renderScore(emptySummary);
+  renderCoachHero(emptySummary, [], null, { live: true });
   renderNextMove(emptySummary, [], { live: true });
+  renderCommandCenter(emptySummary, [], null, { live: true });
   renderActionDeck(emptySummary, [], { live: true });
+  renderDailyLoop(null, null);
+  renderWeeklyPatterns(null);
   renderTimelineWithOptions([], null);
   renderBetaQueues(null);
   renderOnboarding(null, null, null);
@@ -825,6 +1683,7 @@ async function bootArtifacts(options = {}) {
 }
 
 async function renderArtifactReport(captureResult, activity, options) {
+  hideServiceNotice();
   const capture = captureResult.data;
   const isLiveSession = captureResult.path.includes("live-session");
   const isSession = captureResult.path.includes("session-capture");
@@ -874,8 +1733,12 @@ async function renderArtifactReport(captureResult, activity, options) {
   renderBriefMoments(primarySummary);
   renderFocusMeter(primarySummary);
   renderScore(primarySummary);
+  renderCoachHero(primarySummary, dayItems, null, options);
   renderNextMove(primarySummary, dayItems, options);
+  renderCommandCenter(primarySummary, dayItems, null, options);
   renderActionDeck(primarySummary, dayItems, options);
+  renderDailyLoop(null, null);
+  renderWeeklyPatterns(null);
   renderInsights(primarySummary, capture, options);
   renderStats(primarySummary);
   renderBars(primarySummary);
@@ -886,33 +1749,36 @@ async function renderArtifactReport(captureResult, activity, options) {
 
 async function bootBeta(betaConfig) {
   const date = betaConfig.date || new Date().toISOString().slice(0, 10);
-  const [review, onboarding] = await Promise.all([
+  const weekStart = weekStartDate(date);
+  const [review, onboarding, dailyLoop, weekly] = await Promise.all([
     loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
     loadJson(apiUrl(betaConfig, "/api/onboarding")),
+    loadJson(apiUrl(betaConfig, `/api/daily-loop?date=${encodeURIComponent(date)}`)),
+    loadJson(apiUrl(betaConfig, `/api/weekly-patterns?week_start=${encodeURIComponent(weekStart)}`)),
   ]);
+  hideServiceNotice();
   const status = review.status || {};
   const scopeLabel = review.scope?.label || "Today since midnight";
-  const extensionState = status.extension?.state || "not connected";
-  const recorderState = status.native_recorder?.state || "not started";
-  const paused = status.pause?.paused ? "Paused" : "Running";
-  const readiness = status.readiness?.label || "Beta";
 
   document.querySelector("[data-primary-total]").textContent =
     review.summary.total_duration || formatDuration(review.summary.total_seconds || 0);
   document.querySelector("[data-primary-narrative]").textContent =
     summaryHeadline(review.summary);
-  document.querySelector("[data-status]").textContent =
-    `${readiness} - ${paused} - Native recorder ${recorderState} - Chrome bridge ${extensionState}`;
+  document.querySelector("[data-status]").textContent = sidebarStatusText(status);
   document.querySelector("[data-activity-source]").textContent =
-    `Local beta service - ${scopeLabel}`;
+    `Local review - ${scopeLabel}`;
   document.querySelector("[data-capture-source]").textContent =
-    `SQLite daily timeline - ${scopeLabel}`;
+    `Daily timeline - ${scopeLabel}`;
 
   renderFocusMeter(review.summary);
   renderScore(review.summary);
   renderBriefMoments(review.summary);
-  renderNextMove(review.summary, review.items || [], { beta: true });
-  renderActionDeck(review.summary, review.items || [], { beta: true });
+  renderCoachHero(review.summary, review.items || [], dailyLoop, { beta: true, betaConfig });
+  renderNextMove(review.summary, review.items || [], { beta: true, loop: dailyLoop });
+  renderCommandCenter(review.summary, review.items || [], dailyLoop, { beta: true });
+  renderActionDeck(review.summary, review.items || [], { beta: true, loop: dailyLoop });
+  renderDailyLoop(dailyLoop, betaConfig);
+  renderWeeklyPatterns(weekly);
   renderInsights(review.summary, review, { beta: true });
   renderStats(review.summary);
   renderBars(review.summary);
@@ -932,9 +1798,60 @@ function renderOnboarding(betaConfig, onboarding, status) {
   const readiness = status.readiness?.state || "setup_needed";
   panel.hidden = Boolean(onboarding.dismissed) ||
     (Boolean(onboarding.completed) && readiness !== "setup_needed");
+  renderOnboardingSteps(onboarding);
+  renderCapturePreview(status.capture_preview || {});
   renderPermissionChecklist(status);
   renderSetupGuidance(currentSetupGuidance);
+  updateOnboardingActions(onboarding, status);
   bindOnboardingActions(betaConfig);
+}
+
+function renderOnboardingSteps(onboarding) {
+  const wrapper = document.querySelector("[data-onboarding-steps]");
+  const title = document.querySelector("[data-onboarding-title]");
+  if (!wrapper) {
+    return;
+  }
+  const current = onboarding.current_step || "privacy";
+  const labels = {
+    privacy: "Confirm local privacy",
+    app_access: "Grant app access",
+    capture_check: "Verify live capture",
+    daily_focus: "Set daily focus",
+    first_block: "Start first block",
+    complete: "Setup complete",
+  };
+  if (title) {
+    title.textContent = labels[current] || "Set up IntentOS";
+  }
+  wrapper.replaceChildren(
+    ...(onboarding.steps || []).map((item) => {
+      const step = document.createElement("span");
+      step.className = `onboarding-step${item.complete ? " step-complete" : ""}${item.id === current ? " step-current" : ""}`;
+      step.textContent = item.label || item.id;
+      return step;
+    }),
+  );
+}
+
+function renderCapturePreview(preview) {
+  const wrapper = document.querySelector("[data-capture-preview]");
+  if (!wrapper) {
+    return;
+  }
+  const state = preview.state || "unchecked";
+  const title = document.createElement("strong");
+  title.textContent = state === "ok" ? "Capture verified" : "Capture check";
+  const detail = document.createElement("p");
+  const evidence = [preview.app_name, preview.window_title, preview.domain]
+    .filter(Boolean)
+    .join(" - ");
+  detail.textContent = state === "ok"
+    ? `IntentOS can see current metadata: ${evidence || "current app/window"}.`
+    : preview.detail || "Run app access check to verify current app/window metadata.";
+  wrapper.replaceChildren(title, detail);
+  wrapper.dataset.state = state;
+  wrapper.hidden = false;
 }
 
 function renderPermissionChecklist(status) {
@@ -957,22 +1874,107 @@ function renderPermissionChecklist(status) {
   ].filter(Boolean);
   list.replaceChildren(
     ...items.map((item) => {
+      const copyItem = userFacingPermission(item);
       const row = document.createElement("div");
-      row.className = `permission-item permission-${item.state}`;
+      row.className = `permission-item permission-${copyItem.state}`;
       const stateText = document.createElement("span");
       stateText.className = "permission-state";
-      stateText.textContent = permissionStateLabel(item.state);
+      stateText.textContent = permissionStateLabel(copyItem.state);
       const copy = document.createElement("span");
       copy.className = "permission-copy";
       const title = document.createElement("strong");
-      title.textContent = item.label;
+      title.textContent = copyItem.label;
       const detail = document.createElement("span");
-      detail.textContent = item.detail;
+      detail.textContent = copyItem.detail;
       copy.append(title, detail);
       row.append(stateText, copy);
       return row;
     }),
   );
+}
+
+function updateOnboardingActions(onboarding, status) {
+  const current = onboarding.current_step || "privacy";
+  const captureReady = status.capture_preview?.state === "ok";
+  const canComplete = Boolean(onboarding.can_complete);
+  setActionVisibility("[data-onboarding-privacy]", current === "privacy");
+  setActionVisibility("[data-onboarding-check]", ["app_access", "capture_check"].includes(current));
+  setActionVisibility("[data-onboarding-intent]", current === "daily_focus");
+  setActionVisibility("[data-open-accessibility]", ["app_access", "capture_check"].includes(current));
+  setActionVisibility("[data-open-automation]", captureReady);
+  setActionVisibility("[data-open-chrome]", captureReady);
+  setActionVisibility("[data-onboarding-browser]", captureReady && onboarding.browser_detail?.state !== "enabled");
+  setActionVisibility("[data-onboarding-skip-browser]", captureReady && onboarding.browser_detail?.state !== "skipped");
+  const complete = document.querySelector("[data-onboarding-complete]");
+  if (complete) {
+    complete.disabled = !canComplete;
+    complete.title = canComplete
+      ? "Finish first-run setup"
+      : `Finish after ${onboarding.completion_blockers?.join(", ") || "required steps"}`;
+  }
+}
+
+function setActionVisibility(selector, visible) {
+  const node = document.querySelector(selector);
+  if (node) {
+    node.hidden = !visible;
+  }
+}
+
+function userFacingPermission(item) {
+  const label = String(item.label || "");
+  if (label === "Local service") {
+    return {
+      ...item,
+      label: "IntentOS connection",
+      detail: "The review board can read local activity data.",
+    };
+  }
+  if (label === "Local database") {
+    return {
+      ...item,
+      label: "Local storage",
+      detail: "Your review history is available on this Mac.",
+    };
+  }
+  if (label === "Browser Automation") {
+    return {
+      ...item,
+      label: "Browser detail",
+      detail: item.state === "not_applicable"
+        ? "Optional unless you want richer browser titles and URLs."
+        : "IntentOS can add browser titles and URLs when allowed.",
+    };
+  }
+  if (label === "Native recorder") {
+    return {
+      ...item,
+      label: "Activity capture",
+      detail: "IntentOS is watching app and window metadata locally.",
+    };
+  }
+  if (label === "Chrome bridge") {
+    return {
+      ...item,
+      label: "Browser extension detail",
+      detail: "Optional: adds richer browser tab context when installed.",
+    };
+  }
+  if (label === "Privacy mode") {
+    return {
+      ...item,
+      label: "Privacy",
+      detail: "Screenshots, keylogging, page bodies, cookies, and cloud sync stay off.",
+    };
+  }
+  if (label === "Delete local data") {
+    return {
+      ...item,
+      label: "Delete local data",
+      detail: "Available from the menu bar when you need to clear this Mac.",
+    };
+  }
+  return item;
 }
 
 function permissionStateLabel(state) {
@@ -1002,29 +2004,55 @@ function renderSetupGuidance(guidance) {
     return;
   }
   const title = document.createElement("h3");
-  title.textContent = guidance.title || "Setup";
+  title.textContent = userFacingSetupCopy(guidance.title || "Setup");
   const summary = document.createElement("p");
-  summary.textContent = guidance.summary || "";
+  summary.textContent = userFacingSetupCopy(guidance.summary || "");
   const steps = document.createElement("ol");
   (guidance.steps || []).forEach((step) => {
     const row = document.createElement("li");
-    row.textContent = step;
+    row.textContent = userFacingSetupCopy(step);
     steps.append(row);
   });
   const verify = document.createElement("p");
   verify.className = "setup-verify";
-  verify.textContent = guidance.verify || "Run checks again after making changes.";
+  verify.textContent = userFacingSetupCopy(
+    guidance.verify || "Run checks again after making changes.",
+  );
   wrapper.replaceChildren(title, summary, steps, verify);
   wrapper.hidden = false;
 }
 
+function userFacingSetupCopy(text) {
+  return String(text || "")
+    .replaceAll("Chrome Extensions", "Browser detail")
+    .replaceAll("Chrome extension", "browser extension")
+    .replaceAll("Chrome bridge", "browser extension")
+    .replaceAll("native recorder", "activity capture")
+    .replaceAll("Native recorder", "Activity capture")
+    .replaceAll("Browser Automation", "Browser access")
+    .replaceAll("local beta", "IntentOS")
+    .replaceAll("beta", "IntentOS");
+}
+
 function bindOnboardingActions(betaConfig) {
   const bindings = [
+    ["[data-onboarding-privacy]", async () => postJson(betaConfig, "/api/onboarding", { action: "acknowledge_privacy" })],
     ["[data-onboarding-check]", async () => postJson(betaConfig, "/api/permissions/check", {})],
+    ["[data-onboarding-intent]", async () => {
+      document.querySelector("#daily-loop-title")?.scrollIntoView({ block: "start", inline: "nearest" });
+      return { status: "opened" };
+    }],
+    ["[data-onboarding-browser]", async () => {
+      await postJson(betaConfig, "/api/onboarding", { action: "enable_browser_detail" });
+      return openSetting(betaConfig, "automation");
+    }],
+    ["[data-onboarding-skip-browser]", async () => postJson(betaConfig, "/api/onboarding", { action: "skip_browser_detail" })],
     ["[data-open-accessibility]", async () => openSetting(betaConfig, "accessibility")],
     ["[data-open-automation]", async () => openSetting(betaConfig, "automation")],
     ["[data-open-chrome]", async () => openSetting(betaConfig, "chrome_extensions")],
     ["[data-open-diagnostics]", async () => openSetting(betaConfig, "diagnostics")],
+    ["[data-copy-setup-report]", async () => copySetupReport(betaConfig)],
+    ["[data-onboarding-reset]", async () => postJson(betaConfig, "/api/onboarding", { action: "reset" })],
     ["[data-onboarding-complete]", async () => postJson(betaConfig, "/api/onboarding", { action: "complete" })],
     ["[data-onboarding-dismiss]", async () => postJson(betaConfig, "/api/onboarding", { action: "dismiss", minutes: 240 })],
   ];
@@ -1047,14 +2075,26 @@ async function openSetting(betaConfig, target) {
   return result;
 }
 
-boot().catch((error) => {
-  document.querySelector("[data-status]").textContent = "Report load failed";
-  document.querySelector("[data-primary-narrative]").textContent = error.message;
-});
+async function copySetupReport(betaConfig) {
+  const report = await loadJson(apiUrl(betaConfig, "/api/setup-report"));
+  const text = JSON.stringify(report.setup_report || report, null, 2);
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+  }
+  currentSetupGuidance = {
+    title: "Setup report",
+    summary: "A redacted setup report is ready for troubleshooting.",
+    steps: navigator.clipboard?.writeText
+      ? ["The report was copied to the clipboard."]
+      : ["Clipboard access is unavailable here; open diagnostics from the menu bar."],
+    verify: "This report excludes raw titles, URLs, screenshots, cookies, and page bodies.",
+  };
+  renderSetupGuidance(currentSetupGuidance);
+  return report;
+}
+
+boot().catch(renderLoadProblem);
 
 setInterval(() => {
-  boot().catch((error) => {
-    document.querySelector("[data-status]").textContent = "Report load failed";
-    document.querySelector("[data-primary-narrative]").textContent = error.message;
-  });
+  boot().catch(renderLoadProblem);
 }, 2000);

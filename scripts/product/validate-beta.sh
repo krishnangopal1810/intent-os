@@ -14,6 +14,33 @@ SERVICE_LOG="$LOG_DIR/beta-service.log"
 VALIDATION_JSON="$ARTIFACT_DIR/beta-validation.json"
 DAILY_REVIEW_JSON="$ARTIFACT_DIR/beta-daily-review.json"
 BETA_DATE="2026-04-27"
+LOCK_DIR="$RUNTIME_DIR/beta-validation.lock"
+
+mkdir -p "$RUNTIME_DIR"
+if ! mkdir "$LOCK_DIR" >/dev/null 2>&1; then
+  lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+  if [ -n "$lock_pid" ] && kill -0 "$lock_pid" >/dev/null 2>&1; then
+    echo "validate-beta: another beta validation is already using $WORK_DIR (pid $lock_pid)" >&2
+    exit 1
+  fi
+  rm -rf "$LOCK_DIR"
+  if ! mkdir "$LOCK_DIR" >/dev/null 2>&1; then
+    echo "validate-beta: another beta validation is already using $WORK_DIR" >&2
+    exit 1
+  fi
+fi
+printf '%s\n' "$$" > "$LOCK_DIR/pid"
+
+cleanup() {
+  if [ -n "${service_pid:-}" ] && kill -0 "$service_pid" >/dev/null 2>&1; then
+    kill "$service_pid" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${ui_pid:-}" ] && kill -0 "$ui_pid" >/dev/null 2>&1; then
+    kill "$ui_pid" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$LOCK_DIR" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 mkdir -p "$WORK_DIR" "$ARTIFACT_DIR" "$LOG_DIR"
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
@@ -93,16 +120,6 @@ python3 -m intentos.beta_cli serve \
   >> "$SERVICE_LOG" 2>&1 &
 service_pid="$!"
 
-cleanup() {
-  if kill -0 "$service_pid" >/dev/null 2>&1; then
-    kill "$service_pid" >/dev/null 2>&1 || true
-  fi
-  if [ -n "${ui_pid:-}" ] && kill -0 "$ui_pid" >/dev/null 2>&1; then
-    kill "$ui_pid" >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
-
 wait_for_url "$service_url/api/status" "$service_pid"
 python3 -m intentos.beta_cli fake-bridge \
   --service-url "$service_url/api/browser-event" \
@@ -140,6 +157,7 @@ python3 - "$service_url" "$ui_url" "$VALIDATION_JSON" "$DAILY_REVIEW_JSON" "$BET
 import json
 import sys
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from intentos.beta import permissions as beta_permissions
 from intentos.beta import store as beta_store
@@ -160,6 +178,19 @@ def post_json(url, payload):
     with urlopen(request, timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
+def post_json_status(url, payload):
+    request = Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=3) as response:
+            return response.status
+    except HTTPError as exc:
+        return exc.code
+
 status = get_json(f"{service_url}/api/status")
 onboarding = get_json(f"{service_url}/api/onboarding")
 permissions = post_json(f"{service_url}/api/permissions/check", {})
@@ -176,12 +207,17 @@ opened = {
     target: post_json(f"{service_url}/api/open-system-settings", {"target": target})
     for target in ["accessibility", "automation", "chrome_extensions"]
 }
-completed = post_json(f"{service_url}/api/onboarding", {"action": "complete"})
+early_complete = post_json_status(f"{service_url}/api/onboarding", {"action": "complete"})
+if early_complete != 400:
+    raise AssertionError("onboarding completion should require privacy, capture preview, and daily focus")
+privacy_ack = post_json(f"{service_url}/api/onboarding", {"action": "acknowledge_privacy"})
 review = get_json(f"{service_url}/api/daily-review?date={date}")
 if status["row_counts"]["activity_events"] < 3:
     raise AssertionError("expected fixture browser events")
 if permissions["permissions"]["accessibility"]["state"] != "ok":
     raise AssertionError("fake permission check did not pass")
+if permissions["capture_preview"]["state"] != "ok":
+    raise AssertionError("fake permission check must produce a capture preview")
 expected_setting_titles = {
     "accessibility": "Accessibility",
     "automation": "Automation",
@@ -194,8 +230,8 @@ for target, payload in opened.items():
         raise AssertionError(f"settings endpoint must include setup guidance for {target}")
     if expected_setting_titles[target] not in payload["guidance"].get("title", ""):
         raise AssertionError(f"settings guidance must name {target}")
-if not completed["completed"]:
-    raise AssertionError("onboarding completion was not persisted")
+if not privacy_ack["privacy_acknowledged"]:
+    raise AssertionError("privacy acknowledgment was not persisted")
 if not review["items"]:
     raise AssertionError("daily review must include timeline items")
 segment = review["items"][0]
@@ -210,6 +246,92 @@ correction = post_json(
 corrected = get_json(f"{service_url}/api/daily-review?date={date}")
 if corrected["items"][0]["label"] != "learning":
     raise AssertionError("correction did not update rendered report")
+sticky_loop_event = dict(raw_bridge_event)
+sticky_loop_event["timestamp"] = "2026-04-27T12:00:00Z"
+sticky_loop_event["duration_seconds"] = 7200
+sticky_loop_event["title"] = "Implement sticky IntentOS loop - ChatGPT"
+sticky_loop_post = post_json(f"{service_url}/api/browser-event", sticky_loop_event)
+daily_intent = post_json(
+    f"{service_url}/api/daily-intent",
+    {
+        "date": date,
+        "focus_text": "Ship the sticky IntentOS loop",
+        "avoid_text": "LinkedIn feed",
+        "note": "Validation fixture intent",
+    },
+)
+completed = post_json(f"{service_url}/api/onboarding", {"action": "complete"})
+setup_report = get_json(f"{service_url}/api/setup-report")
+if not completed["completed"]:
+    raise AssertionError("onboarding completion was not persisted after required setup")
+if setup_report["setup_report"]["capture_preview"]["state"] != "ok":
+    raise AssertionError("setup report must include redacted capture preview state")
+if "window_title" in setup_report["setup_report"]["capture_preview"]:
+    raise AssertionError("setup report must not expose raw window titles")
+loop_with_intent = get_json(f"{service_url}/api/daily-loop?date={date}")
+if loop_with_intent["intent"]["focus_text"] != "Ship the sticky IntentOS loop":
+    raise AssertionError("daily intent did not persist into daily-loop")
+if loop_with_intent["prompt"]["state"] != "review_due":
+    raise AssertionError("daily-loop should be review_due after 2h captured activity")
+if not isinstance(loop_with_intent.get("correction_count"), int):
+    raise AssertionError("daily-loop must expose correction_count")
+if not isinstance(loop_with_intent.get("low_confidence_count"), int):
+    raise AssertionError("daily-loop must expose low_confidence_count")
+for field in ["intent_contract", "next_block", "correction_reward"]:
+    if field not in loop_with_intent:
+        raise AssertionError(f"daily-loop must expose {field}")
+if "linkedin" not in loop_with_intent["intent_contract"].get("avoid_tokens", []):
+    raise AssertionError("daily-loop intent contract did not expose avoid tokens")
+if not loop_with_intent["next_block"].get("title"):
+    raise AssertionError("daily-loop next_block needs a title")
+focus_rescue = loop_with_intent.get("focus_rescue") or {}
+if focus_rescue.get("state") != "recovery_available":
+    raise AssertionError(f"daily-loop focus_rescue should be recovery_available, got {focus_rescue.get('state')}")
+if focus_rescue.get("avoid_seconds", 0) < 300:
+    raise AssertionError("daily-loop focus_rescue must expose avoid seconds above threshold")
+if not focus_rescue.get("primary_evidence"):
+    raise AssertionError("daily-loop focus_rescue must expose primary evidence")
+if len(focus_rescue.get("available_choices", [])) < 3:
+    raise AssertionError("daily-loop focus_rescue must expose local choices")
+rescue_continue = post_json(
+    f"{service_url}/api/focus-rescue-action",
+    {
+        "date": date,
+        "rescue_key": focus_rescue["rescue_key"],
+        "action": "continue_intentionally",
+        "evidence_id": focus_rescue["primary_evidence"]["evidence_id"],
+        "note": "Validation fixture continued intentionally.",
+    },
+)
+loop_after_rescue = get_json(f"{service_url}/api/daily-loop?date={date}")
+if loop_after_rescue["focus_rescue"]["state"] != "avoid_leaking":
+    raise AssertionError("focus rescue action did not update daily-loop state")
+activation_after_rescue = get_json(f"{service_url}/api/status").get("activation", {})
+for key in ["intent_set_at", "first_rescue_state_at", "first_recovery_action_at"]:
+    if not activation_after_rescue.get(key):
+        raise AssertionError(f"activation diagnostics missing {key}")
+weekly_patterns = get_json(f"{service_url}/api/weekly-patterns?week_start={date}")
+if len(weekly_patterns.get("patterns", [])) != 3:
+    raise AssertionError("weekly patterns endpoint must return three cards")
+if "narrative" not in weekly_patterns:
+    raise AssertionError("weekly patterns endpoint must include a narrative")
+review_checkin = post_json(
+    f"{service_url}/api/review-checkin",
+    {
+        "date": date,
+        "outcome": "mixed",
+        "reflection_text": "The fixture stayed readable.",
+        "next_adjustment": "Keep the avoid target visible.",
+    },
+)
+loop_completed = get_json(f"{service_url}/api/daily-loop?date={date}")
+if loop_completed["prompt"]["state"] != "review_complete":
+    raise AssertionError("review check-in did not complete the daily loop")
+if loop_completed["review_checkin"]["next_adjustment"] != "Keep the avoid target visible.":
+    raise AssertionError("review check-in next adjustment was not persisted")
+activation_after_review = get_json(f"{service_url}/api/status").get("activation", {})
+if not activation_after_review.get("review_completed_at"):
+    raise AssertionError("activation diagnostics missing review_completed_at")
 pause = post_json(f"{service_url}/api/pause", {"minutes": 15})
 paused = get_json(f"{service_url}/api/status")
 if not paused["pause"]["paused"]:
@@ -225,9 +347,41 @@ for token in [
     "data-correction-controls",
     "data-onboarding",
     "data-setup-guidance",
+    "data-daily-loop",
+    "data-intent-form",
+    "data-intent-contract",
+    "data-service-notice",
+    "data-command-center",
+    "data-command-now-title",
+    "data-command-trust-title",
+    "data-command-tonight-title",
+    "data-coach-hero",
+    "data-coach-verdict",
+    "data-coach-receipts",
+    "data-focus-rescue",
+    "data-focus-rescue-actions",
+    "data-signal-details",
+    "data-weekly-details",
+    "data-weekly-patterns",
+    "data-queue-details",
+    "data-evidence-details",
+    "data-review-form",
     "Native recorder",
     "/api/permissions/check",
+    "/api/setup-report",
+    "data-onboarding-steps",
+    "data-capture-preview",
     "POST /api/corrections",
+    "/api/daily-loop",
+    "/api/daily-intent",
+    "/api/review-checkin",
+    "/api/focus-rescue-action",
+    "/api/weekly-patterns",
+    "bindSectionNavigation",
+    "renderCoachHero",
+    "weekStartDate",
+    "openDisclosureForTarget",
+    "scrollTargetIntoWorkspace",
     "daily-review",
 ]:
     if token not in html + app_js:
@@ -236,11 +390,16 @@ for token in [
 scenario_expectations = {
     "all_ok": ("ok", "ok", "running", "connected", False, "ready"),
     "accessibility_blocked": ("blocked", "unchecked", "running", "never_connected", False, "setup_needed"),
-    "automation_blocked": ("ok", "blocked", "running", "never_connected", False, "setup_needed"),
-    "chrome_bridge_missing": ("ok", "ok", "running", "never_connected", False, "ready"),
+    "automation_blocked": ("ok", "blocked", "running", "never_connected", False, "ready"),
+    "chrome_bridge_missing": ("ok", "not_applicable", "running", "never_connected", False, "ready"),
     "recorder_stale": ("ok", "ok", "stale", "connected", False, "setup_needed"),
     "paused_capture": ("ok", "ok", "running", "connected", True, "setup_needed"),
     "setup_needed": ("needs_action", "unchecked", "not_started", "never_connected", False, "setup_needed"),
+    "fresh_install": ("needs_action", "unchecked", "not_started", "never_connected", False, "setup_needed"),
+    "capture_preview_blocked": ("ok", "unchecked", "running", "never_connected", False, "setup_needed"),
+    "browser_detail_skipped": ("ok", "not_applicable", "running", "never_connected", False, "ready"),
+    "browser_detail_granted": ("ok", "ok", "running", "connected", False, "ready"),
+    "duplicate_permission_identity": ("blocked", "unchecked", "running", "never_connected", False, "setup_needed"),
 }
 permission_scenarios = {}
 for scenario, expected in scenario_expectations.items():
@@ -269,12 +428,22 @@ validation = {
     "ui_url": ui_url,
     "initial_rows": status["row_counts"],
     "onboarding": onboarding,
+    "early_onboarding_complete_status": early_complete,
     "permissions": permissions["permissions"],
+    "setup_report": setup_report["setup_report"],
     "extension_heartbeat": heartbeat,
     "extension_post": bridge_post,
+    "sticky_loop_event": sticky_loop_post,
     "permission_scenarios": permission_scenarios,
     "open_settings": opened,
     "correction": correction,
+    "daily_intent": daily_intent,
+    "daily_loop": loop_completed,
+    "focus_rescue_action": rescue_continue,
+    "focus_rescue_after_action": loop_after_rescue["focus_rescue"],
+    "activation": activation_after_review,
+    "weekly_patterns": weekly_patterns,
+    "review_checkin": review_checkin,
     "pause": pause,
     "delete": {"status": "deferred_until_after_render"},
     "config": config,
@@ -283,121 +452,26 @@ Path(validation_path).write_text(json.dumps(validation, indent=2) + "\n", encodi
 print(json.dumps(validation, indent=2))
 PY
 
+python3 - "$DB_PATH" <<'PY'
+import sys
+from intentos.beta import state, store
+
+with store.connect(sys.argv[1]) as conn:
+    store.init_db(conn)
+    state.update_onboarding(conn, "reset")
+PY
+
 browser="$(find_browser || true)"
 if [ -n "$browser" ]; then
-  python3 - "$SITE_DIR/index.html" <<'PY'
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-html = path.read_text(encoding="utf-8")
-probe = """
-    <script>
-      (function () {
-        const workflowProbe = {
-          clicked: [],
-          correction_changed: false,
-          setup_guidance_visible: false,
-        };
-        function delay(ms) {
-          return new Promise((resolve) => window.setTimeout(resolve, ms));
-        }
-        function click(selector) {
-          const element = document.querySelector(selector);
-          if (!element) {
-            return false;
-          }
-          element.click();
-          workflowProbe.clicked.push(selector);
-          return true;
-        }
-        async function runWorkflowProbe() {
-          if (window.__intentosWorkflowProbeRan) {
-            return;
-          }
-          window.__intentosWorkflowProbeRan = true;
-          click("[data-onboarding-check]");
-          click("[data-open-accessibility]");
-          click("[data-open-automation]");
-          click("[data-open-chrome]");
-          await delay(700);
-          const select = document.querySelector(".event-correction select");
-          if (select && select.options.length > 1) {
-            select.value = "learning";
-            select.dispatchEvent(new Event("change", { bubbles: true }));
-            workflowProbe.correction_changed = true;
-          }
-          await delay(900);
-          workflowProbe.setup_guidance_visible =
-            document.querySelector("[data-setup-guidance]")?.hidden === false;
-        }
-        async function writeProbe() {
-          await runWorkflowProbe();
-          const root = document.querySelector("[data-ui-root]");
-          const body = document.body;
-          const state = {
-            root_present: Boolean(root),
-            body_text_length: body.innerText.trim().length,
-            panel_count: document.querySelectorAll(".panel").length,
-            stat_count: document.querySelectorAll(".stat").length,
-            decision_count: document.querySelectorAll(".decision-card").length,
-            event_count: document.querySelectorAll("[data-capture-events] li").length,
-            next_move_text:
-              document.querySelector("[data-next-move-title]")?.textContent.trim() || "",
-            onboarding_visible:
-              document.querySelector("[data-onboarding]")?.hidden === false,
-            correction_controls:
-              document.querySelectorAll(".event-correction").length,
-            workflow_probe: workflowProbe,
-            youtube_visible:
-              document.querySelector(".youtube-panel")?.hidden === false,
-            horizontal_overflow:
-              document.documentElement.scrollWidth >
-              document.documentElement.clientWidth + 1,
-            out_of_view_count: Array.from(document.querySelectorAll("body *"))
-              .filter((element) => {
-                const text = element.textContent.trim();
-                if (!text || element.offsetParent === null) {
-                  return false;
-                }
-                const rect = element.getBoundingClientRect();
-                return rect.left < -1 || rect.right > window.innerWidth + 1;
-              }).length,
-            clipped_text_count: Array.from(document.querySelectorAll("body *"))
-              .filter((element) => {
-                const text = element.textContent.trim();
-                if (!text || element.children.length > 0) {
-                  return false;
-                }
-                const style = window.getComputedStyle(element);
-                return ["hidden", "clip"].includes(style.overflowX) &&
-                  element.scrollWidth > element.clientWidth + 1;
-              }).length,
-          };
-          let node = document.getElementById("intentos-render-probe");
-          if (!node) {
-            node = document.createElement("script");
-            node.id = "intentos-render-probe";
-            node.type = "application/json";
-            document.body.appendChild(node);
-          }
-          node.textContent = JSON.stringify(state);
-        }
-        window.addEventListener("load", () => {
-          window.setTimeout(writeProbe, 700);
-          window.setTimeout(writeProbe, 1800);
-          window.setTimeout(writeProbe, 3200);
-          window.setTimeout(writeProbe, 4600);
-          window.setTimeout(writeProbe, 6200);
-          window.setTimeout(writeProbe, 7600);
-        });
-      })();
-    </script>
-"""
-if "intentos-render-probe" not in html:
-    html = html.replace("</body>", probe + "\n  </body>")
-path.write_text(html, encoding="utf-8")
-PY
+  beta_ready_site="$WORK_DIR/site-beta-ready"
+  beta_ready_url="http://127.0.0.1:$ui_port/site-beta-ready/index.html?mode=beta"
+  rm -rf "$beta_ready_site"
+  cp -R "$SITE_DIR" "$beta_ready_site"
+  python3 scripts/product/inject-ui-render-probe.py "$beta_ready_site/index.html" \
+    --mode beta \
+    --scenario beta-ready \
+    --scenario beta-setup-needed \
+    --workflow
   beta_render_screenshot="$ARTIFACT_DIR/beta-ui-render.png"
   beta_render_dom="$ARTIFACT_DIR/beta-ui-render-dom.html"
   beta_render_json="$ARTIFACT_DIR/beta-ui-render-validation.json"
@@ -408,8 +482,10 @@ PY
   beta_mobile_text="$ARTIFACT_DIR/beta-ui-render-mobile-validation.txt"
   rm -f "$beta_render_screenshot" "$beta_render_dom" "$beta_render_json" "$beta_render_text" \
     "$beta_mobile_screenshot" "$beta_mobile_dom" "$beta_mobile_json" "$beta_mobile_text"
-  python3 - "$browser" "$ui_url" "$beta_render_screenshot" "$beta_render_dom" "$LOG_DIR" "$WORK_DIR" <<'PY'
+  python3 - "$browser" "$beta_ready_url" "$beta_render_screenshot" "$beta_render_dom" "$LOG_DIR" "$WORK_DIR" <<'PY'
 import shutil
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -420,6 +496,7 @@ screenshot = Path(screenshot).resolve()
 dom = Path(dom).resolve()
 log_dir = Path(log_dir).resolve()
 runtime_dir = Path(runtime_dir).resolve()
+timeout_seconds = 18
 base_flags = [
     "--headless=new",
     "--disable-background-networking",
@@ -439,15 +516,63 @@ def run(name: str, extra: list[str], stdout_path: Path | None = None, required: 
     shutil.rmtree(profile, ignore_errors=True)
     command = [browser, *base_flags, f"--user-data-dir={profile}", *extra, ui_url]
     log_path = log_dir / f"beta-ui-render-{name}.log"
+    screenshot_arg = next((arg for arg in extra if arg.startswith("--screenshot=")), "")
+    screenshot_path = Path(screenshot_arg.split("=", 1)[1]).resolve() if screenshot_arg else None
     with log_path.open("w", encoding="utf-8") as log:
-        stdout = subprocess.PIPE if stdout_path else log
+        stdout = log
+        if screenshot_path is not None:
+            process = subprocess.Popen(
+                command,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            if wait_for_artifact(screenshot_path, seconds=timeout_seconds):
+                stop_process(process)
+                return
+            stop_process(process)
+            if required:
+                raise SystemExit(f"browser {name} did not write {screenshot_path}; see {log_path}")
+            return
+        if stdout_path is not None:
+            stdout_path.unlink(missing_ok=True)
+            with stdout_path.open("w", encoding="utf-8") as output:
+                process = subprocess.Popen(
+                    command,
+                    stdout=output,
+                    stderr=log,
+                    start_new_session=True,
+                    text=True,
+                )
+                if wait_for_stdout_marker(
+                    stdout_path,
+                    "intentos-render-probe",
+                    seconds=45,
+                    process=process,
+                ):
+                    stop_process(process)
+                    return
+                if process.poll() is None:
+                    stop_process(process)
+                    if required:
+                        raise SystemExit(f"browser {name} did not write probe marker; see {log_path}")
+                    return
+                if process.returncode != 0:
+                    if required:
+                        raise SystemExit(f"browser {name} failed; see {log_path}")
+                    return
+                if not wait_for_artifact(stdout_path, seconds=1) and required:
+                    raise SystemExit(f"browser {name} did not write {stdout_path}; see {log_path}")
+                return
         try:
             result = subprocess.run(
                 command,
                 check=True,
                 stdout=stdout,
                 stderr=subprocess.STDOUT,
-                timeout=45,
+                start_new_session=True,
+                timeout=timeout_seconds,
                 text=True,
             )
         except subprocess.TimeoutExpired as exc:
@@ -470,6 +595,23 @@ def run(name: str, extra: list[str], stdout_path: Path | None = None, required: 
         stdout_path.write_text(result.stdout or "", encoding="utf-8")
 
 
+def stop_process(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait(timeout=2)
+
+
 def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -479,13 +621,36 @@ def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     return path.is_file() and path.stat().st_size > 0
 
 
-run("screenshot", [f"--screenshot={screenshot}"])
+def wait_for_stdout_marker(
+    path: Path,
+    marker: str,
+    *,
+    seconds: float = 5.0,
+    process: subprocess.Popen | None = None,
+) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore"):
+            return True
+        if process is not None and process.poll() is not None:
+            break
+        time.sleep(0.1)
+    return path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore")
+
+
+run("screenshot", ["--virtual-time-budget=9000", f"--screenshot={screenshot}"])
 run("dom", ["--virtual-time-budget=9000", "--dump-dom"], dom, required=True)
 PY
   python3 scripts/product/render-ui-check.py \
     "$beta_render_screenshot" "$beta_render_dom" "$beta_render_json" "$beta_render_text" 2
-  python3 - "$browser" "$ui_url" "$beta_mobile_screenshot" "$beta_mobile_dom" "$LOG_DIR" "$WORK_DIR" <<'PY'
+  python3 scripts/product/inject-ui-render-probe.py "$beta_ready_site/index.html" \
+    --mode beta \
+    --scenario beta-ready \
+    --scenario beta-setup-needed
+  python3 - "$browser" "$beta_ready_url" "$beta_mobile_screenshot" "$beta_mobile_dom" "$LOG_DIR" "$WORK_DIR" <<'PY'
 import shutil
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -496,6 +661,7 @@ screenshot = Path(screenshot).resolve()
 dom = Path(dom).resolve()
 log_dir = Path(log_dir).resolve()
 runtime_dir = Path(runtime_dir).resolve()
+timeout_seconds = 18
 base_flags = [
     "--headless=new",
     "--disable-background-networking",
@@ -515,15 +681,57 @@ def run(name: str, extra: list[str], stdout_path: Path | None = None) -> None:
     shutil.rmtree(profile, ignore_errors=True)
     command = [browser, *base_flags, f"--user-data-dir={profile}", *extra, ui_url]
     log_path = log_dir / f"beta-ui-render-{name}.log"
+    screenshot_arg = next((arg for arg in extra if arg.startswith("--screenshot=")), "")
+    screenshot_path = Path(screenshot_arg.split("=", 1)[1]).resolve() if screenshot_arg else None
     with log_path.open("w", encoding="utf-8") as log:
-        stdout = subprocess.PIPE if stdout_path else log
+        stdout = log
+        if screenshot_path is not None:
+            process = subprocess.Popen(
+                command,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            if wait_for_artifact(screenshot_path, seconds=timeout_seconds):
+                stop_process(process)
+                return
+            stop_process(process)
+            raise SystemExit(f"browser {name} did not write {screenshot_path}; see {log_path}")
+        if stdout_path is not None:
+            stdout_path.unlink(missing_ok=True)
+            with stdout_path.open("w", encoding="utf-8") as output:
+                process = subprocess.Popen(
+                    command,
+                    stdout=output,
+                    stderr=log,
+                    start_new_session=True,
+                    text=True,
+                )
+                if wait_for_stdout_marker(
+                    stdout_path,
+                    "intentos-render-probe",
+                    seconds=45,
+                    process=process,
+                ):
+                    stop_process(process)
+                    return
+                if process.poll() is None:
+                    stop_process(process)
+                    raise SystemExit(f"browser {name} did not write probe marker; see {log_path}")
+                if process.returncode != 0:
+                    raise SystemExit(f"browser {name} failed; see {log_path}")
+                if not wait_for_artifact(stdout_path, seconds=1):
+                    raise SystemExit(f"browser {name} did not write {stdout_path}; see {log_path}")
+                return
         try:
             result = subprocess.run(
                 command,
                 check=True,
                 stdout=stdout,
                 stderr=subprocess.STDOUT,
-                timeout=45,
+                start_new_session=True,
+                timeout=timeout_seconds,
                 text=True,
             )
         except subprocess.TimeoutExpired as exc:
@@ -540,6 +748,23 @@ def run(name: str, extra: list[str], stdout_path: Path | None = None) -> None:
         stdout_path.write_text(result.stdout or "", encoding="utf-8")
 
 
+def stop_process(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait(timeout=2)
+
+
 def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -549,7 +774,24 @@ def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     return path.is_file() and path.stat().st_size > 0
 
 
-run("mobile-screenshot", [f"--screenshot={screenshot}"])
+def wait_for_stdout_marker(
+    path: Path,
+    marker: str,
+    *,
+    seconds: float = 5.0,
+    process: subprocess.Popen | None = None,
+) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore"):
+            return True
+        if process is not None and process.poll() is not None:
+            break
+        time.sleep(0.1)
+    return path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore")
+
+
+run("mobile-screenshot", ["--virtual-time-budget=9000", f"--screenshot={screenshot}"])
 run("mobile-dom", ["--virtual-time-budget=9000", "--dump-dom"], dom)
 PY
   if [ ! -s "$beta_mobile_screenshot" ] && [ -s "$beta_render_screenshot" ]; then
@@ -558,7 +800,46 @@ PY
   fi
   python3 scripts/product/render-ui-check.py \
     "$beta_mobile_screenshot" "$beta_mobile_dom" "$beta_mobile_json" "$beta_mobile_text" 2
+
+  beta_stale_site="$WORK_DIR/site-beta-service-stale"
+  beta_stale_url="http://127.0.0.1:$ui_port/site-beta-service-stale/index.html?mode=beta"
+  rm -rf "$beta_stale_site"
+  cp -R "$SITE_DIR" "$beta_stale_site"
+  python3 - "$beta_stale_site/beta-config.json" "$BETA_DATE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+date = sys.argv[2]
+path.write_text(
+    json.dumps({"serviceUrl": "http://127.0.0.1:1", "date": date}, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+  python3 scripts/product/inject-ui-render-probe.py "$beta_stale_site/index.html" \
+    --mode beta \
+    --scenario beta-service-stale
+  beta_stale_screenshot="$ARTIFACT_DIR/beta-ui-service-stale.png"
+  beta_stale_dom="$ARTIFACT_DIR/beta-ui-service-stale-dom.html"
+  beta_stale_json="$ARTIFACT_DIR/beta-ui-service-stale-validation.json"
+  beta_stale_text="$ARTIFACT_DIR/beta-ui-service-stale-validation.txt"
+  python3 scripts/product/render-ui-browser.py \
+    --browser "$browser" \
+    --url "$beta_stale_url" \
+    --screenshot "$beta_stale_screenshot" \
+    --dom "$beta_stale_dom" \
+    --log-dir "$LOG_DIR" \
+    --runtime-dir "$WORK_DIR" \
+    --profile-name beta-service-stale \
+    --timeout 18
+  python3 scripts/product/render-ui-check.py \
+    "$beta_stale_screenshot" "$beta_stale_dom" "$beta_stale_json" "$beta_stale_text" 0 beta-service-stale
 else
+  if [ "${INTENTOS_UI_REQUIRE_BROWSER:-0}" = "1" ]; then
+    echo "beta-ui-render-validation: Chrome or Chromium is required for rendered beta UI checks" >&2
+    exit 1
+  fi
   {
     echo "beta-ui-render-validation: skipped"
     echo "reason=Chrome or Chromium not found; set INTENTOS_BROWSER_BIN for rendered beta UI checks"
@@ -589,13 +870,60 @@ def post_json(url, payload):
 
 delete = post_json(f"{service_url}/api/delete-local-data", {})
 deleted = get_json(f"{service_url}/api/status")
+deleted_weekly = get_json(f"{service_url}/api/weekly-patterns?week_start=2026-04-27")
 if deleted["row_counts"]["activity_events"] != 0:
     raise AssertionError("delete-local-data did not clear activity events")
+if deleted_weekly["best_focus_window"]["duration_seconds"] != 0:
+    raise AssertionError("delete-local-data did not clear weekly source state")
 path = Path(validation_path)
 payload = json.loads(path.read_text(encoding="utf-8"))
 payload["delete"] = delete
 payload["post_delete_rows"] = deleted["row_counts"]
+payload["post_delete_weekly"] = deleted_weekly
 path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
+
+if [ -n "$browser" ]; then
+  beta_empty_site="$WORK_DIR/site-beta-empty"
+  beta_empty_url="http://127.0.0.1:$ui_port/site-beta-empty/index.html?mode=beta"
+  rm -rf "$beta_empty_site"
+  cp -R "$SITE_DIR" "$beta_empty_site"
+  python3 - "$beta_empty_site/beta-config.json" "$service_url" "$BETA_DATE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+service_url = sys.argv[2]
+date = sys.argv[3]
+path.write_text(
+    json.dumps({"serviceUrl": service_url, "date": date}, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+  python3 scripts/product/inject-ui-render-probe.py "$beta_empty_site/index.html" \
+    --mode beta \
+    --scenario beta-empty \
+    --scenario beta-intent-missing
+  beta_empty_screenshot="$ARTIFACT_DIR/beta-ui-empty.png"
+  beta_empty_dom="$ARTIFACT_DIR/beta-ui-empty-dom.html"
+  beta_empty_json="$ARTIFACT_DIR/beta-ui-empty-validation.json"
+  beta_empty_text="$ARTIFACT_DIR/beta-ui-empty-validation.txt"
+  beta_intent_json="$ARTIFACT_DIR/beta-ui-intent-missing-validation.json"
+  beta_intent_text="$ARTIFACT_DIR/beta-ui-intent-missing-validation.txt"
+  python3 scripts/product/render-ui-browser.py \
+    --browser "$browser" \
+    --url "$beta_empty_url" \
+    --screenshot "$beta_empty_screenshot" \
+    --dom "$beta_empty_dom" \
+    --log-dir "$LOG_DIR" \
+    --runtime-dir "$WORK_DIR" \
+    --profile-name beta-empty \
+    --timeout 18
+  python3 scripts/product/render-ui-check.py \
+    "$beta_empty_screenshot" "$beta_empty_dom" "$beta_empty_json" "$beta_empty_text" 0 beta-empty
+  python3 scripts/product/render-ui-check.py \
+    "$beta_empty_screenshot" "$beta_empty_dom" "$beta_intent_json" "$beta_intent_text" 0 beta-intent-missing
+fi
 
 echo "validate-beta: ok"

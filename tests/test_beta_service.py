@@ -4,9 +4,10 @@ import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from intentos.beta import store
+from intentos.beta import daily_state, store
 from intentos.beta.service import ServiceConfig, make_handler
 
 
@@ -41,7 +42,8 @@ class BetaServiceTests(unittest.TestCase):
                 onboarding = get_json(f"{base}/api/onboarding")
                 permission_check = post_json(f"{base}/api/permissions/check", {})
                 settings = post_json(f"{base}/api/open-system-settings", {"target": "automation"})
-                completed = post_json(f"{base}/api/onboarding", {"action": "complete"})
+                early_complete = post_json_status(f"{base}/api/onboarding", {"action": "complete"})
+                privacy_ack = post_json(f"{base}/api/onboarding", {"action": "acknowledge_privacy"})
                 report = get_json(f"{base}/api/daily-review?date=2026-04-27")
                 segment = report["items"][0]
                 correction = post_json(
@@ -53,10 +55,63 @@ class BetaServiceTests(unittest.TestCase):
                     },
                 )
                 corrected = get_json(f"{base}/api/daily-review?date=2026-04-27")
+                intent = post_json(
+                    f"{base}/api/daily-intent",
+                    {
+                        "date": "2026-04-27",
+                        "focus_text": "Ship beta loop",
+                        "avoid_text": "Feed drift",
+                    },
+                )
+                completed = post_json(f"{base}/api/onboarding", {"action": "complete"})
+                setup_report = get_json(f"{base}/api/setup-report")
+                loop = get_json(f"{base}/api/daily-loop?date=2026-04-27")
+                rescue_key = loop["focus_rescue"]["rescue_key"]
+                rescue_shown = post_json(
+                    f"{base}/api/focus-rescue-action",
+                    {
+                        "date": "2026-04-27",
+                        "rescue_key": rescue_key,
+                        "action": "shown",
+                        "evidence_id": loop["focus_rescue"]["primary_evidence"]["evidence_id"],
+                    },
+                )
+                invalid_rescue = post_json_status(
+                    f"{base}/api/focus-rescue-action",
+                    {
+                        "date": "2026-04-27",
+                        "rescue_key": rescue_key,
+                        "action": "invalid",
+                    },
+                )
+                rescue_pause = post_json(
+                    f"{base}/api/focus-rescue-action",
+                    {
+                        "date": "2026-04-27",
+                        "rescue_key": rescue_key,
+                        "action": "pause_capture",
+                        "note": "Service test pause.",
+                    },
+                )
+                paused_by_rescue = get_json(f"{base}/api/status")
+                post_json(f"{base}/api/resume", {})
+                weekly = get_json(f"{base}/api/weekly-patterns?week_start=2026-04-27")
+                checkin = post_json(
+                    f"{base}/api/review-checkin",
+                    {
+                        "date": "2026-04-27",
+                        "outcome": "mixed",
+                        "reflection_text": "Loop is visible.",
+                        "next_adjustment": "Review before shutdown.",
+                    },
+                )
+                completed_loop = get_json(f"{base}/api/daily-loop?date=2026-04-27")
+                activation_after_review = get_json(f"{base}/api/status")
                 pause = post_json(f"{base}/api/pause", {"minutes": 15})
                 paused = get_json(f"{base}/api/status")
                 delete = post_json(f"{base}/api/delete-local-data", {})
                 deleted = get_json(f"{base}/api/status")
+                weekly_after_delete = get_json(f"{base}/api/weekly-patterns?week_start=2026-04-27")
             finally:
                 server.shutdown()
                 server.server_close()
@@ -70,9 +125,33 @@ class BetaServiceTests(unittest.TestCase):
         self.assertEqual(permission_check["permissions"]["accessibility"]["state"], "ok")
         self.assertEqual(settings["status"], "validated")
         self.assertIn("browser entry", " ".join(settings["guidance"]["steps"]))
+        self.assertEqual(early_complete, 400)
+        self.assertTrue(privacy_ack["privacy_acknowledged"])
         self.assertTrue(completed["completed"])
+        self.assertEqual(setup_report["setup_report"]["capture_preview"]["state"], "ok")
+        self.assertNotIn("window_title", setup_report["setup_report"]["capture_preview"])
         self.assertEqual(correction["status"], "corrected")
         self.assertEqual(corrected["items"][0]["label"], "learning")
+        self.assertEqual(intent["intent"]["focus_text"], "Ship beta loop")
+        self.assertEqual(loop["intent"]["avoid_text"], "Feed drift")
+        self.assertEqual(loop["correction_count"], 1)
+        self.assertIn("intent_contract", loop)
+        self.assertIn("next_block", loop)
+        self.assertIn("correction_reward", loop)
+        self.assertEqual(loop["focus_rescue"]["state"], "focus_protected")
+        self.assertEqual(rescue_shown["status"], "recorded")
+        self.assertEqual(rescue_shown["action"]["action"], "shown")
+        self.assertEqual(invalid_rescue, 400)
+        self.assertEqual(rescue_pause["pause"]["status"], "paused")
+        self.assertTrue(paused_by_rescue["pause"]["paused"])
+        self.assertIsNotNone(paused_by_rescue["activation"]["intent_set_at"])
+        self.assertIsNotNone(paused_by_rescue["activation"]["first_rescue_state_at"])
+        self.assertIsNotNone(paused_by_rescue["activation"]["first_recovery_action_at"])
+        self.assertEqual(len(weekly["patterns"]), 3)
+        self.assertIn("week", weekly["narrative"].lower())
+        self.assertEqual(checkin["review_checkin"]["outcome"], "mixed")
+        self.assertEqual(completed_loop["prompt"]["state"], "review_complete")
+        self.assertIsNotNone(activation_after_review["activation"]["review_completed_at"])
         self.assertEqual(pause["status"], "paused")
         self.assertTrue(paused["pause"]["paused"])
         self.assertEqual(delete["status"], "deleted")
@@ -80,6 +159,12 @@ class BetaServiceTests(unittest.TestCase):
         self.assertFalse(stale_report.exists())
         self.assertEqual(deleted["row_counts"]["activity_events"], 0)
         self.assertEqual(deleted["service"]["state"], "running")
+        self.assertEqual(weekly_after_delete["best_focus_window"]["duration_seconds"], 0)
+        with store.connect(db) as conn:
+            store.init_db(conn)
+            self.assertIsNone(daily_state.daily_intent(conn, "2026-04-27"))
+            self.assertIsNone(daily_state.review_checkin(conn, "2026-04-27"))
+            self.assertIsNone(daily_state.latest_focus_rescue_action(conn, "2026-04-27", rescue_key))
 
 
 def get_json(url):
@@ -96,6 +181,20 @@ def post_json(url, payload):
     )
     with urlopen(request, timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def post_json_status(url, payload):
+    request = Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=3) as response:
+            return response.status
+    except HTTPError as exc:
+        return exc.code
 
 
 if __name__ == "__main__":

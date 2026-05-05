@@ -74,33 +74,36 @@ if [ "$agent_lines" -gt 140 ]; then
 fi
 
 check_markdown_links() {
-  local file line_no links link target base_dir target_path
+  python3 - <<'PY'
+from __future__ import annotations
 
-  while IFS= read -r file; do
-    base_dir="$(dirname "$file")"
-    line_no=0
-    while IFS= read -r line; do
-      line_no=$((line_no + 1))
-      links="$(printf '%s\n' "$line" | grep -Eo '\[[^]]+\]\([^)]+\)' || true)"
-      [ -n "$links" ] || continue
+import re
+import sys
+from pathlib import Path
 
-      while IFS= read -r link; do
-        target="$(printf '%s\n' "$link" | sed -E 's/^.*\]\(([^)]+)\).*$/\1/')"
-        target="${target%%#*}"
-        [ -n "$target" ] || continue
-        case "$target" in
-          http://* | https://* | mailto:* | /*)
-            continue
-            ;;
-        esac
 
-        target_path="$base_dir/$target"
-        if [ ! -e "$target_path" ]; then
-          fail "$file:$line_no has broken markdown link: $target"
-        fi
-      done <<< "$links"
-    done < "$file"
-  done < <(find . -path './.git' -prune -o -path './.harness' -prune -o -type f -name '*.md' -print)
+link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+skip_dirs = {".git", ".harness"}
+
+for path in Path(".").rglob("*.md"):
+    if skip_dirs.intersection(path.parts):
+        continue
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        lines = path.read_text().splitlines()
+    for line_no, line in enumerate(lines, start=1):
+        for target in link_pattern.findall(line):
+            target = target.split("#", 1)[0]
+            if not target or target.startswith(("http://", "https://", "mailto:", "/")):
+                continue
+            if not (path.parent / target).exists():
+                print(
+                    f"harness-check: {path}:{line_no} has broken markdown link: {target}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(1)
+PY
 }
 
 check_markdown_links

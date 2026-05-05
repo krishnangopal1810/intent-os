@@ -221,10 +221,11 @@ make beta-stop
 
 The beta service stores accepted events in
 `.harness/runtime/beta/intentos.sqlite`, exposes `/api/status`,
-`/api/daily-review`, `/api/events`, `/api/corrections`, `/api/pause`,
-`/api/resume`, `/api/delete-local-data`, and `/api/browser-event`, and serves
-the dashboard from `.harness/runtime/beta/site/` with service-backed beta mode
-required. If the beta service config is missing, the UI must show a live
+`/api/daily-review`, `/api/daily-loop`, `/api/weekly-patterns`, `/api/events`,
+`/api/corrections`, `/api/pause`, `/api/resume`, `/api/delete-local-data`, and
+`/api/browser-event`, and serves the dashboard from
+`.harness/runtime/beta/site/` with service-backed beta mode required. If the
+beta service config is missing, the UI must show a live
 service problem rather than fixture reports. The live beta dashboard does not
 show a separate YouTube domain panel; real YouTube activity is folded into the
 normal activity mix, timeline, and review queues. The Chrome MV3 bridge shell

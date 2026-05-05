@@ -150,8 +150,9 @@ def run_command(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
 def permission_help(detail: str) -> str:
     message = (
         "macOS frontmost app capture failed. Grant Accessibility permission to "
-        "the terminal or Codex host app in System Settings > Privacy & Security "
-        "> Accessibility, then rerun the manual smoke command."
+        "IntentOS in System Settings > Privacy & Security > Accessibility, "
+        "then run the app access check again. If you are using the source "
+        "harness directly, grant the launcher process shown by macOS."
     )
     if detail:
         return f"{message} System Events said: {detail}"

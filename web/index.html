@@ -46,29 +46,107 @@
           </div>
         </header>
 
-        <section class="onboarding-panel" aria-label="Beta setup" data-onboarding hidden>
+        <section class="service-notice" data-service-notice aria-live="polite" hidden>
+          <div>
+            <p class="eyebrow" data-service-notice-kicker>Needs attention</p>
+            <h2 data-service-notice-title>Reconnect IntentOS</h2>
+            <p data-service-notice-body>
+              This dashboard is waiting for IntentOS to reconnect.
+            </p>
+          </div>
+          <div class="service-notice-actions">
+            <button type="button" data-service-retry>Try again</button>
+            <span data-service-notice-action>Open the current dashboard from the menu bar.</span>
+          </div>
+        </section>
+
+        <section class="coach-hero" aria-labelledby="summary-title" data-coach-hero>
+          <div class="coach-main">
+            <p class="eyebrow">Did the day match your plan?</p>
+            <h2 id="summary-title" data-coach-verdict>Preparing today's review</h2>
+            <p data-coach-actual>IntentOS is reading local evidence.</p>
+            <div class="focus-rescue" data-focus-rescue hidden>
+              <div>
+                <p class="eyebrow">Focus rescue</p>
+                <strong data-focus-rescue-label>Need evidence</strong>
+                <p data-focus-rescue-reason>IntentOS is waiting for strict focus or avoid evidence.</p>
+              </div>
+              <div class="rescue-actions" data-focus-rescue-actions></div>
+            </div>
+          </div>
+          <div class="coach-contract" aria-label="Plan versus actual">
+            <div>
+              <span>Protect</span>
+              <strong data-coach-focus>Today's focus</strong>
+              <p data-coach-focus-detail>Waiting for the focus contract.</p>
+            </div>
+            <div>
+              <span>Avoid</span>
+              <strong data-coach-avoid>Today's avoid target</strong>
+              <p data-coach-avoid-detail>Waiting for the avoid contract.</p>
+            </div>
+          </div>
+          <div class="receipt-strip" aria-label="Review receipts" data-coach-receipts></div>
+        </section>
+
+        <section class="command-center" aria-label="Today command center" data-command-center>
+          <article class="command-step command-now">
+            <div>
+              <p class="eyebrow">Now</p>
+              <h3 data-command-now-title>Waiting for next move</h3>
+              <p data-command-now-note>IntentOS is reading local evidence.</p>
+            </div>
+            <a href="#decision-title" data-scroll-link data-command-now-action>Open queue</a>
+          </article>
+          <article class="command-step command-trust">
+            <div>
+              <p class="eyebrow">Trust</p>
+              <h3 data-command-trust-title>Checking evidence</h3>
+              <p data-command-trust-note>Corrections and unclear rows improve future reviews.</p>
+            </div>
+            <a href="#timeline-title" data-scroll-link data-command-trust-action>Review evidence</a>
+          </article>
+          <article class="command-step command-tonight">
+            <div>
+              <p class="eyebrow">Tonight</p>
+              <h3 data-command-tonight-title>Set today's intent</h3>
+              <p data-command-tonight-note>Pick one focus and one thing to avoid.</p>
+            </div>
+            <a href="#daily-loop-title" data-scroll-link data-command-tonight-action>Set intent</a>
+          </article>
+        </section>
+
+        <section class="onboarding-panel" aria-label="Local setup" data-onboarding hidden>
           <div class="onboarding-copy">
             <p class="eyebrow">First run</p>
-            <h2>Local beta setup</h2>
+            <h2 data-onboarding-title>Set up IntentOS</h2>
             <p>
               IntentOS captures metadata only on this Mac. No screenshots,
               keylogging, page bodies, cookies, cloud sync, or telemetry.
             </p>
+            <div class="onboarding-steps" data-onboarding-steps></div>
           </div>
+          <div class="capture-preview" data-capture-preview hidden></div>
           <div class="permission-list" data-permission-checklist></div>
           <div class="setup-guidance" data-setup-guidance aria-live="polite" hidden></div>
           <div class="onboarding-actions">
-            <button type="button" data-onboarding-check>Run checks</button>
-            <button type="button" data-open-accessibility>Accessibility</button>
-            <button type="button" data-open-automation>Automation</button>
-            <button type="button" data-open-chrome>Chrome bridge</button>
-            <button type="button" data-open-diagnostics>Diagnostics</button>
+            <button type="button" data-onboarding-privacy>Continue</button>
+            <button type="button" data-onboarding-check>Check app access</button>
+            <button type="button" data-onboarding-intent>Set daily focus</button>
+            <button type="button" data-onboarding-browser>Improve browser detail</button>
+            <button type="button" data-onboarding-skip-browser>Skip browser detail</button>
+            <button type="button" data-open-accessibility>App access</button>
+            <button type="button" data-open-automation>Browser detail</button>
+            <button type="button" data-open-chrome>Browser detail</button>
+            <button type="button" data-copy-setup-report>Copy setup report</button>
+            <button type="button" data-open-diagnostics>Troubleshooting</button>
+            <button type="button" data-onboarding-reset>Restart onboarding</button>
             <button type="button" class="primary-action" data-onboarding-complete>Done</button>
             <button type="button" class="quiet-action" data-onboarding-dismiss>Later</button>
           </div>
         </section>
 
-        <section class="overview" aria-labelledby="summary-title">
+        <section class="overview" aria-label="Review metrics" hidden>
           <article class="brief">
             <div class="brief-topline">
               <span class="status-dot" aria-hidden="true"></span>
@@ -76,7 +154,7 @@
             </div>
             <div class="brief-copy">
               <p class="brief-total" data-primary-total>--</p>
-              <h2 id="summary-title" data-primary-narrative>Preparing behavior summary</h2>
+              <h2 data-primary-narrative>Preparing behavior summary</h2>
               <p class="brief-subtext" data-primary-action-copy>Loading local evidence</p>
             </div>
             <div class="brief-moments" aria-label="Top behavior signals" data-brief-moments></div>
@@ -106,65 +184,173 @@
           </article>
         </section>
 
-        <section class="section-heading decision-heading" aria-label="Daily decisions">
+        <section class="intent-panel" aria-labelledby="daily-loop-title" data-daily-loop>
+          <div class="intent-copy">
+            <div class="intent-heading-row">
+              <div>
+                <p class="eyebrow">Daily plan</p>
+                <h2 id="daily-loop-title">Today's Intent</h2>
+              </div>
+              <span class="loop-pill" data-loop-status>Not connected</span>
+            </div>
+            <p data-loop-summary>Set one focus and one thing to avoid, then compare the plan with what happened tonight.</p>
+            <div class="intent-current" data-intent-current hidden></div>
+            <div class="intent-contract" data-intent-contract hidden>
+              <div>
+                <p class="eyebrow">Tonight's review</p>
+                <strong data-contract-question>
+                  Tonight: did the focus stay protected while the avoid surface stayed bounded?
+                </strong>
+              </div>
+              <div class="contract-row">
+                <span>Protect</span>
+                <p data-contract-focus>
+                  Deep work, IntentOS, code, docs, and review-board evidence.
+                </p>
+              </div>
+              <div class="contract-row">
+                <span>Avoid</span>
+                <p data-contract-avoid>
+                  LinkedIn feed, scrolling, reactive surfaces, and matching URLs.
+                </p>
+              </div>
+              <div class="contract-row">
+                <span>Review</span>
+                <p data-contract-review>
+                  Evening check-in compares the plan with captured app, page,
+                  title, URL, and behavior-label evidence.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form class="intent-form" data-intent-form hidden>
+            <label>
+              Focus
+              <input type="text" data-intent-focus placeholder="Protect deep work on IntentOS">
+            </label>
+            <label>
+              Avoid
+              <input type="text" data-intent-avoid placeholder="Cap LinkedIn feed scrolling">
+            </label>
+            <label>
+              Note
+              <input type="text" data-intent-note placeholder="Optional context">
+            </label>
+            <button type="submit">Save today's intent</button>
+          </form>
+
+          <form class="review-form" data-review-form hidden>
+            <label>
+              Outcome
+              <select data-review-outcome>
+                <option value="mixed">Mixed</option>
+                <option value="kept_focus">Kept focus</option>
+                <option value="missed">Missed intent</option>
+              </select>
+            </label>
+            <label>
+              Reflection
+              <input type="text" data-review-reflection placeholder="What changed the day?">
+            </label>
+            <label>
+              Tomorrow
+              <input type="text" data-review-next-adjustment placeholder="One adjustment for next time">
+            </label>
+            <button type="submit">Complete review</button>
+          </form>
+        </section>
+
+        <section class="section-heading decision-heading" aria-label="Recommended next steps">
           <div>
-            <p class="eyebrow">What to do with this</p>
-            <h2 id="decision-title">Action Queue</h2>
-            <p class="section-note">A short operating list for the next block, derived from local evidence.</p>
+            <p class="eyebrow">Recommended</p>
+            <h2 id="decision-title">Next Block</h2>
+            <p class="section-note">One action for the next work block. Open evidence only when you want the receipts.</p>
           </div>
         </section>
 
         <section class="decision-deck" aria-label="Actionable daily review" data-action-deck></section>
 
-        <dl class="metric-strip" data-stats></dl>
+        <section class="supporting-stack" aria-label="Supporting detail">
+          <details class="supporting-panel" data-signal-details>
+            <summary>
+              <span>
+                <span class="eyebrow">Signal</span>
+                <strong>Today's shape</strong>
+              </span>
+              <small>Time mix, focus share, and replay confidence.</small>
+            </summary>
+            <dl class="metric-strip" data-stats></dl>
+            <section class="insights" aria-label="Review highlights" data-insights></section>
+          </details>
 
-        <section class="insights" aria-label="Review highlights" data-insights></section>
+          <details class="supporting-panel" data-weekly-details hidden>
+            <summary>
+              <span>
+                <span class="eyebrow">This week</span>
+                <strong id="weekly-patterns-title">Patterns</strong>
+              </span>
+              <small data-weekly-narrative>Weekly patterns will appear after local activity accumulates.</small>
+            </summary>
+            <section class="weekly-grid" aria-label="Weekly patterns" data-weekly-patterns></section>
+          </details>
 
-        <section class="beta-queues" aria-label="Beta review queues" data-beta-review-queues hidden>
-          <article class="queue-panel">
-            <p class="eyebrow">Deep work</p>
-            <ol data-top-deep-work></ol>
-          </article>
-          <article class="queue-panel">
-            <p class="eyebrow">Reactive surfaces</p>
-            <ol data-top-reactive-surfaces></ol>
-          </article>
-          <article class="queue-panel">
-            <p class="eyebrow">Needs review</p>
-            <ol data-low-confidence-segments></ol>
-          </article>
-        </section>
+          <details class="supporting-panel" data-queue-details hidden>
+            <summary>
+              <span>
+                <span class="eyebrow">Review</span>
+                <strong>Focus queues</strong>
+              </span>
+              <small>Top surfaces to repeat, contain, or correct.</small>
+            </summary>
+            <section class="beta-queues" aria-label="Focused review queues" data-beta-review-queues hidden>
+              <article class="queue-panel">
+                <p class="eyebrow">Deep work</p>
+                <ol data-top-deep-work></ol>
+              </article>
+              <article class="queue-panel">
+                <p class="eyebrow">Reactive surfaces</p>
+                <ol data-top-reactive-surfaces></ol>
+              </article>
+              <article class="queue-panel">
+                <p class="eyebrow">Needs review</p>
+                <ol data-low-confidence-segments></ol>
+              </article>
+            </section>
+          </details>
 
-        <section class="section-heading" aria-label="Report sections">
-          <div>
-            <p class="eyebrow">Evidence</p>
-            <h2>Behavior Reports</h2>
-            <p class="section-note">Inspect the labels, source surfaces, and replay rows behind the recommendation.</p>
-          </div>
-        </section>
+          <details class="supporting-panel" data-evidence-details>
+            <summary>
+              <span>
+                <span class="eyebrow">Evidence</span>
+                <strong>Behavior reports</strong>
+              </span>
+              <small>Labels, source surfaces, and replay rows behind the recommendation.</small>
+            </summary>
+            <section class="grid" aria-label="Behavior reports">
+              <article class="panel activity-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Breakdown</p>
+                    <h2 id="activity-title">Activity</h2>
+                  </div>
+                </div>
+                <div class="bars" data-activity-bars></div>
+              </article>
 
-        <section class="grid" aria-label="Behavior reports">
-          <article class="panel activity-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Breakdown</p>
-                <h2 id="activity-title">Activity</h2>
-              </div>
-            </div>
-            <div class="bars" data-activity-bars></div>
-          </article>
-
-          <article class="panel timeline-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Replay</p>
-                <h2 id="timeline-title">Capture Replay</h2>
-              </div>
-              <span class="source-label" data-capture-source>Privacy filtered</span>
-            </div>
-            <div class="correction-controls" data-correction-controls hidden></div>
-            <ol class="event-list" data-capture-events></ol>
-          </article>
+              <article class="panel timeline-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Replay</p>
+                    <h2 id="timeline-title">Capture Replay</h2>
+                  </div>
+                  <span class="source-label" data-capture-source>Privacy filtered</span>
+                </div>
+                <div class="correction-controls" data-correction-controls hidden></div>
+                <ol class="event-list" data-capture-events></ol>
+              </article>
+            </section>
+          </details>
         </section>
       </section>
     </main>

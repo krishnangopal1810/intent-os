@@ -5,7 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 ARTIFACT_DIR=".harness/runtime/artifacts"
-APP_BUNDLE="$ARTIFACT_DIR/IntentOSBeta.app"
+APP_BUNDLE="$ARTIFACT_DIR/IntentOS.app"
+LEGACY_APP_BUNDLE="$ARTIFACT_DIR/IntentOSBeta.app"
 EXECUTABLE="$APP_BUNDLE/Contents/MacOS/IntentOSBeta"
 PACKAGE_JSON="$ARTIFACT_DIR/beta-package.json"
 mkdir -p "$ARTIFACT_DIR"
@@ -27,7 +28,7 @@ PY
   exit 0
 fi
 
-rm -rf "$APP_BUNDLE"
+rm -rf "$APP_BUNDLE" "$LEGACY_APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources" "$MODULE_CACHE"
 swiftc macos/IntentOSBeta/IntentOSBeta.swift \
   -o "$EXECUTABLE" \
@@ -43,7 +44,13 @@ if command -v codesign >/dev/null 2>&1; then
   signed="ad-hoc"
 fi
 
-python3 - "$PACKAGE_JSON" "$APP_BUNDLE" "$signed" <<'PY'
+if command -v ditto >/dev/null 2>&1; then
+  ditto "$APP_BUNDLE" "$LEGACY_APP_BUNDLE"
+else
+  cp -R "$APP_BUNDLE" "$LEGACY_APP_BUNDLE"
+fi
+
+python3 - "$PACKAGE_JSON" "$APP_BUNDLE" "$LEGACY_APP_BUNDLE" "$signed" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -51,8 +58,11 @@ from pathlib import Path
 payload = {
     "status": "built",
     "app_bundle": sys.argv[2],
-    "signed": sys.argv[3],
+    "legacy_app_bundle": sys.argv[3],
+    "bundle_id": "local.intentos.trusted",
+    "display_name": "IntentOS",
+    "signed": sys.argv[4],
 }
 Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-print(f"package-beta: built {sys.argv[2]} signed={sys.argv[3]}")
+print(f"package-beta: built {sys.argv[2]} signed={sys.argv[4]}")
 PY

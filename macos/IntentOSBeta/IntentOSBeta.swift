@@ -9,6 +9,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusMenuItem: NSMenuItem?
     private var didOpenDashboardAfterLaunch = false
     private var isStartingBeta = false
+    private let dailyLoopEndpoint = "/api/daily-loop"
+    private let dailyIntentEndpoint = "/api/daily-intent"
+    private let reviewCheckinEndpoint = "/api/review-checkin"
+    private let weeklyPatternsEndpoint = "/api/weekly-patterns"
 
     static func main() {
         let app = NSApplication.shared
@@ -36,11 +40,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(status)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Open Dashboard", #selector(openDashboard)))
+        menu.addItem(item("Set Today's Intent", #selector(setTodaysIntent)))
+        menu.addItem(item("Open Evening Review", #selector(openEveningReview)))
+        menu.addItem(item("Open Next Block", #selector(openNextBlock)))
+        menu.addItem(item("Open Weekly Patterns", #selector(openWeeklyPatterns)))
         menu.addItem(item("Start Beta", #selector(startBeta)))
         menu.addItem(item("Restart Beta", #selector(restartBeta)))
         menu.addItem(item("Stop Beta", #selector(stopBeta)))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Run Permission Check", #selector(runPermissionCheck)))
+        menu.addItem(item("Restart Onboarding", #selector(restartOnboarding)))
+        menu.addItem(item("Copy Setup Report", #selector(copySetupReport)))
         menu.addItem(item("Open Accessibility Settings", #selector(openAccessibilitySettings)))
         menu.addItem(item("Open Automation Settings", #selector(openAutomationSettings)))
         menu.addItem(item("Open Chrome Extension Setup", #selector(openChromeSetup)))
@@ -85,6 +95,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func restartOnboarding() {
+        post("/api/onboarding", body: #"{"action":"reset"}"#) { _ in
+            self.refreshStatus()
+            _ = self.openRecordedDashboard()
+        }
+    }
+
+    @objc private func copySetupReport() {
+        get("/api/setup-report") { payload in
+            guard let payload,
+                  let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+                  let text = String(data: data, encoding: .utf8)
+            else {
+                self.showActionFailed("Copy Setup Report Failed")
+                return
+            }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            self.showAlert(
+                "Setup Report Copied",
+                "A redacted setup report was copied. It excludes raw titles, URLs, screenshots, cookies, and page bodies."
+            )
+        }
+    }
+
     @objc private func openAccessibilitySettings() {
         openSettings("accessibility")
     }
@@ -111,6 +146,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openDashboard() {
         if !openRecordedDashboard() {
             startBetaIfNeeded(openWhenReady: true)
+        }
+    }
+
+    @objc private func setTodaysIntent() {
+        openDashboardAnchor("daily-loop-title", endpoint: dailyIntentEndpoint)
+    }
+
+    @objc private func openEveningReview() {
+        openDashboardAnchor("daily-loop-title", endpoint: reviewCheckinEndpoint)
+    }
+
+    @objc private func openNextBlock() {
+        openDashboardAnchor("decision-title", endpoint: dailyLoopEndpoint)
+    }
+
+    @objc private func openWeeklyPatterns() {
+        openDashboardAnchor("weekly-patterns-title", endpoint: weeklyPatternsEndpoint)
+    }
+
+    private func openDashboardAnchor(_ anchor: String, endpoint: String) {
+        _ = endpoint
+        if !openRecordedDashboard(anchor: anchor) {
+            startBetaIfNeeded(openWhenReady: false) { success in
+                if success {
+                    _ = self.openRecordedDashboard(anchor: anchor)
+                }
+            }
         }
     }
 
@@ -206,9 +268,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func runMake(_ target: String, completion: ((Bool) -> Void)? = nil) {
         DispatchQueue.global(qos: .utility).async {
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/make")
+            process.executableURL = URL(fileURLWithPath: "/bin/bash")
             process.currentDirectoryURL = self.repoRoot
-            process.arguments = [target]
+            process.arguments = [self.scriptPath(for: target)]
+            process.environment = self.runtimeEnvironment()
             let success: Bool
             do {
                 try process.run()
@@ -223,6 +286,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    private func scriptPath(for target: String) -> String {
+        switch target {
+        case "beta-dev":
+            return "scripts/harness/beta-dev.sh"
+        case "beta-stop":
+            return "scripts/harness/beta-stop.sh"
+        default:
+            return "scripts/harness/\(target).sh"
+        }
+    }
+
+    private func runtimeEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        env["INTENTOS_RUNTIME_DIR"] = runtimeRoot().path
+        return env
     }
 
     private func post(
@@ -273,6 +353,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }.resume()
+    }
+
+    private func get(
+        _ path: String,
+        completion: (([String: Any]?) -> Void)? = nil,
+        retryAfterStart: Bool = true
+    ) {
+        guard isBetaRecordedRunning(),
+              let base = envValue("INTENTOS_BETA_SERVICE_URL"),
+              let url = URL(string: base + path)
+        else {
+            retryGetAfterStart(path, completion: completion, retryAfterStart: retryAfterStart)
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            if error != nil && retryAfterStart {
+                DispatchQueue.main.async {
+                    self.retryGetAfterStart(path, completion: completion, retryAfterStart: retryAfterStart)
+                }
+                return
+            }
+            var payload: [String: Any]?
+            if let data,
+               let object = try? JSONSerialization.jsonObject(with: data),
+               let json = object as? [String: Any] {
+                payload = json
+            }
+            if let completion {
+                DispatchQueue.main.async {
+                    completion(payload)
+                }
+            }
+        }.resume()
+    }
+
+    private func retryGetAfterStart(
+        _ path: String,
+        completion: (([String: Any]?) -> Void)?,
+        retryAfterStart: Bool
+    ) {
+        guard retryAfterStart else {
+            completion?(nil)
+            return
+        }
+        startBetaIfNeeded(openWhenReady: false, forceRestart: isBetaRecordedRunning()) { success in
+            guard success else {
+                completion?(nil)
+                return
+            }
+            self.get(path, completion: completion, retryAfterStart: false)
+        }
     }
 
     private func retryPostAfterStart(
@@ -411,7 +542,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshStatus() {
-        guard isBetaRecordedRunning(), let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + "/api/status") else {
+        guard isBetaRecordedRunning(), let base = envValue("INTENTOS_BETA_SERVICE_URL"), let url = URL(string: base + dailyLoopEndpoint) else {
             updateMenuStatus("Stopped")
             return
         }
@@ -436,22 +567,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         else {
             return nil
         }
-        if let pause = json["pause"] as? [String: Any], pause["paused"] as? Bool == true {
+        let status = json["status"] as? [String: Any] ?? json
+        if let pause = status["pause"] as? [String: Any], pause["paused"] as? Bool == true {
             return "Paused"
         }
-        if let readiness = json["readiness"] as? [String: Any],
+        if let readiness = status["readiness"] as? [String: Any],
            readiness["state"] as? String == "setup_needed" {
             return "Setup Needed"
         }
-        if let capture = json["capture"] as? [String: Any],
+        if let capture = status["capture"] as? [String: Any],
            let captureState = capture["state"] as? String,
            ["error", "stopped"].contains(captureState) {
             return "Capture Issue"
         }
-        if let recorder = json["native_recorder"] as? [String: Any],
+        if let recorder = status["native_recorder"] as? [String: Any],
            let recorderState = recorder["state"] as? String,
            recorderState != "running" {
             return ["not_started", "disabled"].contains(recorderState) ? "Setup Needed" : "Capture Issue"
+        }
+        if let rescue = json["focus_rescue"] as? [String: Any],
+           let rescueState = rescue["state"] as? String {
+            if rescueState == "recovery_available" {
+                return "Recovery Available"
+            }
+            if rescueState == "avoid_leaking" {
+                return "Avoid Leaking"
+            }
+            if rescueState == "focus_protected" {
+                return "Focus Protected"
+            }
+            if rescueState == "evidence_insufficient" {
+                return "Need Evidence"
+            }
+        }
+        if let prompt = json["prompt"] as? [String: Any],
+           let promptState = prompt["state"] as? String {
+            if promptState == "intent_due" {
+                return "Intent Due"
+            }
+            if promptState == "review_due" {
+                return "Review Ready"
+            }
+        }
+        if let lowConfidence = json["low_confidence_count"] as? Int, lowConfidence > 0 {
+            return "Needs Correction"
+        }
+        if let block = json["next_block"] as? [String: Any],
+           let title = block["title"] as? String {
+            let lower = title.lowercased()
+            if lower.contains("close") || lower.contains("leak") || lower.contains("cap") {
+                return "Avoid Leaking"
+            }
+        }
+        if let plan = json["plan_vs_actual"] as? [String: Any],
+           let focusSeconds = plan["focus_seconds"] as? Int,
+           let reactiveSeconds = plan["reactive_seconds"] as? Int,
+           focusSeconds > 0,
+           reactiveSeconds == 0 {
+            return "Focus Holding"
         }
         return "Running"
     }
@@ -472,11 +645,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         envValue("INTENTOS_BETA_STATUS") == "running"
     }
 
-    private func openRecordedDashboard() -> Bool {
+    private func openRecordedDashboard(anchor: String? = nil) -> Bool {
         guard isBetaRecordedRunning(),
-              let url = envValue("INTENTOS_BETA_UI_URL"),
-              let dashboard = URL(string: url)
+              var url = envValue("INTENTOS_BETA_UI_URL")
         else {
+            return false
+        }
+        if let anchor, !anchor.isEmpty {
+            url += "#\(anchor)"
+        }
+        guard let dashboard = URL(string: url) else {
             return false
         }
         NSWorkspace.shared.open(dashboard)
@@ -500,10 +678,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return repoRoot.appendingPathComponent(explicit)
         }
+        if isBundledRuntime() {
+            return applicationSupportRoot().appendingPathComponent("runtime")
+        }
         return repoRoot.appendingPathComponent(".harness/runtime")
     }
 
     private func findRepoRoot() -> URL {
+        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("intent-os-runtime"),
+           FileManager.default.fileExists(atPath: bundled.appendingPathComponent("Makefile").path) {
+            return bundled
+        }
         if let explicit = ProcessInfo.processInfo.environment["INTENTOS_REPO_ROOT"] {
             let explicitURL = URL(fileURLWithPath: explicit)
             if FileManager.default.fileExists(atPath: explicitURL.appendingPathComponent("Makefile").path) {
@@ -523,5 +708,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             url.deleteLastPathComponent()
         }
         return url
+    }
+
+    private func isBundledRuntime() -> Bool {
+        guard let runtime = Bundle.main.resourceURL?.appendingPathComponent("intent-os-runtime") else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: runtime.appendingPathComponent("Makefile").path)
+    }
+
+    private func applicationSupportRoot() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        let root = base.appendingPathComponent("IntentOS", isDirectory: true)
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
     }
 }

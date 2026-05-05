@@ -22,6 +22,9 @@ slices.
   privacy, delete-data, and UI smoke checks against a temp DB.
 - `make package-beta`: build the local ad-hoc signed Swift menu bar app bundle
   when macOS Swift tools exist, or skip clearly when unavailable.
+- `make package-onboarding-beta`: build the trusted-tester `IntentOS.app`
+  zip with bundled runtime assets so normal first run does not require a source
+  checkout or Terminal commands.
 - `make install-beta-app`: copy and open the local beta menu bar app on macOS.
 - `make package-extension`: package the internal Chrome bridge extension zip.
 - `make chrome-bridge-smoke`: run the manual installed Chrome bridge smoke
@@ -92,14 +95,34 @@ macOS metadata recorder, stores normalized activity in
 `.harness/runtime/beta/intentos.sqlite`, writes an isolated
 `.harness/runtime/beta/site/beta-config.json`, and starts a local dashboard
 with `?mode=beta` so missing service config cannot fall back to fixture
-reports. The web shell hides the legacy YouTube domain panel in every mode;
-YouTube activity appears in the normal timeline, activity mix, and reactive
-surfaces instead of a separate bottom section. It does not seed fake rows by
-default, does not require manual imports or Chrome extension setup for first
-beta value, and does not read page bodies, cookies, screenshots, keystrokes, or
-cloud services. Use
+reports. If the service or data path is unavailable, the dashboard shows a
+plain-language reconnect notice at the top of the review board rather than raw
+developer errors. The web shell hides the legacy YouTube domain panel in every
+mode; YouTube activity appears in the normal timeline, activity mix, and
+reactive surfaces instead of a separate bottom section. It does not seed fake
+rows by default, does not require manual imports or Chrome extension setup for
+first beta value, and does not read page bodies, cookies, screenshots,
+keystrokes, or cloud services. Use
 `INTENTOS_BETA_FAKE_BRIDGE=1 make beta-dev` only for explicit fixture bridge
 testing.
+
+The beta service also owns the sticky daily loop, but the dashboard presents it
+as a daily plan and evening review. Users can set today's focus and one thing
+to avoid, preview how tonight's review will compare that natural language with
+captured behavior, then complete an evening review after 5pm local time or
+after 2h of captured activity. The loop is stored only in the local beta SQLite
+database, exposed through `/api/daily-loop`, `/api/daily-intent`, and
+`/api/review-checkin`, and cleared by delete-local-data. `/api/daily-loop`
+also returns the deterministic intent contract, focus rescue state,
+plan-vs-actual receipts, next block, and correction reward;
+`/api/focus-rescue-action` records local shown, return, continue, pause, and
+corrected-evidence choices. `/api/status` exposes local activation milestones
+for first intent, first rescue state, first recovery choice, and completed
+review without sending telemetry. `/api/weekly-patterns` summarizes local
+weekly focus, leak, and trust patterns from the same SQLite source state. The
+menu bar wrapper surfaces Intent Due, Review Ready, Recovery Available, Avoid
+Leaking, Focus Protected, Need Evidence, and Needs Correction states without
+requesting notification permission.
 
 `make dogfood-smoke` is the explicit real-machine beta path. It starts the same
 local service, dashboard, and native recorder with `INTENTOS_BETA_FAKE_BRIDGE=0`,
@@ -124,8 +147,9 @@ Expected artifacts after product code exists:
 - `.harness/runtime/beta/app.env`: beta service/UI/native-recorder/fake-bridge
   PID, DB path, service URL, dashboard URL, daily review artifact, and log paths.
 - `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
-  30-day retention, WAL durability, service-visible `quick_check` health, and
-  truncate checkpointing after delete-local-data.
+  30-day retention, WAL durability, daily intent and review check-in state,
+  service-visible `quick_check` health, and truncate checkpointing after
+  delete-local-data.
 - `.harness/runtime/beta/site/`: isolated beta dashboard shell and service
   config. This keeps dogfood live data separate from fixture UI builds under
   `.harness/runtime/site/`.
@@ -174,6 +198,12 @@ Expected artifacts after product code exists:
   screenshot evidence from the real dogfood smoke when Chrome/Chromium exists.
 - `.harness/runtime/artifacts/IntentOSBeta.app`: local ad-hoc signed dogfood
   menu bar bundle when `make package-beta` builds on macOS.
+- `.harness/runtime/artifacts/IntentOS.app`: trusted tester app bundle using
+  the stable `local.intentos.trusted` identity.
+- `.harness/runtime/artifacts/IntentOS-trusted-beta.zip`: bundled trusted
+  tester artifact produced by `make package-onboarding-beta`.
+- `.harness/runtime/artifacts/onboarding-beta-package.json`: packaging
+  manifest for the bundled trusted tester artifact.
 - `.harness/runtime/artifacts/IntentOSChromeBridge.zip`: internal Chrome bridge
   package when `make package-extension` runs.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
@@ -212,6 +242,9 @@ IntentOS currently provides `scripts/product/dev.sh`,
 - Write validation evidence into `.harness/runtime/artifacts/`.
 - Fail on blank screens, missing JSON artifacts, missing core UI text, missing
   decision cards, missing next move text, horizontal overflow, or clipped text.
+- Fail on recurring manual feedback regressions: forbidden developer-facing
+  copy, over-dense first viewports, broken section navigation, missing daily
+  intent preview updates, or raw service errors in the dashboard.
 - Record validation notes in the active execution plan when relevant.
 
 The current validator fetches the page plus JSON artifacts through a temporary
@@ -220,21 +253,29 @@ background sampler cannot race deterministic fixture rendering. It writes
 `ui-validation.txt`, `ui-validation.json`, and `ui-snapshot.html`, then copies
 the `ui-*` evidence back into `.harness/runtime/artifacts/` for diagnostics.
 When Chrome or Chromium is available locally, it also captures
-`ui-render.png`, `ui-render-mobile.png`, and matching DOM/validation artifacts,
-then checks that the rendered screenshots are non-blank. If the local browser
-can also dump the rendered DOM probe, the validator checks for daily decision
-cards, next move text, horizontal overflow, clipped visible text, and expected
-capture events. It also checks the committed screenshot evidence under
+`ui-render.png`, `ui-render-mobile.png`, and matching DOM/validation artifacts.
+Both fixture and beta validators inject the shared render probe from
+`scripts/product/ui-render-probe.js` through
+`scripts/product/inject-ui-render-probe.py`; `render-ui-check.py` then enforces
+the versioned probe schema, copy policy fixture, first-viewport density budget,
+text layout, section navigation, service-state, workflow, and intent-preview
+fields. The fixture path covers `fixture-default` and `fixture-long-text`.
+It also checks the committed screenshot evidence under
 `docs/assets/screenshots/`. Run `make update-ui-screenshot` after UI source,
-fixture, or report-output changes. CI does not need Chrome to validate the
-committed screenshot; the screenshot metadata records a source hash and
-`make verify` fails when the image is stale.
+fixture, or report-output changes. CI requires browser rendering through
+`INTENTOS_UI_REQUIRE_BROWSER=1`; local runs may skip it with a clear message
+when Chrome/Chromium is unavailable.
 
 `make validate-beta` covers service-backed UI mode. It writes a temporary
 `beta-config.json`, confirms the dashboard shell loads while service APIs are
-available, checks that correction controls, setup guidance controls, decision
-cards, and next move text are present, and verifies that a relabel operation
-changes the next daily-review response without changing raw events.
+available, checks that correction controls, setup guidance controls, daily
+intent controls, evening review controls, decision cards, and next move text are
+present, and verifies that a relabel operation changes the next daily-review
+response without changing raw events. Rendered beta evidence covers
+`beta-ready`, `beta-setup-needed`, `beta-service-stale`, `beta-empty`, and
+`beta-intent-missing` so stale services, empty databases, and missing-intent
+previews fail with product-facing diagnostics instead of requiring manual
+inspection.
 
 ## Observability Contract
 

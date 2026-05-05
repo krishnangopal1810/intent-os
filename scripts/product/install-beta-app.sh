@@ -5,9 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 ARTIFACT_DIR=".harness/runtime/artifacts"
-SOURCE_APP="$ARTIFACT_DIR/IntentOSBeta.app"
+SOURCE_APP="$ARTIFACT_DIR/IntentOS.app"
+LEGACY_SOURCE_APP="$ARTIFACT_DIR/IntentOSBeta.app"
 INSTALL_DIR="${INTENTOS_BETA_INSTALL_DIR:-$HOME/Applications}"
-INSTALLED_APP="$INSTALL_DIR/IntentOSBeta.app"
+INSTALLED_APP="$INSTALL_DIR/IntentOS.app"
 INSTALL_JSON="$ARTIFACT_DIR/beta-install.json"
 
 mkdir -p "$ARTIFACT_DIR"
@@ -28,6 +29,10 @@ PY
   exit 0
 fi
 
+if [ ! -d "$SOURCE_APP" ] && [ -d "$LEGACY_SOURCE_APP" ]; then
+  SOURCE_APP="$LEGACY_SOURCE_APP"
+fi
+
 if [ ! -d "$SOURCE_APP" ]; then
   scripts/product/package-beta.sh
 fi
@@ -44,6 +49,7 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 rm -rf "$INSTALLED_APP"
+rm -rf "$INSTALL_DIR/IntentOSBeta.app"
 if command -v ditto >/dev/null 2>&1; then
   ditto "$SOURCE_APP" "$INSTALLED_APP"
 else

@@ -8,17 +8,29 @@ hidden human coordination.
 - Humans specify product direction, acceptance criteria, and judgment calls.
 - Codex updates specs, implementation, tests, docs, scripts, and follow-up fixes.
 - Review feedback should become either code, tests, docs, or harness rules.
+- Product feedback should become a harness rule whenever it is locally
+  observable.
 
 ## Standard Change Loop
 
 1. Read `AGENTS.md`, product docs, architecture docs, and the active plan.
 2. Validate the current repo state.
 3. Reproduce or specify the requested behavior.
-4. Implement the smallest complete slice.
-5. Run product and harness verification.
-6. Capture runtime evidence when the app has UI or service behavior.
-7. Update docs, quality notes, and the active plan.
-8. Prepare a PR when requested.
+4. Identify the harness layer that should catch regressions for the behavior.
+5. Implement the smallest complete slice.
+6. Update or name the relevant harness check.
+7. Run product and harness verification.
+8. Capture runtime evidence when the app has UI or service behavior.
+9. Update docs, quality notes, and the active plan.
+10. Prepare a PR when requested.
+
+## Harness-Driven Feedback
+
+Follow [HARNESS_DRIVEN_DEVELOPMENT.md](HARNESS_DRIVEN_DEVELOPMENT.md) for any
+manual product feedback. Feedback is not resolved by product code alone; the
+handoff must say which fixture, probe, lint, smoke, or evaluation case will fail
+if the regression returns. If the feedback cannot be automated yet, document the
+manual exception and the closest deterministic proxy.
 
 ## Review Loop
 
@@ -31,6 +43,7 @@ When working on a PR or review feedback:
 - Reply with the exact change made and verification run.
 - Re-run failing checks before handing off.
 - Convert repeated review themes into docs or harness checks.
+- Convert product feedback into harness checks before closing the feedback loop.
 
 ## Merge Criteria
 

@@ -103,7 +103,19 @@ def fetch(base: str, path: str) -> str:
 def validate_static_dom(html: str) -> dict[str, object]:
     root = parse_html(html)
     page_text = root.text()
-    required_text = ["IntentOS", "Activity", "Action Queue", "Capture Replay"]
+    required_text = [
+        "IntentOS",
+        "Activity",
+        "Next Steps",
+        "Today's Intent",
+        "Now",
+        "Trust",
+        "Tonight",
+        "Tonight's review",
+        "Reconnect IntentOS",
+        "Capture Replay",
+        "Today's shape",
+    ]
     for text in required_text:
         assert_true(text in page_text, f"missing UI text: {text}")
 
@@ -121,8 +133,25 @@ def validate_static_dom(html: str) -> dict[str, object]:
         "data-activity-source",
         "data-activity-bars",
         "data-capture-events",
+        "data-daily-loop",
+        "data-intent-form",
+        "data-intent-contract",
+        "data-service-notice",
+        "data-command-center",
+        "data-command-now-title",
+        "data-command-trust-title",
+        "data-command-tonight-title",
+        "data-signal-details",
+        "data-queue-details",
+        "data-evidence-details",
+        "data-review-form",
     ]:
         assert_true(elements_with(root, attr=attr), f"missing DOM binding: {attr}")
+    for href in ["#summary-title", "#decision-title", "#timeline-title", "#activity-title"]:
+        assert_true(
+            any(has_attr(element, "href", href) for element in elements_with(root, tag="a", attr="href")),
+            f"missing nav link: {href}",
+        )
 
     scripts = [element for element in elements_with(root, tag="script") if has_attr(element, "src", "./app.js")]
     styles = [element for element in elements_with(root, tag="link") if has_attr(element, "href", "./styles.css")]

@@ -24,6 +24,8 @@ when product, architecture, or workflow knowledge changes.
    app runtime behavior.
 10. Read [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md) before opening,
    reviewing, or merging changes.
+11. Read [docs/HARNESS_DRIVEN_DEVELOPMENT.md](docs/HARNESS_DRIVEN_DEVELOPMENT.md)
+    before acting on product feedback.
 
 ## Working Rules
 
@@ -43,6 +45,9 @@ when product, architecture, or workflow knowledge changes.
 - Treat missing harness capability as a product blocker. If Codex cannot run,
   inspect, verify, or debug a product change locally, add the missing harness
   support before relying on manual judgment.
+- Treat product feedback as harness input. Every feedback-driven change should
+  either name the existing harness check that catches the issue, add one, or
+  document why the feedback is intentionally manual for now.
 
 ## Product Build Loop
 
@@ -84,6 +89,8 @@ Follow [docs/agent-workflow.md](docs/agent-workflow.md):
 - Quality scorecard: [docs/QUALITY.md](docs/QUALITY.md)
 - Recommended next work: [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md)
 - Harness audit: [docs/HARNESS_AUDIT.md](docs/HARNESS_AUDIT.md)
+- Harness-driven development:
+  [docs/HARNESS_DRIVEN_DEVELOPMENT.md](docs/HARNESS_DRIVEN_DEVELOPMENT.md)
 - App runtime harness: [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md)
 - Agent operating model: [docs/OPERATING_MODEL.md](docs/OPERATING_MODEL.md)
 - Execution plans: [docs/plans/README.md](docs/plans/README.md)

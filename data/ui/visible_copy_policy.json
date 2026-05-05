@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "description": "Visible dashboard copy must stay product-facing and must not leak implementation or raw developer error language.",
+  "forbidden_phrases": [
+    "Sticky loop",
+    "Beta only",
+    "dogfood beta",
+    "Tracking contract",
+    "Local beta service",
+    "SQLite daily timeline",
+    "No rows",
+    "Check the local service",
+    "SQLite",
+    "developer message",
+    "fetch error"
+  ],
+  "raw_error_patterns": [
+    "\\bTypeError\\b",
+    "\\bReferenceError\\b",
+    "\\bTraceback\\b",
+    "\\bUnhandled\\b",
+    "\\bECONNREFUSED\\b",
+    "\\bFailed to fetch\\b",
+    "\\bfetch\\(\\)\\b",
+    "\\bSyntaxError\\b"
+  ]
+}

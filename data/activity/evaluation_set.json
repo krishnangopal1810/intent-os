@@ -184,6 +184,18 @@
   },
   {
     "source_app": "Google Chrome",
+    "surface": "cravebyleena.com",
+    "title": "Crave by Leena delivery pickup logistics",
+    "url": "https://cravebyleena.com/order/pickup",
+    "started_at": "2026-04-25T21:32:00Z",
+    "duration_seconds": 120,
+    "metadata": {
+      "domain": "cravebyleena.com"
+    },
+    "expected_label": "admin"
+  },
+  {
+    "source_app": "Google Chrome",
     "surface": "amazon.in",
     "title": "Instant Pot Duo 6QT 7-in-1 Electric Pressure Cooker",
     "url": "https://www.amazon.in/Instant-Pot/dp/example",

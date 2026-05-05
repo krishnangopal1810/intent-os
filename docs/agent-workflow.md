@@ -18,6 +18,12 @@ Before implementation, make sure [product/BRIEF.md](product/BRIEF.md) contains:
 If the user gives new product direction, update the brief or a product spec
 before coding.
 
+Product feedback must also be triaged through
+[HARNESS_DRIVEN_DEVELOPMENT.md](HARNESS_DRIVEN_DEVELOPMENT.md). Before treating
+a feedback-driven change as done, identify the existing harness check that would
+catch the regression, add a new one, or document why the feedback is
+intentionally manual for now.
+
 ## 2. Plan
 
 Create an execution plan for meaningful work:
@@ -29,6 +35,11 @@ scripts/harness/new-plan.sh short-slug
 The plan must define scope, acceptance criteria, verification, and a progress
 log. Keep the plan active until the work is implemented, verified, and handed
 off.
+
+For feedback-driven work, the plan acceptance criteria should name the harness
+layer being updated: rendered UI probe, visible-copy policy, classifier
+fixture, service smoke, runtime fixture, lint rule, or documented manual
+exception.
 
 For parallel work, create or use a package under `docs/plans/parallel/`. The
 package must include a shared tracker, one task file per agent, explicit
@@ -50,6 +61,10 @@ For new system boundaries or stack choices:
 Build the smallest complete vertical slice that satisfies the active plan.
 Prefer product behavior over scaffolding. Update tests, docs, and verification
 commands in the same change.
+
+When implementation responds to product feedback, update harness behavior in
+the same slice. A product fix without a deterministic check is incomplete unless
+the active plan records why the issue cannot be automated yet.
 
 ## 5. Verify
 
