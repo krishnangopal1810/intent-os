@@ -97,8 +97,25 @@ required_html = [
     "IntentOS",
     "data-ui-root",
     "Behavior reports",
-    "What to do with this",
-    "Action Queue",
+    "Recommended",
+    "Now",
+    "Trust",
+    "Tonight",
+    "data-command-center",
+    "data-command-now-title",
+    "data-command-trust-title",
+    "data-command-tonight-title",
+    "data-signal-details",
+    "data-queue-details",
+    "data-evidence-details",
+    "Next Block",
+    "Did the day match your plan?",
+    "data-coach-hero",
+    "data-weekly-details",
+    "Today's shape",
+    "Today's Intent",
+    "Tonight's review",
+    "Reconnect IntentOS",
     "Capture Replay",
 ]
 for text in required_html:
@@ -118,8 +135,25 @@ for token in [
     "live-capture-summary.json",
     "data-capture-source",
     "data-action-deck",
+    "data-coach-hero",
+    "data-weekly-details",
+    "data-weekly-patterns",
     "data-next-move-title",
     "data-brief-moments",
+    "data-daily-loop",
+    "data-intent-form",
+    "data-intent-contract",
+    "data-service-notice",
+    "data-review-form",
+    "/api/daily-loop",
+    "/api/daily-intent",
+    "/api/review-checkin",
+    "/api/weekly-patterns",
+    "renderCoachHero",
+    "weekStartDate",
+    "bindSectionNavigation",
+    "openDisclosureForTarget",
+    "scrollTargetIntoWorkspace",
 ]:
     if token not in app_js:
         raise AssertionError(f"missing app binding: {token}")
@@ -166,77 +200,10 @@ PY
 
 browser="$(find_browser || true)"
 if [ -n "$browser" ]; then
-  python3 - "$runtime_dir/site/index.html" <<'PY'
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-html = path.read_text(encoding="utf-8")
-probe = """
-    <script>
-      (function () {
-        function writeProbe() {
-          const root = document.querySelector("[data-ui-root]");
-          const body = document.body;
-          const clippedText = Array.from(document.querySelectorAll("body *"))
-            .filter((element) => {
-              const text = element.textContent.trim();
-              if (!text || element.children.length > 0) {
-                return false;
-              }
-              const style = window.getComputedStyle(element);
-              const clips = ["hidden", "clip"].includes(style.overflowX);
-              return clips && element.scrollWidth > element.clientWidth + 1;
-            });
-          const state = {
-            root_present: Boolean(root),
-            body_text_length: body.innerText.trim().length,
-            panel_count: document.querySelectorAll(".panel").length,
-            stat_count: document.querySelectorAll(".stat").length,
-            decision_count: document.querySelectorAll(".decision-card").length,
-            event_count: document.querySelectorAll("[data-capture-events] li").length,
-            next_move_text:
-              document.querySelector("[data-next-move-title]")?.textContent.trim() || "",
-            horizontal_overflow:
-              document.documentElement.scrollWidth >
-              document.documentElement.clientWidth + 1,
-            out_of_view_count: Array.from(document.querySelectorAll("body *"))
-              .filter((element) => {
-                const text = element.textContent.trim();
-                if (!text || element.offsetParent === null) {
-                  return false;
-                }
-                const rect = element.getBoundingClientRect();
-                return rect.left < -1 || rect.right > window.innerWidth + 1;
-              }).length,
-            clipped_text_count: clippedText.length,
-            status_text:
-              document.querySelector("[data-status]")?.textContent.trim() || "",
-          };
-          let node = document.getElementById("intentos-render-probe");
-          if (!node) {
-            node = document.createElement("script");
-            node.id = "intentos-render-probe";
-            node.type = "application/json";
-            document.body.appendChild(node);
-          }
-          node.textContent = JSON.stringify(state);
-        }
-        window.addEventListener("load", () => {
-          window.setTimeout(writeProbe, 600);
-          window.setTimeout(writeProbe, 1600);
-          window.setTimeout(writeProbe, 3200);
-          window.setTimeout(writeProbe, 4600);
-          window.setTimeout(writeProbe, 6200);
-          window.setTimeout(writeProbe, 7600);
-        });
-      })();
-    </script>
-"""
-if "intentos-render-probe" not in html:
-    html = html.replace("</body>", probe + "\n  </body>")
-path.write_text(html, encoding="utf-8")
-PY
+  python3 scripts/product/inject-ui-render-probe.py "$runtime_dir/site/index.html" \
+    --mode fixture \
+    --scenario fixture-default \
+    --scenario fixture-long-text
 
   render_screenshot="$artifact_dir/ui-render.png"
   render_dom="$artifact_dir/ui-render-dom.html"
@@ -248,6 +215,8 @@ PY
     "$log_dir" "$runtime_dir" <<'PY'
 import subprocess
 import shutil
+import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -296,13 +265,60 @@ def run_browser(
         url,
     ]
     with log_path.open("w", encoding="utf-8") as log:
-        stdout = log if stdout_path is None else subprocess.PIPE
+        stdout = log
+        if timeout_artifact is not None:
+            process = subprocess.Popen(
+                command,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            if wait_for_artifact(timeout_artifact, seconds=25):
+                stop_process(process)
+                return True
+            stop_process(process)
+            if not required:
+                log.write(f"\nvalidate-ui: optional browser {name} did not write artifact\n")
+                return False
+            raise SystemExit(f"browser {name} did not write {timeout_artifact}; see {log_path}")
+        if stdout_path is not None:
+            stdout_path.unlink(missing_ok=True)
+            with stdout_path.open("w", encoding="utf-8") as output:
+                process = subprocess.Popen(
+                    command,
+                    stdout=output,
+                    stderr=log,
+                    start_new_session=True,
+                    text=True,
+                )
+                if wait_for_stdout_marker(
+                    stdout_path,
+                    "intentos-render-probe",
+                    seconds=25,
+                    process=process,
+                ):
+                    stop_process(process)
+                    return True
+                if process.poll() is None:
+                    stop_process(process)
+                    if not required:
+                        log.write(f"\nvalidate-ui: optional browser {name} did not write probe marker\n")
+                        return False
+                    raise SystemExit(f"browser {name} did not write probe marker; see {log_path}")
+                if process.returncode != 0:
+                    if not required:
+                        log.write(f"\nvalidate-ui: optional browser {name} failed\n")
+                        return False
+                    raise SystemExit(f"browser {name} failed; see {log_path}")
+                return wait_for_artifact(stdout_path, seconds=1)
         try:
             result = subprocess.run(
                 command,
                 check=True,
                 stdout=stdout,
                 stderr=subprocess.STDOUT,
+                start_new_session=True,
                 timeout=25,
                 text=True,
             )
@@ -331,6 +347,23 @@ def run_browser(
     return True
 
 
+def stop_process(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait(timeout=2)
+
+
 def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -338,6 +371,23 @@ def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
             return True
         time.sleep(0.1)
     return path.is_file() and path.stat().st_size > 0
+
+
+def wait_for_stdout_marker(
+    path: Path,
+    marker: str,
+    *,
+    seconds: float = 5.0,
+    process: subprocess.Popen | None = None,
+) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore"):
+            return True
+        if process is not None and process.poll() is not None:
+            break
+        time.sleep(0.1)
+    return path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore")
 
 
 run_browser("screenshot", [f"--screenshot={screenshot}"], timeout_artifact=screenshot)
@@ -357,6 +407,8 @@ PY
     "$log_dir" "$runtime_dir" <<'PY'
 import subprocess
 import shutil
+import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -405,13 +457,60 @@ def run_browser(
         url,
     ]
     with log_path.open("w", encoding="utf-8") as log:
-        stdout = log if stdout_path is None else subprocess.PIPE
+        stdout = log
+        if timeout_artifact is not None:
+            process = subprocess.Popen(
+                command,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            if wait_for_artifact(timeout_artifact, seconds=25):
+                stop_process(process)
+                return True
+            stop_process(process)
+            if not required:
+                log.write(f"\nvalidate-ui: optional browser {name} did not write artifact\n")
+                return False
+            raise SystemExit(f"browser {name} did not write {timeout_artifact}; see {log_path}")
+        if stdout_path is not None:
+            stdout_path.unlink(missing_ok=True)
+            with stdout_path.open("w", encoding="utf-8") as output:
+                process = subprocess.Popen(
+                    command,
+                    stdout=output,
+                    stderr=log,
+                    start_new_session=True,
+                    text=True,
+                )
+                if wait_for_stdout_marker(
+                    stdout_path,
+                    "intentos-render-probe",
+                    seconds=25,
+                    process=process,
+                ):
+                    stop_process(process)
+                    return True
+                if process.poll() is None:
+                    stop_process(process)
+                    if not required:
+                        log.write(f"\nvalidate-ui: optional browser {name} did not write probe marker\n")
+                        return False
+                    raise SystemExit(f"browser {name} did not write probe marker; see {log_path}")
+                if process.returncode != 0:
+                    if not required:
+                        log.write(f"\nvalidate-ui: optional browser {name} failed\n")
+                        return False
+                    raise SystemExit(f"browser {name} failed; see {log_path}")
+                return wait_for_artifact(stdout_path, seconds=1)
         try:
             result = subprocess.run(
                 command,
                 check=True,
                 stdout=stdout,
                 stderr=subprocess.STDOUT,
+                start_new_session=True,
                 timeout=25,
                 text=True,
             )
@@ -440,6 +539,23 @@ def run_browser(
     return True
 
 
+def stop_process(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait(timeout=2)
+
+
 def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -447,6 +563,23 @@ def wait_for_artifact(path: Path, seconds: float = 5.0) -> bool:
             return True
         time.sleep(0.1)
     return path.is_file() and path.stat().st_size > 0
+
+
+def wait_for_stdout_marker(
+    path: Path,
+    marker: str,
+    *,
+    seconds: float = 5.0,
+    process: subprocess.Popen | None = None,
+) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore"):
+            return True
+        if process is not None and process.poll() is not None:
+            break
+        time.sleep(0.1)
+    return path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore")
 
 
 run_browser("screenshot", [f"--screenshot={screenshot}"], timeout_artifact=screenshot)
@@ -457,6 +590,10 @@ PY
   python3 scripts/product/render-ui-check.py \
     "$mobile_screenshot" "$mobile_dom" "$mobile_json" "$mobile_text"
 else
+  if [ "${INTENTOS_UI_REQUIRE_BROWSER:-0}" = "1" ]; then
+    echo "ui-render-validation: Chrome or Chromium is required for rendered UI checks" >&2
+    exit 1
+  fi
   {
     echo "ui-render-validation: skipped"
     echo "reason=Chrome or Chromium not found; set INTENTOS_BROWSER_BIN for rendered UI checks"

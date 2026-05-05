@@ -20,16 +20,23 @@ EXPECTED_LAYERS = {
     "intentos/activity_cli.py",
     "intentos/activity_evaluate.py",
     "intentos/beta/__init__.py",
+    "intentos/beta/daily_loop.py",
+    "intentos/beta/daily_state.py",
     "intentos/beta/db_health.py",
     "intentos/beta/extension.py",
+    "intentos/beta/focus_rescue.py",
     "intentos/beta/keys.py",
+    "intentos/beta/loop_coach.py",
     "intentos/beta/native_recorder.py",
     "intentos/beta/permissions.py",
     "intentos/beta/recorder.py",
     "intentos/beta/review.py",
+    "intentos/beta/schema.py",
     "intentos/beta/service.py",
+    "intentos/beta/service_helpers.py",
     "intentos/beta/state.py",
     "intentos/beta/store.py",
+    "intentos/beta/weekly_patterns.py",
     "intentos/beta_cli.py",
     "intentos/capture/__init__.py",
     "intentos/capture/browser.py",
@@ -47,6 +54,7 @@ EXPECTED_LAYERS = {
     "intentos/cli.py",
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
+    "tests/test_beta_daily_loop.py",
     "tests/test_beta_extension.py",
     "tests/test_beta_native_recorder.py",
     "tests/test_beta_permissions.py",
@@ -61,6 +69,7 @@ EXPECTED_LAYERS = {
     "tests/test_capture_replay.py",
     "tests/test_capture_session.py",
     "tests/test_harness_completion.py",
+    "tests/test_render_ui_check.py",
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
@@ -76,13 +85,27 @@ ALLOWED_IMPORTS = {
     "intentos/activity_cli.py": {"intentos.activity", "intentos.reporting"},
     "intentos/activity_evaluate.py": {"intentos.activity", "intentos.classifier"},
     "intentos/beta/__init__.py": set(),
+    "intentos/beta/daily_loop.py": {
+        "intentos.beta",
+        "intentos.youtube",
+    },
+    "intentos/beta/daily_state.py": {
+        "intentos.beta",
+    },
     "intentos/beta/db_health.py": set(),
     "intentos/beta/extension.py": {
         "intentos.activity",
         "intentos.capture.browser",
         "intentos.capture.privacy",
     },
+    "intentos/beta/focus_rescue.py": {
+        "intentos.beta",
+        "intentos.youtube",
+    },
     "intentos/beta/keys.py": set(),
+    "intentos/beta/loop_coach.py": {
+        "intentos.youtube",
+    },
     "intentos/beta/native_recorder.py": {
         "intentos.activity",
         "intentos.beta",
@@ -106,21 +129,29 @@ ALLOWED_IMPORTS = {
         "intentos.reporting",
         "intentos.youtube",
     },
+    "intentos/beta/schema.py": set(),
     "intentos/beta/service.py": {
         "intentos.beta",
         "intentos.beta.extension",
+        "intentos.beta.service_helpers",
         "intentos.capture.privacy",
     },
+    "intentos/beta/service_helpers.py": set(),
     "intentos/beta/state.py": {
         "intentos.beta",
     },
     "intentos/beta/store.py": {
         "intentos.beta.db_health",
         "intentos.beta.keys",
+        "intentos.beta.schema",
         "intentos.beta",
         "intentos.activity",
         "intentos.classifier",
         "intentos.reporting",
+    },
+    "intentos/beta/weekly_patterns.py": {
+        "intentos.beta",
+        "intentos.youtube",
     },
     "intentos/beta_cli.py": {
         "intentos.beta",
@@ -176,6 +207,10 @@ ALLOWED_IMPORTS = {
         "intentos.classifier",
         "intentos.reporting",
     },
+    "tests/test_beta_daily_loop.py": {
+        "intentos.activity",
+        "intentos.beta",
+    },
     "tests/test_beta_extension.py": {
         "intentos.beta.extension",
         "intentos.capture.privacy",
@@ -230,6 +265,7 @@ ALLOWED_IMPORTS = {
         "intentos.activity",
         "intentos.beta",
     },
+    "tests/test_render_ui_check.py": set(),
     "tests/test_youtube_mvp.py": {"intentos.youtube"},
 }
 
@@ -525,6 +561,43 @@ def check_evaluation_set(failures: list[str]) -> None:
         },
         minimum=10,
     )
+    check_feedback_regression_examples(failures)
+
+
+def check_feedback_regression_examples(failures: list[str]) -> None:
+    activity_path = ROOT / "data/activity/evaluation_set.json"
+    taxonomy_path = ROOT / "docs/product/TAXONOMY.md"
+    try:
+        items = json.loads(activity_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        failures.append(f"cannot read feedback regression activity fixtures: {exc}")
+        return
+    haystacks = [json.dumps(item, sort_keys=True).lower() for item in items]
+    required_examples = {
+        "developer docs": ["bazel.build"],
+        "local IntentOS review": ["127.0.0.1", "intentos"],
+        "GitHub repositories": ["github.com", "intent-os"],
+        "sports videos": ["youtube.com", "asia cup"],
+        "product research": ["linkedin.com/in/example-founder"],
+        "personal logistics": ["cravebyleena.com"],
+        "shopping": ["amazon.in", "instant pot"],
+        "social feed/status": ["x.com", "/status/"],
+    }
+    for label, needles in required_examples.items():
+        if not any(all(needle in haystack for needle in needles) for haystack in haystacks):
+            failures.append(
+                "data/activity/evaluation_set.json must keep feedback-derived "
+                f"{label} coverage"
+            )
+
+    text = taxonomy_path.read_text(encoding="utf-8")
+    for phrase in [
+        "Feedback Regression Checklist",
+        "make feedback-fixture-candidates",
+        "labeled activity fixture",
+    ]:
+        if phrase not in text:
+            failures.append(f"docs/product/TAXONOMY.md must mention {phrase!r}")
 
 
 def check_capture_adapter_fixtures(failures: list[str]) -> None:
@@ -632,10 +705,14 @@ def check_ui_harness(failures: list[str]) -> None:
         "web/app.js",
         "scripts/product/start-ui.sh",
         "scripts/product/validate-ui.sh",
+        "scripts/product/inject-ui-render-probe.py",
+        "scripts/product/ui-render-probe.js",
+        "scripts/product/render-ui-browser.py",
         "scripts/product/render-ui-check.py",
         "scripts/product/update-ui-screenshot.sh",
         "scripts/product/check-ui-screenshot.sh",
         "scripts/product/ui-screenshot-manifest.py",
+        "data/ui/visible_copy_policy.json",
         "docs/assets/screenshots/intent-os-ui.png",
         "docs/assets/screenshots/intent-os-ui.json",
         "scripts/harness/runtime-log.py",
@@ -655,9 +732,18 @@ def check_ui_harness(failures: list[str]) -> None:
             "ui-render-validation.txt",
             "ui-render-mobile-validation.txt",
             "render-ui-check.py",
+            "inject-ui-render-probe.py",
+            "fixture-long-text",
             "check-ui-screenshot.sh",
             "data-action-deck",
             "data-next-move-title",
+            "data-coach-hero",
+            "data-weekly-details",
+            "data-daily-loop",
+            "data-intent-form",
+            "data-intent-contract",
+            "data-service-notice",
+            "data-review-form",
             "activity-summary.json",
             "capture-summary.json",
             "session-capture-summary.json",
@@ -666,6 +752,45 @@ def check_ui_harness(failures: list[str]) -> None:
         ]:
             if phrase not in text:
                 failures.append(f"scripts/product/validate-ui.sh must mention {phrase}")
+
+    render_probe = ROOT / "scripts/product/ui-render-probe.js"
+    if render_probe.is_file():
+        text = render_probe.read_text(encoding="utf-8")
+        for phrase in [
+            "default_density",
+            "copy_policy",
+            "first_viewport",
+            "coach_hero_present",
+            "weekly_details_present",
+            "intent_preview",
+            "service_state",
+            "visible_decision_cards",
+            "cut_off_text_count",
+            "evidence_open_after_activity",
+            "workflowProbe",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/product/ui-render-probe.js must emit UX probe {phrase!r}")
+
+    render_checker = ROOT / "scripts/product/render-ui-check.py"
+    if render_checker.is_file():
+        text = render_checker.read_text(encoding="utf-8")
+        for phrase in [
+            "default_density",
+            "schema_version",
+            "copy_policy",
+            "first_viewport",
+            "coach_hero_present",
+            "weekly_details_present",
+            "intent_preview",
+            "service_state",
+            "visible_decision_cards",
+            "cut_off_text_count",
+            "evidence_open_after_activity",
+            "visible_word_count",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/product/render-ui-check.py must enforce UX probe {phrase!r}")
 
     makefile = ROOT / "Makefile"
     if makefile.is_file():
@@ -778,7 +903,16 @@ def check_beta_harness_contract(failures: list[str]) -> None:
     validate_beta = ROOT / "scripts/product/validate-beta.sh"
     if validate_beta.is_file():
         text = validate_beta.read_text(encoding="utf-8")
-        for phrase in ["decision_count", "data-next-move-title"]:
+        for phrase in [
+            "inject-ui-render-probe.py",
+            "--workflow",
+            "render-ui-browser.py",
+            "beta-ready",
+            "beta-service-stale",
+            "beta-empty",
+            "beta-intent-missing",
+            "beta-setup-needed",
+        ]:
             if phrase not in text:
                 failures.append(
                     f"scripts/product/validate-beta.sh must include beta UI UX probe {phrase!r}"
@@ -787,9 +921,35 @@ def check_beta_harness_contract(failures: list[str]) -> None:
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
         text = app_js.read_text(encoding="utf-8")
-        for phrase in ["beta-config.json", "/api/daily-review", "/api/corrections", "/api/permissions/check"]:
+        for phrase in [
+            "beta-config.json",
+            "/api/daily-review",
+            "/api/daily-loop",
+            "/api/daily-intent",
+            "/api/review-checkin",
+            "/api/weekly-patterns",
+            "/api/corrections",
+            "/api/permissions/check",
+            "bindSectionNavigation",
+            "openDisclosureForTarget",
+            "scrollTargetIntoWorkspace",
+            "renderCommandCenter",
+            "renderCoachHero",
+            "weekStartDate",
+        ]:
             if phrase not in text:
                 failures.append(f"web/app.js must support beta service mode phrase {phrase!r}")
+    styles = ROOT / "web/styles.css"
+    if styles.is_file():
+        text = styles.read_text(encoding="utf-8")
+        for phrase in [
+            ".workspace",
+            "overflow-y: auto",
+            "scroll-padding-top",
+            "grid-template-rows: auto minmax(0, 1fr)",
+        ]:
+            if phrase not in text:
+                failures.append(f"web/styles.css must keep app-style section navigation phrase {phrase!r}")
     app_html = ROOT / "web/index.html"
     if app_html.is_file():
         html = app_html.read_text(encoding="utf-8")
@@ -797,6 +957,43 @@ def check_beta_harness_contract(failures: list[str]) -> None:
             failures.append("web/index.html must expose beta correction controls")
         if "data-onboarding" not in html:
             failures.append("web/index.html must expose beta onboarding controls")
+        if "data-daily-loop" not in html:
+            failures.append("web/index.html must expose the sticky daily loop")
+        if "data-intent-contract" not in html:
+            failures.append("web/index.html must expose the intent tracking contract")
+        if "data-service-notice" not in html:
+            failures.append("web/index.html must expose the user-facing service notice")
+        if "data-command-center" not in html:
+            failures.append("web/index.html must expose the review command center")
+        if "data-coach-hero" not in html:
+            failures.append("web/index.html must expose the plan-vs-actual coach hero")
+        if "data-weekly-details" not in html or "data-weekly-patterns" not in html:
+            failures.append("web/index.html must expose weekly pattern disclosure bindings")
+        for phrase in ["data-command-now-title", "data-command-trust-title", "data-command-tonight-title"]:
+            if phrase not in html:
+                failures.append(f"web/index.html must expose command center binding {phrase!r}")
+        for phrase in ["data-signal-details", "data-queue-details", "data-evidence-details"]:
+            if phrase not in html:
+                failures.append(f"web/index.html must expose progressive detail binding {phrase!r}")
+        for phrase in [
+            "Sticky loop",
+            "Beta only",
+            "dogfood beta",
+            "Tracking contract",
+            "Local beta setup",
+        ]:
+            if phrase in html:
+                failures.append(f"web/index.html must not expose internal UI phrase {phrase!r}")
+    if app_js.is_file():
+        text = app_js.read_text(encoding="utf-8")
+        for phrase in [
+            "Start the dogfood beta",
+            "Local beta service",
+            "SQLite daily timeline",
+            "Live beta configuration",
+        ]:
+            if phrase in text:
+                failures.append(f"web/app.js must not expose internal UI phrase {phrase!r}")
 
     docs = {
         "docs/APP_RUNTIME.md": ["make beta-dev", "beta-validation.json", "make dogfood-smoke"],

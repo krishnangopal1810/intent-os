@@ -160,8 +160,8 @@ def run_command(command) -> subprocess.CompletedProcess[str]:
 def permission_help(browser_name: str, detail: str) -> str:
     message = (
         f"{browser_name} active tab capture failed. Grant Automation permission "
-        "from the terminal or Codex host app to the browser, then rerun "
-        "make observe-live."
+        "from IntentOS to the browser, then run the browser detail check again. "
+        "Browser detail is optional for first value."
     )
     if detail:
         return f"{message} Browser said: {detail}"

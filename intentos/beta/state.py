@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from intentos.beta import store
+from intentos.beta import setup_flow, store
 
 
 ONBOARDING_KEYS = {
@@ -47,10 +47,18 @@ def status(conn: sqlite3.Connection, db_path: str | None = None) -> dict[str, An
             "service_log": store.runtime_value(conn, "service_log"),
             "native_recorder_log": native.get("log"),
         },
+        "activation": activation_status(conn),
+        "capture_preview": setup_flow.capture_preview(conn),
+        "app_identity": setup_flow.app_identity(),
     }
     payload["permissions"] = permission_summary(conn, payload)
     payload["readiness"] = readiness_state(onboarding(conn), payload["permissions"])
+    payload["setup"] = setup_flow.setup_summary(conn, onboarding(conn), payload)
     return payload
+
+
+def activation_status(conn: sqlite3.Connection) -> dict[str, Any]:
+    return setup_flow.activation_status(conn)
 
 
 def onboarding(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -72,11 +80,20 @@ def onboarding(conn: sqlite3.Connection) -> dict[str, Any]:
 def update_onboarding(conn: sqlite3.Connection, action: str, minutes: int = 240) -> dict[str, Any]:
     now = store.utc_now()
     if action == "complete":
-        store.set_setting(conn, ONBOARDING_KEYS["privacy_acknowledged_at"], now)
+        status_payload = status(conn)
+        enriched = setup_flow.enrich_onboarding(conn, onboarding(conn), status_payload)
+        if not enriched["can_complete"]:
+            missing = ", ".join(enriched["completion_blockers"])
+            raise ValueError(f"onboarding cannot complete before {missing}")
         store.set_setting(conn, ONBOARDING_KEYS["completed_at"], now)
         store.set_setting(conn, ONBOARDING_KEYS["dismissed_until"], "")
     elif action == "acknowledge_privacy":
         store.set_setting(conn, ONBOARDING_KEYS["privacy_acknowledged_at"], now)
+        setup_flow.mark_milestone(conn, "privacy_acknowledged", now)
+    elif action == "skip_browser_detail":
+        store.set_setting(conn, "browser_detail_state", "skipped")
+    elif action == "enable_browser_detail":
+        store.set_setting(conn, "browser_detail_state", "enabled")
     elif action == "dismiss":
         if minutes <= 0:
             raise ValueError("minutes must be positive")
@@ -85,6 +102,7 @@ def update_onboarding(conn: sqlite3.Connection, action: str, minutes: int = 240)
     elif action == "reset":
         for key in ONBOARDING_KEYS.values():
             store.set_setting(conn, key, "")
+        setup_flow.reset_setup(conn)
     else:
         raise ValueError("unknown onboarding action")
     conn.commit()
@@ -246,7 +264,14 @@ def chrome_extension_detail(extension: dict[str, Any]) -> str:
 
 
 def readiness_state(onboarding_state: dict[str, Any], permissions: dict[str, Any]) -> dict[str, str]:
-    states = [item["state"] for item in permissions.values()]
+    required = [
+        permissions["local_service"],
+        permissions["database"],
+        permissions["accessibility"],
+        permissions["native_recorder"],
+        permissions["capture"],
+    ]
+    states = [item["state"] for item in required]
     if "blocked" in states or "needs_action" in states:
         state_name = "setup_needed"
     elif onboarding_state["completed"]:

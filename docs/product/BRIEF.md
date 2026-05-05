@@ -26,8 +26,13 @@ background recorder as the default automated source, accepts optional bounded
 Chrome tab metadata through a localhost extension bridge, serves daily review
 APIs, lets users correct labels locally, guides first-run permissions without
 blocking the dashboard, and can be launched through a native macOS menu bar
-wrapper. The daily review UI should turn evidence into a verdict, decision
-cards, and a next move, so users see what to repeat, contain, or correct.
+wrapper. The daily review UI now leads with a plan-vs-actual coach loop: the
+user sets one focus and one thing to avoid, IntentOS renders the deterministic
+signals it will match, compares the plan with captured behavior, recommends one
+next block, surfaces a focus-rescue state when strict avoid evidence crosses
+five minutes, records local rescue choices, rewards corrections as accuracy
+improvements, and keeps weekly patterns collapsed behind progressive
+disclosure.
 Manual imports remain fixture/parser-only; beta users should not have to export
 data to see value.
 
@@ -39,6 +44,14 @@ used, but what they were doing and why.
 
 It is not a time tracker. It is a behavior intelligence layer for digital life.
 
+The demand wedge is sharper than behavior analytics: IntentOS must help the
+user protect a named high-value commitment before the day slips away. People do
+not need another dashboard. They may want a private system that notices when
+the thing they promised themselves is losing to the avoid pattern they named
+that morning, gives them a small rescue choice while recovery is still
+possible, and produces an evening receipt that is specific enough to change the
+next day.
+
 ## Target User
 
 - Engineers
@@ -48,6 +61,11 @@ It is not a time tracker. It is a behavior intelligence layer for digital life.
 
 Target users have high opportunity cost, already reflect on their behavior, and
 are willing to try tools that make uncomfortable truths visible.
+
+The priority beta user is narrower: a Mac-based builder with one valuable daily
+output commitment, repeated digital drift, and enough agency to name both the
+focus to protect and the surface to avoid. If that user would not be upset after
+losing IntentOS for a week, the product is still too optional.
 
 ## Problem
 
@@ -64,10 +82,18 @@ The core gap is that current tools do not reliably differentiate:
 - Deep work vs shallow work
 - Intentional vs unconscious behavior
 
+The urgent pain is not lack of information. Many target users already know they
+waste time. The painful moment is realizing too late that the important thing
+was never protected. A must-have IntentOS loop should make that loss visible
+early enough to rescue, not merely explain it at night.
+
 ## Product Promise
 
 IntentOS moves from activity tracking to intent inference. It transforms raw
 digital activity into semantic insights about attention, intent, and behavior.
+
+The first must-have promise is: "Tell me when my named focus is losing to the
+avoid pattern I chose, while I can still recover the block."
 
 ## How It Works
 
@@ -80,6 +106,9 @@ digital activity into semantic insights about attention, intent, and behavior.
    patterns, and time leakage.
 4. Insight engine: the product outputs daily narratives, "you thought vs
    reality" comparisons, and behavioral anomalies.
+5. Focus rescue: the beta turns the daily intent contract into a local in-day
+   rescue state, then records whether the user recovered, continued
+   intentionally, or corrected the evidence.
 
 ## Implemented Slices
 
@@ -117,12 +146,20 @@ The current beta target is a trusted internal macOS dogfood build:
   URL/title fallback
 - optional Chrome bridge for richer URL/title/domain/tab metadata
 - service-backed daily review UI with capture health, intent mix, merged
-  timeline, daily verdict, next move, decision cards, deep-work highlights,
-  reactive surfaces, low-confidence segments, and local correction controls
+  timeline, plan-vs-actual coach hero, focus rescue state, next block, daily
+  intent contract, weekly pattern disclosure, reactive surfaces,
+  low-confidence segments, and local correction controls
+- daily intent and evening review loop with deterministic intent-contract
+  signals, plan-vs-actual receipts, correction reward, low-confidence count,
+  and next adjustment handoff
+- focus rescue action persistence for shown, return-to-focus,
+  continue-intentionally, pause-capture, and corrected-evidence choices
 - pause/resume and delete-local-data controls
-- first-run local-only onboarding plus target-specific Accessibility, browser
-  Automation, native recorder, optional Chrome bridge, capture, and database
-  health guidance
+- guided first-run local-only onboarding with Privacy, App access, Capture
+  check, Daily focus, and First block steps; Accessibility is required for
+  first value, while browser detail and the Chrome bridge are optional
+- redacted setup report, capture preview, activation milestones, and stable
+  trusted app identity surfaced through beta status
 - local Swift menu bar wrapper that launches/stops the beta harness
 - real dogfood smoke evidence that observes live local capture without seeding
   fake rows or deleting user data
@@ -134,6 +171,7 @@ make beta-dev
 make beta-status
 make validate-beta
 make package-beta
+make package-onboarding-beta
 make install-beta-app
 make package-extension
 ```
@@ -242,11 +280,13 @@ The detailed MVP spec is
 
 ## Key Risks
 
-1. Insight without action may cause churn.
+1. Insight without timely rescue may cause churn.
 2. Classification accuracy must be high enough to feel trustworthy.
 3. Privacy concerns require on-device design and clear data handling.
 4. The product can degrade into "just another productivity app" if it only
    summarizes app usage.
+5. A broad audience can make the product feel optional; the beta must prove a
+   narrow group wants the focus-rescue loop badly.
 
 ## Vision
 
@@ -255,7 +295,10 @@ Phase 1: Understanding. Provide accurate breakdowns of how time is spent.
 Phase 2: Feedback. Detect misalignment, such as "You planned deep work, but
 spent 60% in shallow loops."
 
-Phase 3: Execution. Take agentic actions such as blocking distractions,
+Phase 3: Rescue. Surface timely, local recovery choices when the user's named
+focus is losing to the avoid pattern they chose.
+
+Phase 4: Execution. Take agentic actions such as blocking distractions,
 scheduling focus blocks, and automating workflows.
 
 ## Long-Term Direction
@@ -271,10 +314,12 @@ understands intent, optimizes time, and executes actions on behalf of the user.
 
 ## Open Questions
 
-- Which automated source should follow the background timeline first: browser
+- What in-day rescue moment makes the priority beta user say they would be
+  upset to lose the app?
+- Which automated source most improves that rescue moment first: browser
   extension metadata, calendar/planned-intent context, Accessibility excerpts,
   or IDE/Git/terminal context?
 - How should labeled evaluation fixtures be expanded with real personal
   examples?
 - What local model should eventually replace or augment deterministic rules?
-- What action loop follows the first insight?
+- What action loop follows the first timely rescue?

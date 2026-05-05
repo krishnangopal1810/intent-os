@@ -6,9 +6,9 @@
   <key>CFBundleExecutable</key>
   <string>IntentOSBeta</string>
   <key>CFBundleIdentifier</key>
-  <string>local.intentos.beta</string>
+  <string>local.intentos.trusted</string>
   <key>CFBundleName</key>
-  <string>IntentOS Beta</string>
+  <string>IntentOS</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

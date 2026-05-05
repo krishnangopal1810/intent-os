@@ -5,6 +5,87 @@ at a time into an execution plan under `docs/plans/active/`.
 
 ## Recently Completed Slices
 
+Must-have focus rescue loop.
+
+Goal: make the dogfood beta protect one named high-value focus from one named
+avoid pattern before the day is lost. The dashboard and menu bar now surface a
+local rescue state when strict avoid-pattern evidence crosses five minutes.
+
+Why this mattered:
+
+- The product needed a painkiller loop, not another passive activity dashboard.
+- Rescue is triggered from the user's own focus and avoid contract, so the
+  product moment is personal and testable.
+- Continue, return, pause, and correction choices preserve agency without
+  adding notifications, blocking, cloud inference, or automation.
+
+Completed acceptance criteria:
+
+- `/api/daily-loop` exposes `focus_rescue` with state, reason, threshold,
+  protected focus time, avoid time, primary evidence, receipts, latest action,
+  and available choices.
+- `POST /api/focus-rescue-action` records shown, return-to-focus,
+  continue-intentionally, pause-capture, and corrected-evidence actions.
+- SQLite retention and delete-local-data clear focus rescue actions with other
+  local user state.
+- The dashboard makes focus rescue visible in the first coach moment on desktop
+  and mobile, with compact local action buttons.
+- The menu bar prioritizes Recovery Available, Avoid Leaking, Focus Protected,
+  and Need Evidence after pause/setup/capture health.
+- `make validate-beta`, `make validate-ui`, screenshot checks, and unit tests
+  cover rescue API payloads, action persistence, rendered UI, and menu labels.
+
+Must-have product loop.
+
+Goal: make the dogfood beta feel like a daily intent coach instead of an
+activity dashboard. The first screen now answers: what the user planned to
+protect, what they meant to avoid, what happened, what IntentOS learned, and
+what to do in the next block.
+
+Why this mattered:
+
+- The default product moment should create accountability, not ask the user to
+  interpret analytics.
+- Natural-language focus and avoid inputs now become visible deterministic
+  signals: app names, domains, titles, URLs, and labels.
+- Correction reward and weekly patterns reinforce accuracy improvement without
+  streaks, scores, blocking, or notifications.
+
+Completed acceptance criteria:
+
+- `/api/daily-loop` exposes `intent_contract`, `next_block`, and
+  `correction_reward` alongside plan-vs-actual receipts.
+- `/api/weekly-patterns` exposes three local weekly pattern cards.
+- The dashboard leads with the plan-vs-actual coach hero, one next block,
+  visible intent contract, and collapsed evidence/weekly detail.
+- The menu bar exposes intent, evening review, next block, weekly patterns,
+  pause/resume, diagnostics, and product status labels such as Review Ready,
+  Focus Holding, Avoid Leaking, and Needs Correction.
+- `make validate-beta` and `make validate-ui` enforce the new UI bindings,
+  density budget, friendly empty states, visible-copy policy, and API payloads.
+
+Sticky daily loop.
+
+Goal: make the dogfood beta worth returning to by asking the user to set one
+focus and one thing to avoid, then complete an evening review that compares
+intent against captured behavior and carries an adjustment forward.
+
+Why this mattered:
+
+- The product should not rely on users voluntarily inspecting a dashboard.
+- Intent gives the daily review a concrete plan-vs-actual frame.
+- Evening review and correction counts reinforce that the product gets sharper
+  with use.
+
+Completed acceptance criteria:
+
+- Local beta SQLite stores daily intents and review check-ins with retention.
+- `/api/daily-loop`, `/api/daily-intent`, and `/api/review-checkin` are
+  available on the local service.
+- The dashboard exposes Today's Intent above the Action Queue.
+- The menu bar can show Intent Due and Review Due without OS notifications.
+- `make validate-beta`, `make validate-ui`, and `make verify` cover the loop.
+
 Automated background timeline.
 
 Goal: make the existing live sampler feel like a user-first timeline: starting
@@ -108,15 +189,17 @@ What is ready:
 - Native macOS metadata capture is the primary beta source.
 - Service-backed daily review, corrections, pause/resume, permission guidance,
   delete-local-data, and diagnostics are wired.
-- Local menu bar packaging and install/open smoke evidence exist.
+- Local menu bar packaging, bundled trusted-tester artifact packaging, guided
+  first-run setup, capture preview, redacted setup report, and install/open
+  smoke evidence exist.
 - Deterministic verification, cleanup audit, beta validation, UI render checks,
   and screenshot freshness gates pass locally.
 
 Testing boundary:
 
-- Send only to trusted Mac users who are comfortable running a source beta,
-  granting Accessibility and browser Automation permissions, and sharing
-  diagnostics if setup fails.
+- Send only to trusted Mac users who are comfortable running a local Mac beta,
+  granting Accessibility for app/window metadata, and sharing the redacted setup
+  report if setup fails. Browser detail is optional after first value.
 - Do not present it as a polished installer, notarized app, or public beta.
 - Chrome bridge setup is optional for the first pass; native recorder capture
   should show value without it.
@@ -141,28 +224,43 @@ Current evidence:
   machine with native recorder events and no fake bridge. Rows increased from
   3292 to 3348, pause held row count steady, and Chrome bridge absence was
   recorded only as a warning.
+- 2026-05-03: trusted source beta handoff was added at
+  [launch/trusted-source-beta.md](launch/trusted-source-beta.md), linked from
+  the README and docs index, and includes setup, permissions, privacy,
+  diagnostics, stop/delete, troubleshooting, and feedback template.
+- 2026-05-03: fresh launch gate passed `make cleanup-check`, `make
+  validate-ui`, `make validate-beta`, `make verify`, `make package-beta`,
+  `make install-beta-app`, `make package-extension`, `make beta-status`, `make
+  diagnose-json`, and `make dogfood-smoke`.
+- 2026-05-03: fresh `make dogfood-smoke` passed for 30 minutes with rows
+  increasing from 6032 to 6119, native recorder `running`, pause privacy
+  passing, and Chrome bridge absence recorded only as a warning.
+- 2026-05-03: `make chrome-bridge-smoke` was blocked because the installed
+  Chrome bridge did not reach `connected` or `posting_events` before timeout;
+  native recorder stayed `running` and rows increased from 6124 to 6159 during
+  the blocked smoke.
 
 ## Recommended Next Slice
 
-Trusted friend beta handoff plus installed Chrome bridge smoke.
+Trusted tester demand validation.
 
-Goal: send the source beta to a small trusted Mac tester group, collect setup
-and classification feedback, and run a second smoke with the Chrome bridge
-installed so bridge health moves from `never_connected` to `connected` or
-`posting_events`.
+Goal: put the focus-rescue beta in front of a small trusted Mac cohort and
+measure whether the protected-focus loop is valuable enough to miss. Chrome
+bridge recovery remains useful only when a tester's real browser-heavy workflow
+needs richer evidence than the native recorder provides.
 
 Acceptance criteria:
 
-- At least two testers can launch the source beta through the menu bar app or
-  `make beta-dev`, grant required local permissions, and see current-day
-  activity in the service-backed dashboard.
-- Permission-check output is understandable enough that testers can recover
-  from missing Accessibility, Automation, native recorder, or Chrome bridge
-  setup without chat-only instructions.
-- A second smoke with the Chrome extension installed verifies bridge connected
-  or posting-events state while native recorder remains the primary path.
-- Feedback that changes product assumptions is recorded in docs or fixtures,
-  not left only in chat.
+- At least two testers launch the source beta, set one focus and one avoid
+  target, and see a focus-rescue state from current-day local evidence.
+- Each tester answers: "Would you be upset if IntentOS stopped protecting this
+  focus next week?"
+- At least one feedback item becomes a fixture, harness check, quality note, or
+  explicit product assumption.
+- Any Chrome bridge repair work is tied to a tester workflow where native
+  recorder metadata is insufficient for focus rescue.
+- `make beta-status`, `make diagnose-json`, and redacted feedback fixtures are
+  enough to debug tester issues without raw SQLite sharing.
 
 ## Harness Upgrades To Keep Current
 
@@ -204,8 +302,8 @@ Acceptance criteria:
 ## Then
 
 1. Real Chrome extension dogfood install flow and visible bridge health.
-2. Calendar or planned-intent integration so IntentOS can compare what happened
-   against what the user meant to do.
+2. Calendar or planned-intent integration so IntentOS can expand beyond the
+   current focus+avoid intent into time-block-aware comparison.
 3. Accessibility visible-text excerpts for desktop apps where titles are too
    sparse.
 4. IDE, Git, and terminal metadata for engineers and builders.

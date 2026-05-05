@@ -46,30 +46,53 @@ The current local-first slice keeps these concerns separate:
 - `intentos/reporting.py`: generic aggregate behavior reporting.
 - `intentos/activity_cli.py`: multi-app activity CLI.
 - `intentos/activity_evaluate.py`: labeled multi-app evaluation runner.
-- `intentos/beta/store.py`: SQLite schema, retention, raw event persistence,
-  settings, runtime status, corrections, and delete-local-data behavior.
+- `intentos/beta/store.py`: SQLite connection setup, retention, raw event
+  persistence, settings, runtime status, corrections, and delete-local-data
+  behavior.
+- `intentos/beta/schema.py`: SQLite DDL for beta activity, correction, daily
+  intent, review check-in, focus rescue action, settings, and runtime status
+  tables.
+- `intentos/beta/daily_state.py`: local SQLite upsert/read helpers for daily
+  intents, evening review check-ins, and focus rescue actions.
+- `intentos/beta/focus_rescue.py`: deterministic focus rescue state, strict
+  avoid-pattern thresholding, evidence receipts, and local choice payloads.
 - `intentos/beta/db_health.py`: SQLite quick-check, WAL checkpoint, and local
   DB/WAL/SHM file-size helpers used by beta status and reset flows.
+- `intentos/beta/loop_coach.py`: deterministic daily intent coach helpers for
+  intent-contract extraction, plan-vs-actual receipts, next-block selection,
+  and correction reward.
 - `intentos/beta/review.py`: service-backed daily review generation that reuses
   the existing classifier/reporting pipeline and layers corrections over
   derived labels.
+- `intentos/beta/daily_loop.py`: sticky daily loop read model for
+  plan-vs-actual, prompt state, focus rescue, intent contract, next block,
+  correction reward, correction count, and low-confidence count.
 - `intentos/beta/extension.py`: Chrome extension bridge validation and privacy
   filtering for bounded tab metadata.
 - `intentos/beta/keys.py`: stable review segment keys and correction matching
   helpers shared by beta persistence and review generation.
+- `intentos/beta/service_helpers.py`: small HTTP-service helpers for request
+  parsing, validation, artifact cleanup, and event serialization.
+- `intentos/beta/setup_flow.py`: first-run setup milestones, guided step
+  derivation, capture preview state, app identity, and redacted setup report
+  shaping.
 - `intentos/beta/native_recorder.py`: beta native macOS recorder that samples
   frontmost app/window metadata, uses the existing browser metadata fallback,
   applies privacy filtering through the capture stack, and writes SQLite rows.
 - `intentos/beta/permissions.py`: explicit dogfood permission probes, local
-  repair actions, and target-specific setup guidance for Accessibility,
-  browser Automation, Chrome bridge setup, and diagnostics.
+  repair actions, target-specific setup guidance, and capture-preview updates
+  for required Accessibility plus optional browser detail.
 - `intentos/beta/recorder.py`: beta recorder rules for idle and long-gap
   handling before persistence.
 - `intentos/beta/service.py`: local `127.0.0.1` HTTP APIs for status, events,
-  onboarding, permission checks, daily review, corrections, pause/resume,
-  delete-local-data, and browser events.
+  onboarding, setup report, permission checks, daily review, daily loop,
+  weekly patterns, daily intent, review check-in, focus rescue actions,
+  corrections, pause/resume, delete-local-data, and browser events.
 - `intentos/beta/state.py`: shared status, permission summary, and onboarding
-  state derived from SQLite settings and runtime health.
+  state plus activation diagnostics derived from SQLite settings and runtime
+  health.
+- `intentos/beta/weekly_patterns.py`: local weekly pattern aggregation derived
+  from daily review rows, corrections, and daily-loop state.
 - `intentos/beta_cli.py`: beta service, native recorder, status, fixture
   seeding, fake bridge, and daily-review command wiring.
 - `intentos/capture/core.py`: metadata-only capture observation validation and

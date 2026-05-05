@@ -1,4 +1,4 @@
-.PHONY: adapter-fixture-check app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot chrome-bridge-smoke cleanup-check dev dev-live diagnose diagnose-json dogfood-smoke feedback-fixture-candidates harness-check harness-lint harness-status install-beta-app new-feature observe observe-live observe-session package-beta package-extension review-status update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
+.PHONY: adapter-fixture-check app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot chrome-bridge-smoke cleanup-check dev dev-live diagnose diagnose-json dogfood-smoke feedback-fixture-candidates harness-check harness-lint harness-status install-beta-app new-feature observe observe-live observe-session package-beta package-onboarding-beta package-extension review-status update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -38,6 +38,9 @@ validate-beta:
 
 package-beta:
 	@scripts/product/package-beta.sh
+
+package-onboarding-beta:
+	@scripts/product/package-onboarding-beta.sh
 
 install-beta-app:
 	@scripts/product/install-beta-app.sh

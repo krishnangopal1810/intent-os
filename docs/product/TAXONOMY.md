@@ -66,3 +66,13 @@ These are not primary labels yet, but future classifiers should expose them:
 | YouTube | System design lecture | `learning` |
 | YouTube | Cricket match highlights | `entertainment` |
 | YouTube | Comedy compilation | `entertainment` |
+
+## Feedback Regression Checklist
+
+When beta corrections or manual product feedback show that an obvious activity
+was classified as `unknown` or as the wrong label, run
+`make feedback-fixture-candidates` and promote the corrected pattern into a
+labeled activity fixture before related classifier work is complete. The
+activity evaluation set must keep coverage for developer docs, local IntentOS
+review, GitHub repositories, sports videos, product research, personal
+logistics, shopping, and social feed/status pages.

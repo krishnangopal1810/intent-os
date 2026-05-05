@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from intentos.activity import ActivityEvent
-from intentos.beta import recorder, review, store
+from intentos.beta import daily_state, recorder, review, store
 
 
 class BetaStoreTests(unittest.TestCase):
@@ -175,6 +175,18 @@ class BetaStoreTests(unittest.TestCase):
                 recent = ActivityEvent("App", "Surface", "Implement recent", "2026-04-20T00:00:00Z", 60)
                 store.insert_event(conn, old)
                 store.insert_event(conn, recent)
+                daily_state.record_focus_rescue_action(
+                    conn,
+                    "2026-03-01",
+                    "old-rescue",
+                    "shown",
+                )
+                daily_state.record_focus_rescue_action(
+                    conn,
+                    "2026-04-20",
+                    "recent-rescue",
+                    "shown",
+                )
                 removed = store.cleanup_old_events(
                     conn, datetime(2026, 4, 27, tzinfo=timezone.utc)
                 )
@@ -182,6 +194,12 @@ class BetaStoreTests(unittest.TestCase):
             self.assertEqual(removed, 1)
             with store.connect(db) as conn:
                 self.assertEqual(store.row_counts(conn)["activity_events"], 1)
+                self.assertIsNone(
+                    daily_state.latest_focus_rescue_action(conn, "2026-03-01", "old-rescue")
+                )
+                self.assertIsNotNone(
+                    daily_state.latest_focus_rescue_action(conn, "2026-04-20", "recent-rescue")
+                )
 
     def test_delete_all_preserves_runtime_status_and_checkpoints(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -193,12 +211,21 @@ class BetaStoreTests(unittest.TestCase):
                     conn,
                     ActivityEvent("App", "Surface", "Implement", "2026-04-27T09:00:00Z", 60),
                 )
+                daily_state.upsert_daily_intent(conn, "2026-04-27", "Focus", "Avoid")
+                daily_state.upsert_review_checkin(conn, "2026-04-27", "mixed")
+                daily_state.record_focus_rescue_action(conn, "2026-04-27", "rescue", "shown")
                 store.delete_all(conn)
                 status = store.status(conn, str(db))
+                intent = daily_state.daily_intent(conn, "2026-04-27")
+                checkin = daily_state.review_checkin(conn, "2026-04-27")
+                action = daily_state.latest_focus_rescue_action(conn, "2026-04-27", "rescue")
 
             self.assertEqual(status["row_counts"]["activity_events"], 0)
             self.assertEqual(status["service"]["state"], "running")
             self.assertEqual(status["database"]["quick_check"], "ok")
+            self.assertIsNone(intent)
+            self.assertIsNone(checkin)
+            self.assertIsNone(action)
 
     def test_idle_samples_are_not_counted_and_long_gaps_are_not_faked(self):
         with tempfile.TemporaryDirectory() as tmp:

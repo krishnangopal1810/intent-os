@@ -20,10 +20,16 @@ class BetaMenuAppTests(unittest.TestCase):
             items,
             [
                 ("Open Dashboard", "openDashboard"),
+                ("Set Today's Intent", "setTodaysIntent"),
+                ("Open Evening Review", "openEveningReview"),
+                ("Open Next Block", "openNextBlock"),
+                ("Open Weekly Patterns", "openWeeklyPatterns"),
                 ("Start Beta", "startBeta"),
                 ("Restart Beta", "restartBeta"),
                 ("Stop Beta", "stopBeta"),
                 ("Run Permission Check", "runPermissionCheck"),
+                ("Restart Onboarding", "restartOnboarding"),
+                ("Copy Setup Report", "copySetupReport"),
                 ("Open Accessibility Settings", "openAccessibilitySettings"),
                 ("Open Automation Settings", "openAutomationSettings"),
                 ("Open Chrome Extension Setup", "openChromeSetup"),
@@ -42,8 +48,34 @@ class BetaMenuAppTests(unittest.TestCase):
         self.assertIn("isBetaRecordedRunning()", self.swift)
         self.assertIn('runtimeRoot().appendingPathComponent("beta/app.env")', self.swift)
         self.assertIn("retryPostAfterStart(", self.swift)
+        self.assertIn("retryGetAfterStart(", self.swift)
         self.assertIn("error != nil && retryAfterStart", self.swift)
         self.assertIn("forceRestart: true", self.swift)
+        self.assertIn("/api/setup-report", self.swift)
+        self.assertIn('"action":"reset"', self.swift)
+        self.assertIn("scriptPath(for: target)", self.swift)
+        self.assertIn("INTENTOS_RUNTIME_DIR", self.swift)
+        self.assertIn("intent-os-runtime", self.swift)
+        self.assertIn("/api/daily-loop", self.swift)
+        self.assertIn("/api/daily-intent", self.swift)
+        self.assertIn("/api/review-checkin", self.swift)
+        self.assertIn("/api/weekly-patterns", self.swift)
+        self.assertIn("Intent Due", self.swift)
+        self.assertIn("Review Ready", self.swift)
+        self.assertIn("Recovery Available", self.swift)
+        self.assertIn("Focus Protected", self.swift)
+        self.assertIn("Need Evidence", self.swift)
+        self.assertIn("Focus Holding", self.swift)
+        self.assertIn("Avoid Leaking", self.swift)
+        self.assertIn("Needs Correction", self.swift)
+        self.assertIn("Paused", self.swift)
+        self.assertIn("Running", self.swift)
+        self.assertIn('openDashboardAnchor("decision-title"', self.swift)
+        self.assertIn('openDashboardAnchor("weekly-patterns-title"', self.swift)
+        self.assertLess(
+            self.swift.index('let status = json["status"] as? [String: Any] ?? json'),
+            self.swift.index('if let prompt = json["prompt"] as? [String: Any]'),
+        )
 
     def test_start_restart_stop_and_quit_have_distinct_behaviors(self):
         self.assertIn("startBetaIfNeeded(openWhenReady: false)", self.swift)

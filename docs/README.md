@@ -18,8 +18,8 @@ IntentOS has a local-first Python CLI foundation:
   exposed through the harness.
 - Dogfood beta runtime with a local Python service, SQLite persistence,
   deterministic fake Chrome bridge, Chrome MV3 extension shell, service-backed
-  daily review UI, relabel corrections, pause/resume, delete-local-data, and
-  local Swift menu bar packaging.
+  daily review UI, focus rescue actions, relabel corrections, pause/resume,
+  delete-local-data, and local Swift menu bar packaging.
 - Bounded live session timeline capture that repeatedly samples metadata,
   merges adjacent equivalent activity, and renders the timeline in the UI.
 - Local UI shell for inspecting current behavior summaries.
@@ -63,8 +63,12 @@ and richer DOM automation are not implemented yet.
   verification expectations.
 - [QUALITY.md](QUALITY.md): quality scorecard and known gaps.
 - [NEXT_STEPS.md](NEXT_STEPS.md): recommended next product slices.
+- [launch/trusted-source-beta.md](launch/trusted-source-beta.md): trusted
+  source beta setup, diagnostics, privacy boundary, and feedback template.
 - [HARNESS_AUDIT.md](HARNESS_AUDIT.md): status of this harness against the
   OpenAI Harness Engineering model.
+- [HARNESS_DRIVEN_DEVELOPMENT.md](HARNESS_DRIVEN_DEVELOPMENT.md): policy for
+  turning product feedback into first-class harness checks.
 - [HARNESS_FEATURES.md](HARNESS_FEATURES.md): runnable, inspectable, and
   fixture-backed contracts for the upcoming feature sequence.
 - [APP_RUNTIME.md](APP_RUNTIME.md): local app launch, UI validation,
@@ -120,6 +124,7 @@ make diagnose-json
 make feedback-fixture-candidates
 make review-status
 make package-beta
+make package-onboarding-beta
 make chrome-bridge-smoke
 make app-status
 make diagnose

@@ -13,6 +13,7 @@ from typing import Any
 from intentos.activity import ActivityEvent
 from intentos.beta.db_health import checkpoint, db_file_stats, quick_check
 from intentos.beta.keys import clean_key, domain_for_url, segment_key_from_parts, stable_url_pattern
+from intentos.beta.schema import DDL
 from intentos.classifier import BehaviorLabel
 from intentos.reporting import event_sample_count
 
@@ -41,67 +42,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 
 def init_db(conn: sqlite3.Connection, retention_days: int = DEFAULT_RETENTION_DAYS) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS activity_events (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          event_key TEXT NOT NULL UNIQUE,
-          source_app TEXT NOT NULL,
-          surface TEXT NOT NULL,
-          title TEXT NOT NULL,
-          started_at TEXT NOT NULL,
-          duration_seconds INTEGER NOT NULL,
-          url TEXT,
-          metadata_json TEXT NOT NULL,
-          source_adapter TEXT NOT NULL,
-          sample_count INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_activity_events_started
-          ON activity_events(started_at);
-        CREATE TABLE IF NOT EXISTS classified_segments (
-          segment_key TEXT PRIMARY KEY,
-          date TEXT NOT NULL,
-          source_app TEXT NOT NULL,
-          surface TEXT NOT NULL,
-          title TEXT NOT NULL,
-          url TEXT,
-          started_at TEXT NOT NULL,
-          duration_seconds INTEGER NOT NULL,
-          label TEXT NOT NULL,
-          confidence REAL NOT NULL,
-          reason TEXT NOT NULL,
-          sample_count INTEGER NOT NULL,
-          corrected_label TEXT,
-          updated_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS corrections (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          segment_key TEXT NOT NULL,
-          corrected_label TEXT NOT NULL,
-          scope TEXT NOT NULL,
-          apply_to_future INTEGER NOT NULL DEFAULT 0,
-          app TEXT NOT NULL,
-          surface TEXT NOT NULL,
-          domain TEXT,
-          title_pattern TEXT,
-          url_pattern TEXT,
-          created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_corrections_key
-          ON corrections(segment_key, created_at);
-        CREATE TABLE IF NOT EXISTS settings (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS runtime_status (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        """
-    )
+    conn.executescript(DDL)
     set_setting(conn, "schema_version", SCHEMA_VERSION, overwrite=False)
     set_setting(conn, "retention_days", str(retention_days), overwrite=False)
     set_setting(conn, "privacy_settings_version", "metadata-only-v1", overwrite=False)
@@ -198,9 +139,14 @@ def add_correction(
 
 def cleanup_old_events(conn: sqlite3.Connection, now: datetime | None = None) -> int:
     days = int(setting(conn, "retention_days", str(DEFAULT_RETENTION_DAYS)))
-    cutoff = ((now or datetime.now(timezone.utc)) - timedelta(days=days)).isoformat()
+    cutoff_time = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+    cutoff = cutoff_time.isoformat()
+    cutoff_date = cutoff_time.date().isoformat()
     cursor = conn.execute("DELETE FROM activity_events WHERE started_at < ?", (cutoff,))
     conn.execute("DELETE FROM classified_segments WHERE started_at < ?", (cutoff,))
+    conn.execute("DELETE FROM daily_intents WHERE date < ?", (cutoff_date,))
+    conn.execute("DELETE FROM review_checkins WHERE date < ?", (cutoff_date,))
+    conn.execute("DELETE FROM focus_rescue_actions WHERE date < ?", (cutoff_date,))
     conn.commit()
     if cursor.rowcount:
         checkpoint(conn, "PASSIVE")
@@ -208,7 +154,14 @@ def cleanup_old_events(conn: sqlite3.Connection, now: datetime | None = None) ->
 
 
 def delete_all(conn: sqlite3.Connection) -> None:
-    for table in ["activity_events", "classified_segments", "corrections"]:
+    for table in [
+        "activity_events",
+        "classified_segments",
+        "corrections",
+        "daily_intents",
+        "review_checkins",
+        "focus_rescue_actions",
+    ]:
         conn.execute(f"DELETE FROM {table}")
     set_status(conn, "data_state", "deleted")
     conn.commit()
@@ -236,6 +189,25 @@ def set_status(conn: sqlite3.Connection, key: str, value: str) -> None:
         """
         INSERT INTO runtime_status (key, value, updated_at) VALUES (?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+        """,
+        (key, value, utc_now()),
+    )
+    conn.commit()
+
+
+def set_status_once(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute(
+        """
+        INSERT INTO runtime_status (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value=CASE
+            WHEN runtime_status.value = '' THEN excluded.value
+            ELSE runtime_status.value
+          END,
+          updated_at=CASE
+            WHEN runtime_status.value = '' THEN excluded.updated_at
+            ELSE runtime_status.updated_at
+          END
         """,
         (key, value, utc_now()),
     )
@@ -280,7 +252,12 @@ def row_to_event(row: sqlite3.Row) -> ActivityEvent:
 def row_counts(conn: sqlite3.Connection) -> dict[str, int]:
     return {
         table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        for table in ["activity_events", "classified_segments", "corrections"]
+        for table in [
+            "activity_events",
+            "classified_segments",
+            "corrections",
+            "focus_rescue_actions",
+        ]
     }
 
 def setting(conn: sqlite3.Connection, key: str, default: str) -> str:

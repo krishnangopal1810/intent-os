@@ -9,12 +9,18 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
 
-from intentos.beta import permissions, recorder, review, state, store
+from intentos.beta import daily_loop, daily_state, permissions, recorder, review, setup_flow, state, store, weekly_patterns
 from intentos.beta.extension import chrome_event_to_activity
+from intentos.beta.service_helpers import (
+    clear_generated_artifacts,
+    event_to_dict,
+    optional_text,
+    parsed_path,
+    require_text,
+    today,
+)
 from intentos.capture.privacy import load_privacy_policy
-
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
@@ -31,7 +37,6 @@ class ServiceConfig:
     permission_mode: str = "real"
     allow_system_open: bool = True
 
-
 def make_handler(config: ServiceConfig):
     class BetaHandler(BaseHTTPRequestHandler):
         server_version = "IntentOSBeta/1"
@@ -46,10 +51,36 @@ def make_handler(config: ServiceConfig):
                     self.send_json(self.with_conn(lambda conn: store.status(conn, str(config.db_path))))
                 elif path == "/api/onboarding":
                     self.send_json(self.with_conn(lambda conn: onboarding_payload(conn)))
+                elif path == "/api/setup-report":
+                    self.send_json(self.with_conn(lambda conn: {
+                        "status": "ok",
+                        "setup_report": setup_flow.setup_report(
+                            conn,
+                            str(config.db_path),
+                            config.runtime_dir,
+                            store.status(conn),
+                        ),
+                    }))
                 elif path == "/api/daily-review":
                     date = query.get("date", [today()])[0]
                     self.send_json(
                         self.with_conn(lambda conn: review.daily_review(conn, date, str(config.db_path)))
+                    )
+                elif path == "/api/daily-loop":
+                    date = query.get("date", [today()])[0]
+                    self.send_json(
+                        self.with_conn(lambda conn: daily_loop.daily_loop(conn, date, str(config.db_path)))
+                    )
+                elif path == "/api/weekly-patterns":
+                    week_start = query.get("week_start", [today()])[0]
+                    self.send_json(
+                        self.with_conn(
+                            lambda conn: weekly_patterns.weekly_patterns(
+                                conn,
+                                week_start,
+                                str(config.db_path),
+                            )
+                        )
                     )
                 elif path == "/api/events":
                     date = query.get("date", [today()])[0]
@@ -81,6 +112,12 @@ def make_handler(config: ServiceConfig):
                     self.send_json({"status": "deleted", "cleared_artifacts": removed})
                 elif path == "/api/onboarding":
                     self.handle_onboarding(payload)
+                elif path == "/api/daily-intent":
+                    self.handle_daily_intent(payload)
+                elif path == "/api/review-checkin":
+                    self.handle_review_checkin(payload)
+                elif path == "/api/focus-rescue-action":
+                    self.handle_focus_rescue_action(payload)
                 elif path == "/api/permissions/check":
                     self.send_json(
                         self.with_conn(
@@ -150,6 +187,73 @@ def make_handler(config: ServiceConfig):
                 raise ValueError("minutes must be an integer")
             self.send_json(self.with_conn(lambda conn: state.update_onboarding(conn, action, minutes)))
 
+        def handle_daily_intent(self, payload: dict[str, Any]) -> None:
+            date = optional_text(payload, "date") or today()
+            focus_text = require_text(payload, "focus_text")
+            avoid_text = require_text(payload, "avoid_text")
+            note = optional_text(payload, "note")
+            def write(conn: sqlite3.Connection) -> dict[str, Any]:
+                intent = daily_state.upsert_daily_intent(
+                    conn,
+                    date,
+                    focus_text,
+                    avoid_text,
+                    note,
+                )
+                store.set_status_once(conn, "activation_intent_set_at", store.utc_now())
+                return intent
+
+            intent = self.with_conn(write)
+            self.send_json({"status": "saved", "intent": intent})
+
+        def handle_review_checkin(self, payload: dict[str, Any]) -> None:
+            date = optional_text(payload, "date") or today()
+            outcome = require_text(payload, "outcome")
+            reflection_text = optional_text(payload, "reflection_text")
+            next_adjustment = optional_text(payload, "next_adjustment")
+            def write(conn: sqlite3.Connection) -> dict[str, Any]:
+                checkin = daily_state.upsert_review_checkin(
+                    conn,
+                    date,
+                    outcome,
+                    reflection_text,
+                    next_adjustment,
+                )
+                store.set_status_once(conn, "activation_review_completed_at", store.utc_now())
+                return checkin
+
+            checkin = self.with_conn(write)
+            self.send_json({"status": "saved", "review_checkin": checkin})
+
+        def handle_focus_rescue_action(self, payload: dict[str, Any]) -> None:
+            date = optional_text(payload, "date") or today()
+            rescue_key = require_text(payload, "rescue_key")
+            action = require_text(payload, "action")
+            evidence_id = optional_text(payload, "evidence_id")
+            note = optional_text(payload, "note")
+
+            def write(conn: sqlite3.Connection) -> dict[str, Any]:
+                row = daily_state.record_focus_rescue_action(
+                    conn,
+                    date,
+                    rescue_key,
+                    action,
+                    evidence_id,
+                    note,
+                )
+                result: dict[str, Any] = {"status": "recorded", "action": row}
+                if action != "shown":
+                    store.set_status_once(conn, "activation_first_recovery_action_at", store.utc_now())
+                if action == "pause_capture":
+                    paused_until = (
+                        datetime.now(timezone.utc) + timedelta(minutes=15)
+                    ).isoformat().replace("+00:00", "Z")
+                    store.set_pause(conn, paused_until)
+                    result["pause"] = {"status": "paused", "paused_until": paused_until}
+                return result
+
+            self.send_json(self.with_conn(write))
+
         def handle_open_system_settings(self, payload: dict[str, Any]) -> None:
             target = require_text(payload, "target")
             runtime_dir = config.runtime_dir or config.db_path.parent.parent
@@ -189,7 +293,6 @@ def make_handler(config: ServiceConfig):
 
     return BetaHandler
 
-
 def serve(config: ServiceConfig) -> None:
     with store.connect(config.db_path) as conn:
         store.init_db(conn, config.retention_days)
@@ -197,6 +300,7 @@ def serve(config: ServiceConfig) -> None:
         store.checkpoint(conn, "PASSIVE")
         store.set_status(conn, "service_state", "running")
         store.set_status(conn, "service_started_at", store.utc_now())
+        setup_flow.mark_milestone(conn, "opened")
         store.set_status(conn, "capture_state", "ready")
         store.set_status(conn, "capture_note", "")
         if config.service_log:
@@ -208,55 +312,9 @@ def serve(config: ServiceConfig) -> None:
     print(f"beta-service: serving http://127.0.0.1:{config.port}", flush=True)
     server.serve_forever()
 
-
 def onboarding_payload(conn: sqlite3.Connection) -> dict[str, Any]:
+    status_payload = store.status(conn)
     return {
-        "onboarding": state.onboarding(conn),
-        "status": store.status(conn),
-    }
-
-
-def clear_generated_artifacts(runtime_dir: Path | None) -> list[str]:
-    if runtime_dir is None:
-        return []
-    artifacts = runtime_dir / "artifacts"
-    removed: list[str] = []
-    for name in [
-        "beta-daily-review.json",
-        "beta-dogfood-smoke.json",
-        "beta-dogfood-smoke-daily-review.json",
-        "beta-dogfood-smoke-dashboard.png",
-    ]:
-        path = artifacts / name
-        if path.exists():
-            path.unlink()
-            removed.append(str(path))
-    return removed
-
-
-def parsed_path(path: str) -> tuple[str, dict[str, list[str]]]:
-    parsed = urlparse(path)
-    return parsed.path, parse_qs(parsed.query)
-
-
-def today() -> str:
-    return datetime.now().astimezone().date().isoformat()
-
-
-def require_text(payload: dict[str, Any], key: str) -> str:
-    value = payload.get(key)
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{key} must be non-empty text")
-    return value.strip()
-
-
-def event_to_dict(event) -> dict[str, object]:
-    return {
-        "source_app": event.source_app,
-        "surface": event.surface,
-        "title": event.title,
-        "started_at": event.started_at,
-        "duration_seconds": event.duration_seconds,
-        "url": event.url,
-        "metadata": event.metadata or {},
+        "onboarding": setup_flow.enrich_onboarding(conn, state.onboarding(conn), status_payload),
+        "status": status_payload,
     }
