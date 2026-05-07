@@ -27,6 +27,7 @@ class BetaMenuAppTests(unittest.TestCase):
                 ("Start Beta", "startBeta"),
                 ("Restart Beta", "restartBeta"),
                 ("Stop Beta", "stopBeta"),
+                ("Run Preflight", "runPreflight"),
                 ("Run Permission Check", "runPermissionCheck"),
                 ("Restart Onboarding", "restartOnboarding"),
                 ("Copy Setup Report", "copySetupReport"),
@@ -52,6 +53,9 @@ class BetaMenuAppTests(unittest.TestCase):
         self.assertIn("error != nil && retryAfterStart", self.swift)
         self.assertIn("forceRestart: true", self.swift)
         self.assertIn("/api/setup-report", self.swift)
+        self.assertIn("Run Preflight", self.swift)
+        self.assertIn("INTENTOS_BUNDLED_RUNTIME_PRESENT", self.swift)
+        self.assertIn("INTENTOS_APP_BUNDLE_PATH", self.swift)
         self.assertIn('"action":"reset"', self.swift)
         self.assertIn("scriptPath(for: target)", self.swift)
         self.assertIn("INTENTOS_RUNTIME_DIR", self.swift)

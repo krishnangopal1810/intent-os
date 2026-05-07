@@ -54,7 +54,7 @@ ask testers to share `.harness/runtime/beta/intentos.sqlite`.
 
 ## Setup Path
 
-Preferred trusted-tester path:
+Normal trusted-tester path:
 
 1. Send the tester `.harness/runtime/artifacts/IntentOS-trusted-beta.zip`.
 2. The tester opens `IntentOS.app`.
@@ -63,13 +63,13 @@ Preferred trusted-tester path:
 4. Browser detail and the Chrome bridge are optional after app/window capture
    is healthy.
 
-Build that artifact from the repo:
+Only maintainers build that artifact from the repo:
 
 ```sh
 make package-onboarding-beta
 ```
 
-Developer fallback from a fresh checkout:
+Troubleshooting fallback from a fresh checkout:
 
 ```sh
 make verify
@@ -77,7 +77,7 @@ make package-beta
 make install-beta-app
 ```
 
-If the app path is not working, run the beta directly:
+If the app path is not working during support, run the beta directly:
 
 ```sh
 make beta-dev
@@ -131,13 +131,13 @@ recorder rows are increasing.
 
 Ask each tester to complete this once:
 
-1. Start IntentOS through the menu bar app or `make beta-dev`.
-2. Confirm `make beta-status` reports the service as ready, native recorder as
-   running, and SQLite `quick_check` as `ok`.
-3. Set today's focus and one surface to avoid in the dashboard.
+1. Start IntentOS by opening the trusted-tester app.
+2. Complete Privacy, App access, Capture check, Daily focus, and First block.
+3. Confirm the dashboard shows one live state: Focus protected, Avoid leaking,
+   Recovery available, or Needs evidence.
 4. Work normally for at least two hours or until the evening review becomes
    available.
-5. Review plan-vs-actual, correct any wrong labels, and submit the evening
+5. Review the evening receipt, correct any wrong labels, and submit the evening
    check-in with one next adjustment.
 6. Answer the demand question: "Would you be upset if IntentOS stopped
    protecting this focus next week?"
@@ -227,6 +227,9 @@ Use one feedback record per test day:
 ## Setup
 
 - Setup blocker:
+- Setup minutes:
+- First captured app/window:
+- First live state:
 - Permission-check output summary:
 - beta-status readiness:
 
@@ -251,6 +254,8 @@ Use one feedback record per test day:
 - Did the review change tomorrow's behavior:
 - Would you be upset if IntentOS stopped protecting this focus next week:
 - What would make the answer definitely yes:
+- Repeated feedback mapped to fixture, UI probe, validation scenario, quality
+  note, or manual exception:
 
 ## Diagnostics Shared
 

@@ -1,4 +1,4 @@
-.PHONY: adapter-fixture-check app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot chrome-bridge-smoke cleanup-check dev dev-live diagnose diagnose-json dogfood-smoke feedback-fixture-candidates harness-check harness-lint harness-status install-beta-app new-feature observe observe-live observe-session package-beta package-onboarding-beta package-extension review-status update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
+.PHONY: adapter-fixture-check app-status app-stop beta-dev beta-status beta-stop check-ui-screenshot chrome-bridge-smoke cleanup-check cohort-evidence-check dev dev-live diagnose diagnose-json dogfood-smoke feedback-fixture-candidates harness-check harness-lint harness-status install-beta-app new-feature observe observe-live observe-session package-beta package-onboarding-beta package-extension package-onboarding-check review-status update-ui-screenshot validate-beta validate-ui verify verify-harness new-plan
 
 dev:
 	@scripts/harness/dev.sh
@@ -41,6 +41,12 @@ package-beta:
 
 package-onboarding-beta:
 	@scripts/product/package-onboarding-beta.sh
+
+package-onboarding-check:
+	@scripts/harness/package-onboarding-check.py
+
+cohort-evidence-check:
+	@scripts/harness/cohort-evidence-check.py
 
 install-beta-app:
 	@scripts/product/install-beta-app.sh

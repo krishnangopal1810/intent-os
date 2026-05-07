@@ -201,6 +201,19 @@ def validate_probe(
         failures.append("expected rendered daily intent loop")
     if not is_stale and len(str(probe.get("daily_loop_text", "")).strip()) < 20:
         failures.append("expected rendered daily loop text")
+    receipt_required = is_beta and not is_stale and not is_empty and not is_intent_missing
+    if receipt_required and not probe.get("evening_receipt_present"):
+        failures.append("expected rendered evening receipt")
+    if receipt_required and len(str(probe.get("evening_receipt_text", "")).strip()) < 20:
+        failures.append("expected evening receipt summary")
+    if is_beta and not is_stale and int(probe.get("onboarding_step_count", 0)) < 5:
+        failures.append("expected five-step onboarding stepper")
+    step_text = str(probe.get("onboarding_step_text", ""))
+    for phrase in ["Privacy", "App access", "Capture check", "Daily focus", "First block"]:
+        if is_beta and not is_stale and phrase not in step_text:
+            failures.append(f"onboarding stepper missing {phrase}")
+    if is_beta and not is_stale and not str(probe.get("capture_preview_state", "")):
+        failures.append("expected capture preview state")
     if not probe.get("command_center_present"):
         failures.append("expected rendered command center")
     if int(probe.get("command_step_count", 0)) < 3:

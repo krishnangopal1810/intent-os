@@ -439,6 +439,8 @@ def check_public_harness_commands(failures: list[str]) -> None:
         "chrome-bridge-smoke:": "scripts/product/chrome-bridge-smoke.sh",
         "diagnose-json:": "scripts/harness/diagnose-json.py",
         "feedback-fixture-candidates:": "scripts/harness/feedback-fixture-candidates.py",
+        "package-onboarding-check:": "scripts/harness/package-onboarding-check.py",
+        "cohort-evidence-check:": "scripts/harness/cohort-evidence-check.py",
         "review-status:": "scripts/harness/review-status.py",
     }
     for target, script in required_targets.items():
@@ -451,8 +453,15 @@ def check_public_harness_commands(failures: list[str]) -> None:
             failures.append(f"{script} must be executable")
 
     verify = ROOT / "scripts/product/verify.sh"
-    if verify.is_file() and "adapter-fixture-check.py" not in verify.read_text(encoding="utf-8"):
-        failures.append("scripts/product/verify.sh must run adapter-fixture-check.py")
+    if verify.is_file():
+        verify_text = verify.read_text(encoding="utf-8")
+        for phrase in [
+            "adapter-fixture-check.py",
+            "package-onboarding-check.py",
+            "cohort-evidence-check.py",
+        ]:
+            if phrase not in verify_text:
+                failures.append(f"scripts/product/verify.sh must run {phrase}")
 
     docs = {
         "docs/APP_RUNTIME.md": [
@@ -461,10 +470,16 @@ def check_public_harness_commands(failures: list[str]) -> None:
             "make chrome-bridge-smoke",
             "make diagnose-json",
             "make feedback-fixture-candidates",
+            "make package-onboarding-check",
+            "make cohort-evidence-check",
             "make review-status",
         ],
         "docs/OPERATING_MODEL.md": ["make review-status", "make diagnose-json"],
-        "docs/QUALITY.md": ["adapter fixture manifest", "installed Chrome bridge smoke"],
+        "docs/QUALITY.md": [
+            "adapter fixture manifest",
+            "installed Chrome bridge smoke",
+            "cohort evidence",
+        ],
     }
     for relative_path, phrases in docs.items():
         path = ROOT / relative_path
@@ -768,6 +783,9 @@ def check_ui_harness(failures: list[str]) -> None:
             "cut_off_text_count",
             "evidence_open_after_activity",
             "workflowProbe",
+            "evening_receipt_present",
+            "onboarding_step_count",
+            "browser_detail_action_visible",
         ]:
             if phrase not in text:
                 failures.append(f"scripts/product/ui-render-probe.js must emit UX probe {phrase!r}")
@@ -788,6 +806,9 @@ def check_ui_harness(failures: list[str]) -> None:
             "cut_off_text_count",
             "evidence_open_after_activity",
             "visible_word_count",
+            "evening_receipt_present",
+            "onboarding_step_count",
+            "capture_preview_state",
         ]:
             if phrase not in text:
                 failures.append(f"scripts/product/render-ui-check.py must enforce UX probe {phrase!r}")
@@ -889,8 +910,12 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         "scripts/harness/beta-stop.sh",
         "scripts/product/validate-beta.sh",
         "scripts/product/package-beta.sh",
+        "scripts/product/package-onboarding-beta.sh",
         "scripts/product/install-beta-app.sh",
         "scripts/product/package-extension.sh",
+        "scripts/harness/package-onboarding-check.py",
+        "scripts/harness/cohort-evidence-check.py",
+        "data/beta/cohort_evidence_template.json",
         "scripts/product/dogfood-smoke.sh",
         "data/beta/fake_chrome_events.json",
         "extension/chrome/manifest.json",
@@ -912,6 +937,8 @@ def check_beta_harness_contract(failures: list[str]) -> None:
             "beta-empty",
             "beta-intent-missing",
             "beta-setup-needed",
+            "evening_receipt",
+            "first_live_state_at",
         ]:
             if phrase not in text:
                 failures.append(
