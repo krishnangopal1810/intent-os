@@ -133,6 +133,22 @@ class HarnessCompletionTests(unittest.TestCase):
         self.assertIn(payload["status"], {"ok", "warning"})
         self.assertIn("recommended_next_commands", payload)
 
+    def test_onboarding_package_and_cohort_checks_write_artifacts(self):
+        for command, output in [
+            ("package-onboarding-check.py", ".harness/runtime/artifacts/package-onboarding-check.json"),
+            ("cohort-evidence-check.py", ".harness/runtime/artifacts/cohort-evidence-check.json"),
+        ]:
+            result = subprocess.run(
+                [sys.executable, f"scripts/harness/{command}"],
+                cwd=ROOT,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            payload = json.loads(Path(output).read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "ok")
+            self.assertIn(": ok", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

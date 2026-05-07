@@ -25,6 +25,10 @@ slices.
 - `make package-onboarding-beta`: build the trusted-tester `IntentOS.app`
   zip with bundled runtime assets so normal first run does not require a source
   checkout or Terminal commands.
+- `make package-onboarding-check`: validate the trusted-tester package contract,
+  stable app identity, bundled runtime metadata, and no-Terminal normal path.
+- `make cohort-evidence-check`: validate the trusted beta cohort evidence
+  template and any optional cohort evidence artifact without raw personal data.
 - `make install-beta-app`: copy and open the local beta menu bar app on macOS.
 - `make package-extension`: package the internal Chrome bridge extension zip.
 - `make chrome-bridge-smoke`: run the manual installed Chrome bridge smoke
@@ -204,6 +208,12 @@ Expected artifacts after product code exists:
   tester artifact produced by `make package-onboarding-beta`.
 - `.harness/runtime/artifacts/onboarding-beta-package.json`: packaging
   manifest for the bundled trusted tester artifact.
+- `.harness/runtime/artifacts/package-onboarding-check.json`: deterministic
+  package-contract validation for the trusted tester artifact.
+- `.harness/runtime/artifacts/cohort-evidence-check.json`: cohort evidence
+  template/result validation for activation, retention, and would-miss signals.
+- `.harness/runtime/artifacts/cohort-evidence.json`: optional ignored cohort
+  results artifact validated by `make cohort-evidence-check` when present.
 - `.harness/runtime/artifacts/IntentOSChromeBridge.zip`: internal Chrome bridge
   package when `make package-extension` runs.
 - `.harness/runtime/site/`: generated local UI shell served by `make dev`.
@@ -227,7 +237,8 @@ IntentOS currently provides `scripts/product/dev.sh`,
 `scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`,
 `scripts/product/validate-beta.sh`, `scripts/product/package-beta.sh`,
 `scripts/product/install-beta-app.sh`, `scripts/product/package-extension.sh`,
-`scripts/product/verify.sh`, `scripts/harness/beta-dev.sh`,
+`scripts/product/verify.sh`, `scripts/harness/package-onboarding-check.py`,
+`scripts/harness/cohort-evidence-check.py`, `scripts/harness/beta-dev.sh`,
 `scripts/harness/beta-status.sh`, `scripts/harness/beta-stop.sh`, and
 `scripts/harness/dev-live.sh`.
 
@@ -276,6 +287,16 @@ response without changing raw events. Rendered beta evidence covers
 `beta-intent-missing` so stale services, empty databases, and missing-intent
 previews fail with product-facing diagnostics instead of requiring manual
 inspection.
+
+Trusted beta stickiness harness support is split between deterministic checks
+and manual cohort evidence. `make package-onboarding-check` verifies the
+downloadable tester artifact contract even on machines that cannot build the
+Swift app. `make cohort-evidence-check` validates
+`data/beta/cohort_evidence_template.json` and, when present, the ignored
+`.harness/runtime/artifacts/cohort-evidence.json` file. Cohort evidence must
+record setup minutes, first captured app/window, first live state, evening
+review completion, correction themes, would-miss answer, and the harness or
+quality artifact that repeated feedback maps to.
 
 ## Observability Contract
 

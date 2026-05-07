@@ -8,9 +8,9 @@ Use this document to keep quality visible to future Codex runs.
 | --- | --- | --- |
 | Product definition | Yellow | IntentOS brief, behavior taxonomy, YouTube slice, multi-app `ActivityEvent` foundation, dogfood beta target, and must-have focus-rescue wedge are specified; real demand validation is still pending. |
 | Architecture | Yellow | Local-first Python CLI/UI stack, beta service/SQLite boundaries, MVP boundaries, and capture adapter boundaries are documented and linted. |
-| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, beta validation, UI validation, and labeled fixture evaluation. |
+| Verification | Green | `make verify` runs harness checks, harness linting, repository audit, unit tests, CLI smoke evaluation, capture replay, beta validation, UI validation, package contract checks, cohort evidence checks, and labeled fixture evaluation. |
 | Security | Yellow | Local-only defaults, live-capture privacy rules, beta SQLite retention, Chrome bridge filtering, background timeline visibility, guided first-run permission handling, and redacted setup reports are documented. |
-| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, artifact runtime, bundled trusted-tester packaging, installed app smoke evidence, adapter fixture manifest checks, JSON diagnostics, and a passing 30-minute native-recorder dogfood smoke exist; richer observability is pending. |
+| Reliability | Yellow | CLI verification, beta API validation, UI validation, screenshot evidence, artifact runtime, bundled trusted-tester packaging, package contract checks, installed app smoke evidence, adapter fixture manifest checks, JSON diagnostics, cohort evidence scaffolding, and a passing 30-minute native-recorder dogfood smoke exist; richer observability is pending. |
 | UX | Yellow | The beta now has guided first run, stable IntentOS app identity, capture preview, setup report, menu bar launch, daily intent coach hero, focus rescue state/actions, correction controls, and desktop/mobile UI validation; public notarized installer polish is still pending. |
 
 ## Harness-Driven Feedback Policy
@@ -31,8 +31,11 @@ exists until the gap is closed.
 - Demand validation is intentionally manual for now: the harness can verify the
   focus-rescue loop exists, but it cannot prove users want it badly. The proxy
   checks are the completed focus-rescue plan, `make validate-beta`,
-  `make validate-ui`, and recorded trusted-tester answers to whether they would
-  be upset if IntentOS stopped protecting their named focus.
+  `make validate-ui`, `make cohort-evidence-check`, and recorded trusted-tester
+  answers to whether they would be upset if IntentOS stopped protecting their
+  named focus. The cohort evidence template requires every repeated feedback
+  theme to map to a fixture, UI probe, validation scenario, quality note, or
+  manual exception.
 - Architecture lints cover the current Python layer map but need expansion as
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;

@@ -1,20 +1,20 @@
 # IntentOS
 
 <p align="center">
-  <strong>Private focus rescue for protecting one daily commitment on Mac.</strong>
+  <strong>Local-only Mac focus rescue for protecting today's one commitment.</strong>
 </p>
 
 <p align="center">
-  IntentOS lets you name one focus to protect and one avoid pattern for the day.
-  It watches local app, window, and browser metadata, warns when recovery is
-  still possible, and gives you an evening receipt of what actually happened.
+  Name the work that matters, name the avoid pattern that usually wins, and
+  IntentOS turns local app/window evidence into a live protection state plus an
+  evening receipt.
 </p>
 
 <p align="center">
   <img alt="verify" src="https://img.shields.io/badge/verify-make%20verify-0f766e">
   <img alt="runtime" src="https://img.shields.io/badge/runtime-local--only-111827">
   <img alt="privacy" src="https://img.shields.io/badge/privacy-metadata--first-334155">
-  <img alt="status" src="https://img.shields.io/badge/status-macOS%20source%20beta-b45309">
+  <img alt="status" src="https://img.shields.io/badge/status-macOS%20trusted%20beta-b45309">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
@@ -34,9 +34,10 @@
 
 ![IntentOS focus rescue review](docs/assets/screenshots/intent-os-ui.png)
 
-The first product moment: IntentOS compares today's protected focus against the
-avoid pattern you named, shows the evidence it found, and gives you a recovery
-choice before the day is gone.
+The first product moment: a trusted Mac tester opens the app, accepts the
+local-only promise, grants Accessibility, sets one focus and one avoid target,
+sees a live protection state, and gets an evening receipt before the day is
+gone.
 
 ## Why
 
@@ -47,7 +48,7 @@ watching lectures, shopping, or sliding into a feed loop.
 IntentOS is for builders who do not need another dashboard after the damage is
 done. They need a private system that notices when the important thing is losing
 to the avoid pattern they chose that morning, while there is still time to
-recover.
+recover and still enough trust to keep using it tomorrow.
 
 ## What It Does
 
@@ -59,8 +60,8 @@ IntentOS turns bounded local metadata into a daily intent loop:
 4. Show whether focus is protected, avoid is leaking, or evidence needs review.
 5. Record the recovery choice and generate an evening plan-vs-actual receipt.
 
-The beta is currently tuned for Mac-based founders, engineers, independent
-builders, and knowledge workers with one expensive daily output commitment.
+The beta is tuned for Mac-based founders, engineers, independent builders, and
+knowledge workers with one expensive daily output commitment.
 
 ## Quick Start
 
@@ -75,25 +76,41 @@ make dev
 
 Open the URL printed by the command.
 
-### 2. Run the Real Local Mac Beta
+### 2. Join the Trusted Mac Beta
 
-This starts the service-backed beta with local SQLite persistence and native
-macOS app/window metadata capture.
+The normal tester path is the bundled app artifact. Testers should not need to
+run `make` or use Terminal unless they are troubleshooting with a maintainer.
+
+Open `IntentOS-trusted-beta.zip`, launch `IntentOS.app`, and follow the in-app
+stepper:
+
+1. Privacy
+2. App access
+3. Capture check
+4. Daily focus
+5. First block
+
+Accessibility is the only required first-value permission. Browser detail stays
+optional and hidden until native app/window capture works.
+
+### 3. Maintainer And Troubleshooting Commands
+
+These commands are for maintainers, local builders, and support sessions. They
+run the service-backed beta with local SQLite persistence and native macOS
+app/window metadata capture.
 
 ```sh
 make beta-dev
 make beta-status
 ```
 
-Open the URL printed as `INTENTOS_BETA_UI_URL`. First run walks through
-Privacy, App access, Capture check, Daily focus, and First block. Accessibility
-is the only required first-value permission; browser detail is optional.
+Open the URL printed as `INTENTOS_BETA_UI_URL`.
 
 Manual metadata-only macOS diagnostics are available through
 `make observe-live`, `make observe-session`, and `make dev-live` when you want
 to inspect current local activity outside deterministic CI.
 
-### 3. Prepare a Trusted-Tester App Artifact
+### 4. Prepare a Trusted-Tester App Artifact
 
 Maintainers can package the no-Terminal tester artifact:
 
@@ -113,6 +130,8 @@ Common developer commands:
 | Inspect beta health | `make beta-status` |
 | Stop beta | `make beta-stop` |
 | Package trusted-tester app | `make package-onboarding-beta` |
+| Validate package contract | `make package-onboarding-check` |
+| Validate cohort evidence template | `make cohort-evidence-check` |
 | Run all checks | `make verify` |
 
 More runtime commands live in [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md).
@@ -122,11 +141,12 @@ More runtime commands live in [docs/APP_RUNTIME.md](docs/APP_RUNTIME.md).
 - A daily focus/avoid contract that says exactly what IntentOS will protect.
 - A capture preview after Accessibility succeeds, limited to current app,
   window, title, and domain evidence.
-- A focus-rescue state when the avoid pattern starts beating the protected
-  focus.
+- A first-block state that is hard to miss: Focus protected, Avoid leaking,
+  Recovery available, or Needs evidence.
 - One recovery choice: return to focus, continue intentionally, pause capture,
   or correct the evidence.
-- An evening receipt comparing the plan with the captured day.
+- An evening receipt summarizing protected focus time, avoid leakage, rescue
+  choices, corrections, and one next adjustment.
 
 ## Privacy
 
@@ -146,18 +166,22 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security baseline.
 
 ## Current Status
 
-IntentOS is a macOS source beta for trusted testers. It is runnable,
-inspectable, fixture-backed, service-backed, and privacy-constrained.
+IntentOS is a macOS trusted beta for a small group of technical testers. It is
+runnable, inspectable, fixture-backed, service-backed, and privacy-constrained.
 
 - The fixture UI works without permissions through `make dev`.
-- The live beta supports guided first run, stable `IntentOS` permission
-  identity, capture preview, local setup report, daily intent, focus rescue,
-  correction controls, and evening review.
-- The trusted-tester app artifact is available, but this is not a notarized
-  public installer, auto-updating app, or broad public beta.
+- The live beta supports a strict first-run stepper, stable `IntentOS`
+  permission identity, preflight checks, capture preview, local setup report,
+  visible support actions, daily intent, first-block state, focus rescue,
+  correction controls, and evening receipt.
+- The trusted-tester app artifact is the normal tester path, but this is not a
+  notarized public installer, auto-updating app, or broad public beta.
 - Verification is deterministic: `make verify` covers harness checks, unit
-  tests, beta validation, UI render probes, screenshot freshness, and fixture
-  evaluation.
+  tests, package contract checks, cohort evidence template validation, beta
+  validation, UI render probes, screenshot freshness, and fixture evaluation.
+- The current success target is a 5-10 person cohort: median setup under 5
+  minutes, 5 testers completing 3 days, 3 completing 7 days, and 2 saying they
+  would miss IntentOS if it stopped protecting their named focus next week.
 - IntentOS is released under the MIT license.
 
 Manual imports still exist for fixtures and regression tests. They are not the

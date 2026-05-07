@@ -268,6 +268,13 @@ if setup_report["setup_report"]["capture_preview"]["state"] != "ok":
     raise AssertionError("setup report must include redacted capture preview state")
 if "window_title" in setup_report["setup_report"]["capture_preview"]:
     raise AssertionError("setup report must not expose raw window titles")
+if "preflight" not in setup_report["setup_report"]:
+    raise AssertionError("setup report must include preflight diagnostics")
+setup_activation = setup_report["setup_report"].get("activation", {})
+if setup_activation.get("time_to_capture_ready_seconds") is None:
+    raise AssertionError("setup report must include time_to_capture_ready_seconds")
+if setup_activation["time_to_capture_ready_seconds"] > 60:
+    raise AssertionError("capture preview should be verified within 60s in validation")
 loop_with_intent = get_json(f"{service_url}/api/daily-loop?date={date}")
 if loop_with_intent["intent"]["focus_text"] != "Ship the sticky IntentOS loop":
     raise AssertionError("daily intent did not persist into daily-loop")
@@ -280,6 +287,9 @@ if not isinstance(loop_with_intent.get("low_confidence_count"), int):
 for field in ["intent_contract", "next_block", "correction_reward"]:
     if field not in loop_with_intent:
         raise AssertionError(f"daily-loop must expose {field}")
+receipt = loop_with_intent.get("evening_receipt") or {}
+if not receipt.get("summary") or not receipt.get("protected_focus"):
+    raise AssertionError("daily-loop must expose an evening receipt summary")
 if "linkedin" not in loop_with_intent["intent_contract"].get("avoid_tokens", []):
     raise AssertionError("daily-loop intent contract did not expose avoid tokens")
 if not loop_with_intent["next_block"].get("title"):
@@ -307,9 +317,11 @@ loop_after_rescue = get_json(f"{service_url}/api/daily-loop?date={date}")
 if loop_after_rescue["focus_rescue"]["state"] != "avoid_leaking":
     raise AssertionError("focus rescue action did not update daily-loop state")
 activation_after_rescue = get_json(f"{service_url}/api/status").get("activation", {})
-for key in ["intent_set_at", "first_rescue_state_at", "first_recovery_action_at"]:
+for key in ["intent_set_at", "first_live_state_at", "first_rescue_state_at", "first_recovery_action_at", "first_review_ready_at"]:
     if not activation_after_rescue.get(key):
         raise AssertionError(f"activation diagnostics missing {key}")
+if activation_after_rescue.get("app_opened_at") != activation_after_rescue.get("opened_at"):
+    raise AssertionError("activation diagnostics must normalize app_opened_at")
 weekly_patterns = get_json(f"{service_url}/api/weekly-patterns?week_start={date}")
 if len(weekly_patterns.get("patterns", [])) != 3:
     raise AssertionError("weekly patterns endpoint must return three cards")
@@ -350,6 +362,7 @@ for token in [
     "data-daily-loop",
     "data-intent-form",
     "data-intent-contract",
+    "data-evening-receipt",
     "data-service-notice",
     "data-command-center",
     "data-command-now-title",

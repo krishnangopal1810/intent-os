@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import platform
 import sqlite3
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +20,10 @@ ACTIVATION_KEYS = {
     "accessibility_verified": "activation_accessibility_verified_at",
     "capture_verified": "activation_capture_verified_at",
     "intent_set": "activation_intent_set_at",
+    "first_live_state": "activation_first_live_state_at",
     "first_rescue_state": "activation_first_rescue_state_at",
     "first_recovery_action": "activation_first_recovery_action_at",
+    "first_review_ready": "activation_first_review_ready_at",
     "review_completed": "activation_review_completed_at",
 }
 
@@ -54,13 +57,16 @@ def activation_status(conn: sqlite3.Connection) -> dict[str, Any]:
     capture = parse_time(milestones.get("capture_verified"))
     intent = parse_time(milestones.get("intent_set"))
     return {
+        "app_opened_at": milestones["opened"],
         "opened_at": milestones["opened"],
         "privacy_acknowledged_at": milestones["privacy_acknowledged"],
         "accessibility_verified_at": milestones["accessibility_verified"],
         "capture_verified_at": milestones["capture_verified"],
         "intent_set_at": milestones["intent_set"],
+        "first_live_state_at": milestones["first_live_state"],
         "first_rescue_state_at": milestones["first_rescue_state"],
         "first_recovery_action_at": milestones["first_recovery_action"],
+        "first_review_ready_at": milestones["first_review_ready"],
         "review_completed_at": milestones["review_completed"],
         "time_to_capture_ready_seconds": elapsed_seconds(opened, capture),
         "time_to_intent_set_seconds": elapsed_seconds(opened, intent),
@@ -152,6 +158,7 @@ def enrich_onboarding(
         "accessibility_verified": permissions["accessibility"]["state"] == "ok",
         "capture_verified": preview.get("state") == "ok",
         "intent_set": bool(activation.get("intent_set_at")),
+        "first_live_state": bool(activation.get("first_live_state_at")),
         "first_rescue_state": bool(activation.get("first_rescue_state_at")),
     }
     enriched = dict(onboarding)
@@ -203,16 +210,21 @@ def current_step(milestones: dict[str, bool], onboarding: dict[str, Any]) -> str
 
 def setup_steps(milestones: dict[str, bool]) -> list[dict[str, Any]]:
     return [
-        step("privacy", "Privacy", milestones["privacy_acknowledged"]),
-        step("app_access", "App access", milestones["accessibility_verified"]),
-        step("capture_check", "Capture check", milestones["capture_verified"]),
-        step("daily_focus", "Daily focus", milestones["intent_set"]),
-        step("first_block", "First block", milestones["first_rescue_state"]),
+        step("privacy", "Privacy", milestones["privacy_acknowledged"], "Local-only promise accepted."),
+        step("app_access", "App access", milestones["accessibility_verified"], "App/window access verified."),
+        step("capture_check", "Capture check", milestones["capture_verified"], "Current metadata preview shown."),
+        step("daily_focus", "Daily focus", milestones["intent_set"], "Focus and avoid target saved."),
+        step("first_block", "First block", milestones["first_live_state"], "First live state is visible."),
     ]
 
 
-def step(step_id: str, label: str, complete: bool) -> dict[str, Any]:
-    return {"id": step_id, "label": label, "complete": complete}
+def step(step_id: str, label: str, complete: bool, ready_copy: str) -> dict[str, Any]:
+    return {
+        "id": step_id,
+        "label": label,
+        "complete": complete,
+        "verification": ready_copy if complete else "Next action",
+    }
 
 
 def can_complete(
@@ -258,6 +270,7 @@ def setup_report(
         "runtime": {"dir": str(runtime_dir) if runtime_dir else None},
         "service": status_payload["service"],
         "database": status_payload["database"],
+        "preflight": status_payload.get("preflight", {}),
         "readiness": status_payload["readiness"],
         "setup": status_payload["setup"],
         "activation": status_payload["activation"],
@@ -277,6 +290,88 @@ def setup_report(
             "cloud_sync": False,
         },
     }
+
+
+def preflight_status(
+    conn: sqlite3.Connection,
+    db_path: str | None = None,
+) -> dict[str, Any]:
+    runtime_dir = runtime_dir_for(db_path)
+    app_bundle = os.environ.get("INTENTOS_APP_BUNDLE_PATH", "")
+    bundled_runtime_path = os.environ.get("INTENTOS_BUNDLED_RUNTIME_PATH", "")
+    bundled_runtime = env_true("INTENTOS_BUNDLED_RUNTIME_PRESENT") or bool(
+        bundled_runtime_path and Path(bundled_runtime_path).joinpath("Makefile").is_file()
+    )
+    service_running = (store.runtime_value(conn, "service_state") or "running") == "running"
+    checks = {
+        "bundled_runtime_present": check(
+            bundled_runtime,
+            "Tester app includes its local runtime.",
+            "Source checkout path; tester package should include the runtime.",
+            required=False,
+        ),
+        "app_support_runtime_writable": check(
+            is_writable_dir(runtime_dir),
+            "IntentOS can write its local runtime data.",
+            "IntentOS cannot write its local runtime data folder.",
+        ),
+        "service_startable": check(
+            service_running,
+            "Local review service is running.",
+            "Local review service has not started.",
+        ),
+        "local_port_available": check(
+            service_running,
+            "Localhost review port is serving.",
+            "Localhost review port is not serving yet.",
+        ),
+        "app_location_readable": check(
+            is_readable_path(Path(app_bundle)) if app_bundle else True,
+            "IntentOS app location is readable.",
+            "IntentOS app location is not readable.",
+        ),
+    }
+    required_ok = all(
+        item["state"] == "ok"
+        for item in checks.values()
+        if item.get("required", True)
+    )
+    return {
+        "state": "ready" if required_ok else "blocked",
+        "normal_path_requires_terminal": not bundled_runtime,
+        "runtime_dir": str(runtime_dir) if runtime_dir else None,
+        "app_bundle_path": app_bundle or None,
+        "checks": checks,
+    }
+
+
+def runtime_dir_for(db_path: str | None) -> Path | None:
+    if os.environ.get("INTENTOS_RUNTIME_DIR"):
+        return Path(os.environ["INTENTOS_RUNTIME_DIR"])
+    if db_path:
+        path = Path(db_path)
+        return path.parent.parent if path.parent.name == "beta" else path.parent
+    return None
+
+
+def check(ok: bool, ready: str, blocked: str, required: bool = True) -> dict[str, Any]:
+    return {
+        "state": "ok" if ok else "blocked",
+        "detail": ready if ok else blocked,
+        "required": required,
+    }
+
+
+def env_true(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+
+
+def is_writable_dir(path: Path | None) -> bool:
+    return bool(path and path.exists() and path.is_dir() and os.access(path, os.W_OK))
+
+
+def is_readable_path(path: Path) -> bool:
+    return path.exists() and os.access(path, os.R_OK)
 
 
 def app_identity() -> dict[str, str]:

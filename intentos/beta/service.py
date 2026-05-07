@@ -50,7 +50,7 @@ def make_handler(config: ServiceConfig):
                 if path == "/api/status":
                     self.send_json(self.with_conn(lambda conn: store.status(conn, str(config.db_path))))
                 elif path == "/api/onboarding":
-                    self.send_json(self.with_conn(lambda conn: onboarding_payload(conn)))
+                    self.send_json(self.with_conn(lambda conn: onboarding_payload(conn, str(config.db_path))))
                 elif path == "/api/setup-report":
                     self.send_json(self.with_conn(lambda conn: {
                         "status": "ok",
@@ -58,7 +58,7 @@ def make_handler(config: ServiceConfig):
                             conn,
                             str(config.db_path),
                             config.runtime_dir,
-                            store.status(conn),
+                            store.status(conn, str(config.db_path)),
                         ),
                     }))
                 elif path == "/api/daily-review":
@@ -312,8 +312,8 @@ def serve(config: ServiceConfig) -> None:
     print(f"beta-service: serving http://127.0.0.1:{config.port}", flush=True)
     server.serve_forever()
 
-def onboarding_payload(conn: sqlite3.Connection) -> dict[str, Any]:
-    status_payload = store.status(conn)
+def onboarding_payload(conn: sqlite3.Connection, db_path: str | None = None) -> dict[str, Any]:
+    status_payload = store.status(conn, db_path)
     return {
         "onboarding": setup_flow.enrich_onboarding(conn, state.onboarding(conn), status_payload),
         "status": status_payload,

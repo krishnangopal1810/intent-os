@@ -48,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(item("Restart Beta", #selector(restartBeta)))
         menu.addItem(item("Stop Beta", #selector(stopBeta)))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(item("Run Preflight", #selector(runPreflight)))
         menu.addItem(item("Run Permission Check", #selector(runPermissionCheck)))
         menu.addItem(item("Restart Onboarding", #selector(restartOnboarding)))
         menu.addItem(item("Copy Setup Report", #selector(copySetupReport)))
@@ -92,6 +93,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         post("/api/permissions/check", body: "{}") { payload in
             self.refreshStatus()
             self.showPermissionCheckResult(payload)
+        }
+    }
+
+    @objc private func runPreflight() {
+        get("/api/status") { payload in
+            guard let preflight = payload?["preflight"] as? [String: Any] else {
+                self.showActionFailed("Preflight Failed")
+                return
+            }
+            self.showPreflightResult(preflight)
         }
     }
 
@@ -302,6 +313,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func runtimeEnvironment() -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["INTENTOS_RUNTIME_DIR"] = runtimeRoot().path
+        env["INTENTOS_APP_BUNDLE_PATH"] = Bundle.main.bundleURL.path
+        env["INTENTOS_BUNDLED_RUNTIME_PRESENT"] = isBundledRuntime() ? "1" : "0"
+        if let runtime = Bundle.main.resourceURL?.appendingPathComponent("intent-os-runtime") {
+            env["INTENTOS_BUNDLED_RUNTIME_PATH"] = runtime.path
+        }
         return env
     }
 
@@ -481,6 +497,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let message = (["Readiness: \(readinessLabel)"] + rows).joined(separator: "\n\n")
         showAlert("Permission Check Complete", message)
+    }
+
+    private func showPreflightResult(_ preflight: [String: Any]) {
+        let state = preflight["state"] as? String ?? "unknown"
+        let checks = preflight["checks"] as? [String: Any] ?? [:]
+        let rows = checks.keys.sorted().compactMap { key -> String? in
+            guard let item = checks[key] as? [String: Any] else { return nil }
+            let label = key.replacingOccurrences(of: "_", with: " ").capitalized
+            let status = permissionStateLabel(item["state"] as? String)
+            let detail = item["detail"] as? String ?? ""
+            return detail.isEmpty ? "\(label): \(status)" : "\(label): \(status)\n\(detail)"
+        }
+        showAlert("IntentOS Preflight: \(permissionStateLabel(state))", rows.joined(separator: "\n\n"))
     }
 
     private func chromeBridgeInstallInstructions() -> String {

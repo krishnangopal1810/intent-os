@@ -1214,10 +1214,11 @@ function renderDailyLoop(loop, betaConfig) {
   const status = document.querySelector("[data-loop-status]");
   const summary = document.querySelector("[data-loop-summary]");
   const current = document.querySelector("[data-intent-current]");
+  const receipt = document.querySelector("[data-evening-receipt]");
   const intentForm = document.querySelector("[data-intent-form]");
   const contract = document.querySelector("[data-intent-contract]");
   const reviewForm = document.querySelector("[data-review-form]");
-  if (!panel || !status || !summary || !current || !intentForm || !contract || !reviewForm) {
+  if (!panel || !status || !summary || !current || !receipt || !intentForm || !contract || !reviewForm) {
     return;
   }
   bindDailyLoopForms(betaConfig);
@@ -1230,6 +1231,7 @@ function renderDailyLoop(loop, betaConfig) {
     summary.textContent =
       "Start IntentOS to set today's focus and complete an evening review.";
     current.hidden = true;
+    receipt.hidden = true;
     intentForm.hidden = true;
     contract.hidden = true;
     reviewForm.hidden = true;
@@ -1243,6 +1245,7 @@ function renderDailyLoop(loop, betaConfig) {
   status.textContent = rescue?.label || loopStatusLabel(prompt.state);
   summary.textContent = loopSummary(loop);
   current.hidden = !intent;
+  renderEveningReceipt(loop?.evening_receipt || null, receipt, Boolean(intent));
   intentForm.hidden = Boolean(intent);
   contract.hidden = false;
   reviewForm.hidden = !(intent && prompt.review_due && !checkin);
@@ -1257,6 +1260,36 @@ function renderDailyLoop(loop, betaConfig) {
     current.replaceChildren();
     renderIntentContractPreview();
   }
+}
+
+function renderEveningReceipt(receipt, wrapper, hasIntent) {
+  if (!wrapper) {
+    return;
+  }
+  if (!hasIntent || !receipt) {
+    wrapper.hidden = true;
+    wrapper.replaceChildren();
+    return;
+  }
+  const title = document.createElement("strong");
+  title.textContent = receipt.title || "Evening receipt";
+  const summary = document.createElement("p");
+  summary.textContent = receipt.summary || "IntentOS is collecting local evidence for tonight.";
+  const facts = document.createElement("div");
+  facts.className = "receipt-facts";
+  [
+    ["Protected", receipt.protected_focus || "0s"],
+    ["Avoid", receipt.avoid_leakage || "0s"],
+    ["Rescue", receipt.rescue_state || "Need evidence"],
+    ["Corrections", `${receipt.correction_count || 0}`],
+  ].forEach(([label, value]) => {
+    const fact = document.createElement("span");
+    fact.textContent = `${label}: ${value}`;
+    facts.append(fact);
+  });
+  wrapper.replaceChildren(title, summary, facts);
+  wrapper.dataset.state = receipt.status || "collecting";
+  wrapper.hidden = false;
 }
 
 function bindDailyLoopForms(betaConfig) {
@@ -1828,7 +1861,11 @@ function renderOnboardingSteps(onboarding) {
     ...(onboarding.steps || []).map((item) => {
       const step = document.createElement("span");
       step.className = `onboarding-step${item.complete ? " step-complete" : ""}${item.id === current ? " step-current" : ""}`;
-      step.textContent = item.label || item.id;
+      const name = document.createElement("strong");
+      name.textContent = item.label || item.id;
+      const state = document.createElement("small");
+      state.textContent = item.verification || (item.complete ? "Ready" : "Pending");
+      step.replaceChildren(name, state);
       return step;
     }),
   );
@@ -1857,13 +1894,16 @@ function renderCapturePreview(preview) {
 function renderPermissionChecklist(status) {
   const list = document.querySelector("[data-permission-checklist]");
   const permissions = status.permissions || {};
+  const captureReady = status.capture_preview?.state === "ok";
+  const browserConfigured = status.setup?.browser_detail?.state &&
+    status.setup.browser_detail.state !== "not_started";
   const items = [
     permissions.local_service,
     permissions.database,
     permissions.accessibility,
-    permissions.browser_automation,
+    captureReady || browserConfigured ? permissions.browser_automation : null,
     permissions.native_recorder,
-    permissions.chrome_extension,
+    captureReady || browserConfigured ? permissions.chrome_extension : null,
     permissions.capture,
     permissions.privacy,
     {

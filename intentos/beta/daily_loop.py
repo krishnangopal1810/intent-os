@@ -55,7 +55,7 @@ def daily_loop(
         items,
         latest_focus_rescue_action,
     )
-    record_activation_rescue_state(conn, rescue)
+    record_activation_loop_state(conn, rescue, prompt)
     status = store.status(conn, db_path)
     return {
         "date": date,
@@ -67,6 +67,12 @@ def daily_loop(
         "low_confidence_count": low_confidence_count,
         "plan_vs_actual": plan_vs_actual,
         "focus_rescue": rescue,
+        "evening_receipt": build_evening_receipt(
+            plan_vs_actual,
+            rescue,
+            checkin,
+            correction_count,
+        ),
         "intent_contract": loop_coach.build_intent_contract(intent, items),
         "next_block": loop_coach.build_next_block(
             intent,
@@ -91,7 +97,7 @@ def loop_prompt_state(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     local_now = (now or datetime.now()).astimezone()
-    review_ready = local_now.hour >= 17 or total_seconds >= 7200
+    review_ready = has_checkin or local_now.hour >= 17 or total_seconds >= 7200
     intent_due = not has_intent
     review_due = has_intent and review_ready and not has_checkin
     if intent_due:
@@ -126,6 +132,55 @@ def prompt_reason(state: str, review_ready: bool, total_seconds: int) -> str:
     return f"Review will unlock after 5pm or 2h captured; {format_duration(total_seconds)} is available."
 
 
-def record_activation_rescue_state(conn: sqlite3.Connection, rescue: dict[str, Any]) -> None:
+def build_evening_receipt(
+    plan: dict[str, Any],
+    rescue: dict[str, Any],
+    checkin: dict[str, Any] | None,
+    correction_count: int,
+) -> dict[str, Any]:
+    choices = [
+        receipt for receipt in rescue.get("receipts", [])
+        if receipt.get("kind") == "choice"
+    ]
+    return {
+        "title": "Evening receipt",
+        "status": "complete" if checkin else "ready" if plan.get("matched_focus") or plan.get("matched_avoid") else "collecting",
+        "protected_focus": plan.get("focus_duration", "0s"),
+        "avoid_leakage": plan.get("reactive_duration", "0s"),
+        "rescue_state": rescue.get("label", "Need evidence"),
+        "rescue_choice_count": len(choices),
+        "latest_choice": choices[-1] if choices else None,
+        "correction_count": correction_count,
+        "next_adjustment": (checkin or {}).get("next_adjustment") or "",
+        "summary": receipt_summary(plan, rescue, checkin, correction_count),
+    }
+
+
+def receipt_summary(
+    plan: dict[str, Any],
+    rescue: dict[str, Any],
+    checkin: dict[str, Any] | None,
+    correction_count: int,
+) -> str:
+    if checkin:
+        adjustment = checkin.get("next_adjustment") or "Use today's receipt to set tomorrow's first constraint."
+        return f"Review complete: {plan.get('actual_summary', 'local evidence was reviewed')} Next: {adjustment}"
+    if rescue.get("state") == "evidence_insufficient":
+        return "Keep IntentOS open through one focused block so the receipt has enough local evidence."
+    return (
+        f"{plan.get('actual_summary', 'IntentOS is collecting local evidence')} "
+        f"{correction_count} correction(s) are reflected in this receipt."
+    )
+
+
+def record_activation_loop_state(
+    conn: sqlite3.Connection,
+    rescue: dict[str, Any],
+    prompt: dict[str, Any],
+) -> None:
+    if rescue.get("state") in {"focus_protected", "recovery_available", "avoid_leaking", "evidence_insufficient"}:
+        store.set_status_once(conn, "activation_first_live_state_at", store.utc_now())
     if rescue.get("state") in {"focus_protected", "recovery_available", "avoid_leaking"}:
         store.set_status_once(conn, "activation_first_rescue_state_at", store.utc_now())
+    if prompt.get("review_ready"):
+        store.set_status_once(conn, "activation_first_review_ready_at", store.utc_now())

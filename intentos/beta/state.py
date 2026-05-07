@@ -48,6 +48,7 @@ def status(conn: sqlite3.Connection, db_path: str | None = None) -> dict[str, An
             "native_recorder_log": native.get("log"),
         },
         "activation": activation_status(conn),
+        "preflight": setup_flow.preflight_status(conn, db_path),
         "capture_preview": setup_flow.capture_preview(conn),
         "app_identity": setup_flow.app_identity(),
     }
@@ -167,9 +168,7 @@ def permission_summary(conn: sqlite3.Connection, payload: dict[str, Any]) -> dic
     }
 
 
-def permission_item(
-    conn: sqlite3.Connection, key: str, label: str, unchecked_detail: str, action: str
-) -> dict[str, str]:
+def permission_item(conn: sqlite3.Connection, key: str, label: str, unchecked_detail: str, action: str) -> dict[str, str]:
     value = store.runtime_value(conn, key) or "unchecked"
     detail = store.runtime_value(conn, f"{key}_detail") or unchecked_detail
     return item(value, label, detail, action)
