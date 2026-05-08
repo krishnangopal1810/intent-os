@@ -149,6 +149,101 @@ class HarnessCompletionTests(unittest.TestCase):
             self.assertEqual(payload["status"], "ok")
             self.assertIn(": ok", result.stdout)
 
+    def test_cohort_evidence_check_enforces_success_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "cohort-evidence.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "testers": [
+                            self.cohort_tester(7, 4, "recovery_available", True),
+                            self.cohort_tester(7, 5, "focus_protected", True),
+                            self.cohort_tester(7, 4, "avoid_leaking", False),
+                            self.cohort_tester(3, 5, "evidence_insufficient", False),
+                            self.cohort_tester(3, 6, "focus_protected", False),
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/harness/cohort-evidence-check.py",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            payload = json.loads(
+                Path(".harness/runtime/artifacts/cohort-evidence-check.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertIn("cohort-evidence-check: ok", result.stdout)
+        self.assertEqual(payload["metrics"]["three_day_testers"], 5)
+        self.assertEqual(payload["metrics"]["seven_day_testers"], 3)
+        self.assertEqual(payload["metrics"]["would_miss_yes"], 2)
+        self.assertTrue(payload["target_status"]["median_setup_minutes"]["passed"])
+
+    def test_cohort_evidence_check_fails_below_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "cohort-evidence.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "testers": [
+                            self.cohort_tester(
+                                1,
+                                12,
+                                "dashboard_viewed",
+                                False,
+                            )
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/harness/cohort-evidence-check.py",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("three_day_testers below target", result.stderr)
+        self.assertIn("median_setup_minutes above target", result.stderr)
+        self.assertIn("first_live_state", result.stderr)
+
+    @staticmethod
+    def cohort_tester(
+        days_completed: int,
+        setup_minutes: int,
+        first_live_state: str,
+        would_miss_next_week: bool,
+    ) -> dict:
+        return {
+            "days_completed": days_completed,
+            "setup_minutes": setup_minutes,
+            "first_captured_app_or_window": "IntentOS Review Board",
+            "first_live_state": first_live_state,
+            "evening_review_completed": days_completed >= 1,
+            "correction_themes": [],
+            "would_miss_next_week": would_miss_next_week,
+            "repeated_feedback_mapped_to": ["quality_note"],
+        }
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,16 +27,21 @@ def main() -> int:
     evidence_path = Path(args.evidence)
     evidence = load_json(evidence_path, failures, required=False)
     metrics = check_evidence(evidence, template, failures) if evidence else {}
+    target_status = check_success_targets(metrics, template, failures) if evidence else {}
     result = {
         "status": "failed" if failures else "ok",
         "template": str(TEMPLATE.relative_to(ROOT)),
         "evidence": rel(evidence_path),
         "evidence_present": evidence_path.is_file(),
         "metrics": metrics,
+        "target_status": target_status,
         "failures": failures,
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    OUTPUT.write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     if failures:
         for failure in failures:
             print(f"cohort-evidence-check: {failure}", file=sys.stderr)
@@ -48,6 +53,7 @@ def main() -> int:
 def check_template(template: dict[str, Any], failures: list[str]) -> None:
     required = set(template.get("required_fields_per_tester") or [])
     for field in [
+        "days_completed",
         "setup_minutes",
         "first_captured_app_or_window",
         "first_live_state",
@@ -62,6 +68,15 @@ def check_template(template: dict[str, Any], failures: list[str]) -> None:
     for key in ["raw_sqlite_shared", "screenshots_required", "raw_titles_or_urls_required"]:
         if privacy.get(key) is not False:
             failures.append(f"cohort evidence template must keep {key}=false")
+    allowed_states = template.get("allowed_first_live_states")
+    expected_states = {
+        "focus_protected",
+        "avoid_leaking",
+        "recovery_available",
+        "evidence_insufficient",
+    }
+    if set(allowed_states or []) != expected_states:
+        failures.append("cohort evidence template must list the first live states")
 
 
 def check_evidence(
@@ -75,6 +90,7 @@ def check_evidence(
         return {}
     required = set(template.get("required_fields_per_tester") or [])
     mappings = set(template.get("allowed_feedback_mappings") or [])
+    allowed_states = set(template.get("allowed_first_live_states") or [])
     setup_minutes: list[float] = []
     would_miss = 0
     three_day = 0
@@ -87,14 +103,42 @@ def check_evidence(
         if missing:
             failures.append(f"tester {index} missing {', '.join(missing)}")
         if isinstance(tester.get("setup_minutes"), (int, float)):
-            setup_minutes.append(float(tester["setup_minutes"]))
+            value = float(tester["setup_minutes"])
+            if value < 0:
+                failures.append(f"tester {index} setup_minutes must be non-negative")
+            else:
+                setup_minutes.append(value)
+        else:
+            failures.append(f"tester {index} setup_minutes must be numeric")
+        if tester.get("first_live_state") not in allowed_states:
+            failures.append(
+                f"tester {index} first_live_state must be one of "
+                f"{', '.join(sorted(allowed_states))}"
+            )
+        captured = tester.get("first_captured_app_or_window")
+        if not isinstance(captured, str) or not captured.strip():
+            failures.append(f"tester {index} first_captured_app_or_window must be non-empty")
+        if not isinstance(tester.get("evening_review_completed"), bool):
+            failures.append(f"tester {index} evening_review_completed must be boolean")
+        if not isinstance(tester.get("would_miss_next_week"), bool):
+            failures.append(f"tester {index} would_miss_next_week must be boolean")
+        if not isinstance(tester.get("correction_themes"), list):
+            failures.append(f"tester {index} correction_themes must be a list")
         if tester.get("would_miss_next_week") is True:
             would_miss += 1
-        if int(tester.get("days_completed") or 0) >= 3:
+        days_completed = tester.get("days_completed")
+        if not isinstance(days_completed, int) or days_completed < 0:
+            failures.append(f"tester {index} days_completed must be a non-negative integer")
+            days_completed = 0
+        if days_completed >= 3:
             three_day += 1
-        if int(tester.get("days_completed") or 0) >= 7:
+        if days_completed >= 7:
             seven_day += 1
-        for mapping in tester.get("repeated_feedback_mapped_to") or []:
+        feedback_mappings = tester.get("repeated_feedback_mapped_to")
+        if not isinstance(feedback_mappings, list):
+            failures.append(f"tester {index} repeated_feedback_mapped_to must be a list")
+            feedback_mappings = []
+        for mapping in feedback_mappings:
             if mapping not in mappings:
                 failures.append(f"tester {index} has unknown feedback mapping {mapping}")
     median_setup = statistics.median(setup_minutes) if setup_minutes else None
@@ -105,6 +149,46 @@ def check_evidence(
         "would_miss_yes": would_miss,
         "median_setup_minutes": median_setup,
     }
+
+
+def check_success_targets(
+    metrics: dict[str, Any],
+    template: dict[str, Any],
+    failures: list[str],
+) -> dict[str, Any]:
+    targets = template.get("success_targets") or {}
+    status: dict[str, Any] = {}
+    minimum_targets = [
+        "three_day_testers",
+        "seven_day_testers",
+        "would_miss_yes",
+    ]
+    for key in minimum_targets:
+        target = targets.get(key)
+        actual = metrics.get(key)
+        passed = isinstance(target, int) and isinstance(actual, int) and actual >= target
+        status[key] = {"actual": actual, "target": target, "passed": passed}
+        if not passed:
+            failures.append(f"cohort evidence {key} below target: {actual} < {target}")
+
+    setup_target = targets.get("median_setup_minutes")
+    setup_actual = metrics.get("median_setup_minutes")
+    setup_passed = (
+        isinstance(setup_target, (int, float))
+        and isinstance(setup_actual, (int, float))
+        and setup_actual <= float(setup_target)
+    )
+    status["median_setup_minutes"] = {
+        "actual": setup_actual,
+        "target": setup_target,
+        "passed": setup_passed,
+    }
+    if not setup_passed:
+        failures.append(
+            "cohort evidence median_setup_minutes above target: "
+            f"{setup_actual} > {setup_target}"
+        )
+    return status
 
 
 def load_json(path: Path, failures: list[str], required: bool) -> dict[str, Any] | None:

@@ -239,8 +239,8 @@ The detailed MVP spec is
 
 - `make verify` runs harness checks, structural linting, repository audit, unit
   tests, CLI smoke checks, YouTube evaluation, multi-app `ActivityEvent`
-  evaluation, capture replay, beta validation, UI validation, and screenshot
-  freshness checks.
+  evaluation, capture replay, beta validation, UI validation, package contract
+  checks, cohort evidence checks, and screenshot freshness checks.
 - The multi-app evaluation set keeps generic behavior classification from
   regressing while future adapters are added.
 - The YouTube evaluation set preserves the first domain-specific slice as a
@@ -266,6 +266,8 @@ The detailed MVP spec is
 - Automatic blocking, scheduling, or workflow execution in the current local
   slices.
 - Generic productivity dashboards that only restate app usage.
+- Broad consumer launch before the Mac builder focus-rescue loop has retained
+  trusted testers.
 - Public always-on live capture is not implemented.
 - Screenshot capture and OCR are not part of the first live capture slice.
 
