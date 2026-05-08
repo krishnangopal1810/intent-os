@@ -35,7 +35,8 @@ exists until the gap is closed.
   answers to whether they would be upset if IntentOS stopped protecting their
   named focus. The cohort evidence template requires every repeated feedback
   theme to map to a fixture, UI probe, validation scenario, quality note, or
-  manual exception.
+  manual exception. When cohort results are present, the check enforces the
+  current demand targets instead of treating demand evidence as advisory.
 - Architecture lints cover the current Python layer map but need expansion as
   new layers appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;

@@ -10,6 +10,7 @@
     "raw_titles_or_urls_required": false
   },
   "required_fields_per_tester": [
+    "days_completed",
     "setup_minutes",
     "first_captured_app_or_window",
     "first_live_state",
@@ -24,6 +25,12 @@
     "validation_scenario",
     "quality_note",
     "manual_exception"
+  ],
+  "allowed_first_live_states": [
+    "focus_protected",
+    "avoid_leaking",
+    "recovery_available",
+    "evidence_insufficient"
   ],
   "success_targets": {
     "three_day_testers": 5,

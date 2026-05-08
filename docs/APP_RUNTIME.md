@@ -294,9 +294,12 @@ downloadable tester artifact contract even on machines that cannot build the
 Swift app. `make cohort-evidence-check` validates
 `data/beta/cohort_evidence_template.json` and, when present, the ignored
 `.harness/runtime/artifacts/cohort-evidence.json` file. Cohort evidence must
-record setup minutes, first captured app/window, first live state, evening
-review completion, correction themes, would-miss answer, and the harness or
-quality artifact that repeated feedback maps to.
+record days completed, setup minutes, first captured app/window, first live
+state, evening review completion, correction themes, would-miss answer, and
+the harness or quality artifact that repeated feedback maps to. When an
+evidence artifact exists, the check fails unless it meets the current demand
+targets: five three-day testers, three seven-day testers, two would-miss-yes
+answers, and median setup at or below five minutes.
 
 ## Observability Contract
 

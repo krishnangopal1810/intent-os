@@ -301,6 +301,8 @@ Open-source hypothesis:
   positioning research.
 - 2026-05-06: Must-have focus rescue implementation completed; next work should
   validate demand with trusted testers and reduce activation friction.
+- 2026-05-09: Cohort evidence validation now enforces the demand targets when
+  trusted-tester results are present.
 
 ## Handoff Notes
 

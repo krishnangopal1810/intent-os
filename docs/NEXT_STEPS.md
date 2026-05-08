@@ -257,6 +257,9 @@ Acceptance criteria:
   focus next week?"
 - At least one feedback item becomes a fixture, harness check, quality note, or
   explicit product assumption.
+- Cohort results are recorded in the ignored
+  `.harness/runtime/artifacts/cohort-evidence.json` shape and pass
+  `make cohort-evidence-check`.
 - Any Chrome bridge repair work is tied to a tester workflow where native
   recorder metadata is insufficient for focus rescue.
 - `make beta-status`, `make diagnose-json`, and redacted feedback fixtures are
