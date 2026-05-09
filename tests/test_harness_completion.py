@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import os
 import subprocess
@@ -148,6 +149,44 @@ class HarnessCompletionTests(unittest.TestCase):
             payload = json.loads(Path(output).read_text(encoding="utf-8"))
             self.assertEqual(payload["status"], "ok")
             self.assertIn(": ok", result.stdout)
+        package_payload = json.loads(
+            Path(".harness/runtime/artifacts/package-onboarding-check.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            package_payload["checked_menu_app"],
+            "macos/IntentOSBeta/IntentOSBeta.swift",
+        )
+
+    def test_package_check_rejects_stale_dashboard_menu_regression(self):
+        module = self.load_harness_script(
+            "package_onboarding_check",
+            "scripts/harness/package-onboarding-check.py",
+        )
+        stale_menu_source = """
+        menu.addItem(item("Open Dashboard", #selector(openDashboard)))
+        private func openDashboard() {
+            if !openRecordedDashboard() {
+                startBetaIfNeeded(openWhenReady: true)
+            }
+        }
+        private func isBetaRecordedRunning() -> Bool {
+            envValue("INTENTOS_BETA_STATUS") == "running"
+        }
+        private func openRecordedDashboard(anchor: String? = nil) -> Bool {
+            NSWorkspace.shared.open(dashboard)
+            return true
+        }
+        """
+        failures = []
+        module.check_menu_app_stale_dashboard_guard(stale_menu_source, failures)
+        message = "\n".join(failures)
+
+        self.assertIn("INTENTOS_BETA_SERVICE_PID", message)
+        self.assertIn("INTENTOS_BETA_UI_PID", message)
+        self.assertIn("kill(pid, 0)", message)
+        self.assertIn("must not report dashboard opened", message)
 
     def test_cohort_evidence_check_enforces_success_targets(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -243,6 +282,15 @@ class HarnessCompletionTests(unittest.TestCase):
             "would_miss_next_week": would_miss_next_week,
             "repeated_feedback_mapped_to": ["quality_note"],
         }
+
+    @staticmethod
+    def load_harness_script(name: str, relative_path: str):
+        spec = importlib.util.spec_from_file_location(name, ROOT / relative_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"could not load {relative_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
 
 if __name__ == "__main__":
