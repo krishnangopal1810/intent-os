@@ -100,9 +100,12 @@ metadata-only adapters outside CI and write replay artifacts under
 local Python service bound to `127.0.0.1:58917` by default, starts the native
 macOS metadata recorder, stores normalized activity in
 `.harness/runtime/beta/intentos.sqlite`, writes an isolated
-`.harness/runtime/beta/site/beta-config.json`, and starts a local dashboard
-with `?mode=beta` so missing service config cannot fall back to fixture
-reports. If the service or data path is unavailable, the dashboard shows a
+`.harness/runtime/beta/site/beta-config.json` with a generated per-run API
+token, and starts a local dashboard with `?mode=beta` so missing service config
+cannot fall back to fixture reports. The localhost service requires that token
+on activity-data reads and all writes, and only reflects CORS for the local
+dashboard or Chrome extension bridge origins. If the service or data path is
+unavailable, the dashboard shows a
 plain-language reconnect notice at the top of the review board rather than raw
 developer errors. The web shell hides the legacy YouTube domain panel in every
 mode; YouTube activity appears in the normal timeline, activity mix, and
@@ -152,7 +155,8 @@ Expected artifacts after product code exists:
 - `.harness/runtime/app.env`: runtime status, process ID when relevant, log
   path, artifact path, runtime mode, data mode, and UI URL.
 - `.harness/runtime/beta/app.env`: beta service/UI/native-recorder/fake-bridge
-  PID, DB path, service URL, dashboard URL, daily review artifact, and log paths.
+  PID, DB path, service URL, generated API token, dashboard URL, daily review
+  artifact, and log paths.
 - `.harness/runtime/beta/intentos.sqlite`: local dogfood beta database with
   30-day retention, WAL durability, daily intent and review check-in state,
   service-visible `quick_check` health, and truncate checkpointing after
@@ -285,8 +289,8 @@ when Chrome/Chromium is unavailable.
 `beta-config.json`, confirms the dashboard shell loads while service APIs are
 available, checks that correction controls, setup guidance controls, daily
 intent controls, evening review controls, decision cards, and next move text are
-present, and verifies that a relabel operation changes the next daily-review
-response without changing raw events. Rendered beta evidence covers
+present, and verifies that a relabel operation changes the current and future
+daily-review responses without changing raw events. Rendered beta evidence covers
 `beta-ready`, `beta-setup-needed`, `beta-service-stale`, `beta-empty`, and
 `beta-intent-missing` so stale services, empty databases, and missing-intent
 previews fail with product-facing diagnostics instead of requiring manual

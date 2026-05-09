@@ -266,18 +266,30 @@ class HarnessCompletionTests(unittest.TestCase):
         self.assertIn("first_live_state", result.stderr)
 
     def test_ci_publishes_trusted_beta_artifact_without_tracking_binary(self):
-        workflow = Path(".github/workflows/trusted-beta-artifact.yml").read_text(
-            encoding="utf-8"
-        )
-        for phrase in [
+        workflow = Path(".github/workflows/trusted-beta-artifact.yml").read_text(encoding="utf-8")
+        for phrase in (
             "runs-on: macos-latest",
             "make package-onboarding-beta",
             "make package-onboarding-check",
             "actions/upload-artifact@v4",
             ".harness/runtime/artifacts/IntentOS-trusted-beta.zip",
-        ]:
+            "github.event_name != 'pull_request'",
+        ):
             self.assertIn(phrase, workflow)
         self.assertIn(".harness/runtime/", Path(".gitignore").read_text(encoding="utf-8"))
+
+    def test_harness_lint_guards_review_finding_regressions(self):
+        lint = Path("scripts/harness/lint.py").read_text(encoding="utf-8")
+        for phrase in (
+            "unregistered Python file", "must not use wildcard CORS",
+            "tester-facing artifacts from pull_request builds",
+            "must preserve future correction matching", "must restrict localhost bridge config",
+            "must not apply future corrections by domain alone", "must strip raw URL detail",
+            "must scrub delete-local-data metadata", "must clear beta artifacts",
+            "must use loadBetaJson with API token headers",
+            "must keep beta regression coverage phrase",
+        ):
+            self.assertIn(phrase, lint)
 
     @staticmethod
     def cohort_tester(
@@ -305,7 +317,3 @@ class HarnessCompletionTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
-
-
-if __name__ == "__main__":
-    unittest.main()

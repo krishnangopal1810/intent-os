@@ -47,6 +47,7 @@ def chrome_event_to_activity(
         raise ValueError(f"browser event {index} url must be http or https")
     if contains_sensitive_url(url):
         return None
+    safe_url = storage_safe_url(parsed)
 
     title = bound_text(require_text(item, "title", index), 160)
     observed_at = parse_observed_at(item.get("timestamp") or item.get("observed_at"), index)
@@ -82,7 +83,7 @@ def chrome_event_to_activity(
         title=title,
         started_at=observed_at,
         duration_seconds=duration,
-        url=url,
+        url=safe_url,
         metadata=redact_metadata({k: v for k, v in metadata.items() if v is not None}, policy),
     )
 
@@ -96,6 +97,10 @@ def reject_forbidden_payload(item: dict[str, Any], index: int) -> None:
 def contains_sensitive_url(url: str) -> bool:
     lowered = url.lower()
     return any(part in lowered for part in SENSITIVE_URL_PARTS)
+
+
+def storage_safe_url(parsed) -> str:
+    return parsed._replace(query="", fragment="").geturl()
 
 
 def parse_observed_at(value: object, index: int) -> str:

@@ -13,14 +13,10 @@ def clear_generated_artifacts(runtime_dir: Path | None) -> list[str]:
         return []
     artifacts = runtime_dir / "artifacts"
     removed: list[str] = []
-    for name in [
-        "beta-daily-review.json",
-        "beta-dogfood-smoke.json",
-        "beta-dogfood-smoke-daily-review.json",
-        "beta-dogfood-smoke-dashboard.png",
-    ]:
-        path = artifacts / name
-        if path.exists():
+    for pattern in ["beta-*.json", "beta-*.png", "beta-*.html", "beta-*.txt"]:
+        for path in sorted(artifacts.glob(pattern)):
+            if not path.is_file():
+                continue
             path.unlink()
             removed.append(str(path))
     return removed

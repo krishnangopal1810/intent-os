@@ -11,6 +11,13 @@ async function serviceUrl(path) {
   return `${await serviceBaseUrl()}${path}`;
 }
 
+async function apiHeaders(extra = {}) {
+  const data = await chrome.storage.local.get({ apiToken: "" });
+  return data.apiToken
+    ? { ...extra, "X-IntentOS-Token": data.apiToken }
+    : extra;
+}
+
 function eventFromTab(tab, extra = {}) {
   if (!tab || !tab.url || !tab.title || !/^https?:\/\//.test(tab.url)) {
     return null;
@@ -33,7 +40,7 @@ async function postHeartbeat() {
   try {
     await fetch(await serviceUrl("/api/extension-heartbeat"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await apiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         version: BRIDGE_VERSION,
         timestamp: new Date().toISOString(),
@@ -54,7 +61,7 @@ async function postTab(tab, extra = {}) {
     await postHeartbeat();
     await fetch(await serviceUrl("/api/browser-event"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await apiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     });
   } catch (error) {
@@ -104,7 +111,54 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
   }
 });
 
+async function configureService(message, sender) {
+  if (!isTrustedDashboardSender(sender, message)) {
+    return;
+  }
+  const updates = {};
+  if (typeof message.apiToken === "string" && message.apiToken) {
+    updates.apiToken = message.apiToken;
+  }
+  if (typeof message.serviceUrl === "string") {
+    try {
+      const url = new URL(message.serviceUrl);
+      if (url.hostname === "127.0.0.1" && url.port) {
+        updates.servicePort = Number(url.port);
+      }
+    } catch (error) {
+      console.debug("IntentOS beta bridge ignored invalid service URL", error);
+    }
+  }
+  if (Object.keys(updates).length) {
+    await chrome.storage.local.set(updates);
+  }
+}
+
+function isTrustedDashboardSender(sender, message) {
+  if (typeof sender.url !== "string") {
+    return false;
+  }
+  try {
+    const url = new URL(sender.url);
+    return (
+      url.protocol === "http:" &&
+      url.hostname === "127.0.0.1" &&
+      url.pathname === "/site/index.html" &&
+      url.searchParams.get("mode") === "beta" &&
+      message?.dashboardOrigin === url.origin
+    );
+  } catch (error) {
+    return false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message?.type === "intentos_service_config") {
+    configureService(message, sender).catch((error) => {
+      console.debug("IntentOS beta bridge could not store service config", error);
+    });
+    return;
+  }
   if (message?.type === "intentos_bounded_metadata" && sender.tab) {
     postTab(sender.tab, {
       page_kind: message.page_kind,

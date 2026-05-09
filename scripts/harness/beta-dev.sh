@@ -57,14 +57,16 @@ PY
 wait_for_url() {
   local url="$1"
   local pid="$2"
-  python3 - "$url" "$pid" <<'PY'
+  local token="${3:-}"
+  python3 - "$url" "$pid" "$token" <<'PY'
 import os
 import sys
 import time
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 url = sys.argv[1]
 pid = int(sys.argv[2])
+token = sys.argv[3]
 last_error = None
 for _ in range(40):
     try:
@@ -72,7 +74,8 @@ for _ in range(40):
     except OSError as exc:
         raise SystemExit(f"process {pid} exited before serving {url}: {exc}")
     try:
-        with urlopen(url, timeout=1) as response:
+        request = Request(url, headers={"X-IntentOS-Token": token} if token else {})
+        with urlopen(request, timeout=1) as response:
             if 200 <= response.status < 400:
                 raise SystemExit(0)
             last_error = f"HTTP {response.status}"
@@ -109,6 +112,13 @@ PY
 scripts/harness/beta-stop.sh >/dev/null 2>&1 || true
 scripts/harness/runtime-log.py beta dev_start mode=dogfood_harness
 
+api_token="${INTENTOS_BETA_API_TOKEN:-$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)}"
+ui_port="$(choose_port)"
+
 INTENTOS_RUNTIME_DIR="$SITE_RUNTIME_DIR" INTENTOS_PRESERVE_LIVE_ARTIFACTS=1 \
   scripts/product/dev.sh > "$UI_LOG" 2>&1
 
@@ -123,9 +133,11 @@ service_pid="$(start_process "$SERVICE_LOG" \
   --port "$service_port" \
   --service-log "$SERVICE_LOG" \
   --runtime-dir "$RUNTIME_DIR" \
-  --permission-mode "$PERMISSION_MODE")"
+  --permission-mode "$PERMISSION_MODE" \
+  --api-token "$api_token" \
+  --allowed-origin "http://127.0.0.1:$ui_port")"
 echo "$service_pid" > "$SERVICE_PID_FILE"
-wait_for_url "$service_url/api/status" "$service_pid"
+wait_for_url "$service_url/api/status" "$service_pid" "$api_token"
 
 if [ "$NATIVE_RECORDER" = "1" ]; then
   : > "$RECORDER_LOG"
@@ -153,12 +165,14 @@ if [ "$FAKE_BRIDGE" = "1" ]; then
   python3 -m intentos.beta_cli fake-bridge \
     --service-url "$service_url/api/browser-event" \
     --input data/beta/fake_chrome_events.json \
+    --api-token "$api_token" \
     --once > "$BRIDGE_LOG" 2>&1
 
   bridge_pid="$(start_process "$BRIDGE_LOG" \
     python3 -m intentos.beta_cli fake-bridge \
     --service-url "$service_url/api/browser-event" \
     --input data/beta/fake_chrome_events.json \
+    --api-token "$api_token" \
     --interval-seconds "${INTENTOS_BETA_FAKE_BRIDGE_INTERVAL_SECONDS:-60}")"
   echo "$bridge_pid" > "$BRIDGE_PID_FILE"
 else
@@ -212,11 +226,11 @@ python3 -m intentos.beta_cli daily-review \
 cat > "$SITE_DIR/beta-config.json" <<EOF
 {
   "serviceUrl": "$service_url",
-  "date": "$BETA_DATE"
+  "date": "$BETA_DATE",
+  "apiToken": "$api_token"
 }
 EOF
 
-ui_port="$(choose_port)"
 ui_url="http://127.0.0.1:$ui_port/site/index.html?mode=beta"
 ui_pid="$(start_process "$UI_LOG" env \
   INTENTOS_RUNTIME_DIR="$SITE_RUNTIME_DIR" \
@@ -234,6 +248,7 @@ wait_for_url "$ui_url" "$ui_pid"
   echo "INTENTOS_BETA_SERVICE_PORT=$service_port"
   echo "INTENTOS_BETA_SERVICE_URL=$service_url"
   echo "INTENTOS_BETA_SERVICE_LOG=$SERVICE_LOG"
+  echo "INTENTOS_BETA_API_TOKEN=$api_token"
   echo "INTENTOS_BETA_PERMISSION_MODE=$PERMISSION_MODE"
   echo "INTENTOS_BETA_NATIVE_RECORDER_ENABLED=$NATIVE_RECORDER"
   echo "INTENTOS_BETA_NATIVE_RECORDER_PID=$recorder_pid"
@@ -254,4 +269,4 @@ wait_for_url "$ui_url" "$ui_pid"
 scripts/harness/runtime-log.py beta dev_started \
   mode=dogfood_harness pid="$service_pid" port="$service_port" url="$ui_url"
 echo "beta-dev: started"
-cat "$BETA_ENV"
+sed 's/^INTENTOS_BETA_API_TOKEN=.*/INTENTOS_BETA_API_TOKEN=<redacted>/' "$BETA_ENV"

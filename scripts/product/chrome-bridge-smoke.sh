@@ -31,17 +31,18 @@ fi
 service_url="$(grep '^INTENTOS_BETA_SERVICE_URL=' "$BETA_ENV" | tail -n 1 | cut -d= -f2-)"
 ui_url="$(grep '^INTENTOS_BETA_UI_URL=' "$BETA_ENV" | tail -n 1 | cut -d= -f2-)"
 fake_bridge="$(grep '^INTENTOS_BETA_FAKE_BRIDGE_ENABLED=' "$BETA_ENV" | tail -n 1 | cut -d= -f2-)"
+api_token="$(grep '^INTENTOS_BETA_API_TOKEN=' "$BETA_ENV" | tail -n 1 | cut -d= -f2-)"
 
 python3 - "$service_url" "$ui_url" "$fake_bridge" "$SMOKE_JSON" "$SMOKE_LOG" \
-  "$SECONDS_TO_RUN" "$POLL_SECONDS" <<'PY'
+  "$SECONDS_TO_RUN" "$POLL_SECONDS" "$api_token" <<'PY'
 import json
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
-service_url, ui_url, fake_bridge, smoke_path, log_path, seconds_text, poll_text = sys.argv[1:]
+service_url, ui_url, fake_bridge, smoke_path, log_path, seconds_text, poll_text, api_token = sys.argv[1:]
 smoke_path = Path(smoke_path)
 log_path = Path(log_path)
 seconds_to_run = int(seconds_text)
@@ -55,7 +56,8 @@ def log(message: str) -> None:
 
 
 def get_json(url: str) -> dict:
-    with urlopen(url, timeout=5) as response:
+    request = Request(url, headers={"X-IntentOS-Token": api_token})
+    with urlopen(request, timeout=5) as response:
         return json.loads(response.read().decode("utf-8"))
 
 

@@ -57,14 +57,16 @@ PY
 wait_for_url() {
   local url="$1"
   local pid="$2"
-  python3 - "$url" "$pid" <<'PY'
+  local token="${3:-}"
+  python3 - "$url" "$pid" "$token" <<'PY'
 import os
 import sys
 import time
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 url = sys.argv[1]
 pid = int(sys.argv[2])
+token = sys.argv[3]
 last = None
 for _ in range(40):
     try:
@@ -72,7 +74,8 @@ for _ in range(40):
     except OSError as exc:
         raise SystemExit(f"process {pid} exited: {exc}")
     try:
-        with urlopen(url, timeout=1) as response:
+        request = Request(url, headers={"X-IntentOS-Token": token} if token else {})
+        with urlopen(request, timeout=1) as response:
             if 200 <= response.status < 400:
                 raise SystemExit(0)
             last = response.status
@@ -106,7 +109,13 @@ find_browser() {
   return 1
 }
 
+api_token="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
 service_port="$(choose_port)"
+ui_port="$(choose_port)"
 service_url="http://127.0.0.1:$service_port"
 : > "$SERVICE_LOG"
 python3 -m intentos.beta_cli serve \
@@ -116,14 +125,17 @@ python3 -m intentos.beta_cli serve \
   --service-log "$SERVICE_LOG" \
   --runtime-dir "$WORK_DIR" \
   --permission-mode fake \
+  --api-token "$api_token" \
+  --allowed-origin "http://127.0.0.1:$ui_port" \
   --disable-system-open \
   >> "$SERVICE_LOG" 2>&1 &
 service_pid="$!"
 
-wait_for_url "$service_url/api/status" "$service_pid"
+wait_for_url "$service_url/api/status" "$service_pid" "$api_token"
 python3 -m intentos.beta_cli fake-bridge \
   --service-url "$service_url/api/browser-event" \
   --input data/beta/fake_chrome_events.json \
+  --api-token "$api_token" \
   --once > "$LOG_DIR/beta-fake-bridge.log" 2>&1
 python3 - "$DB_PATH" <<'PY'
 import sys
@@ -142,18 +154,18 @@ INTENTOS_RUNTIME_DIR="$WORK_DIR" INTENTOS_PRESERVE_LIVE_ARTIFACTS=1 \
 cat > "$SITE_DIR/beta-config.json" <<EOF
 {
   "serviceUrl": "$service_url",
-  "date": "$BETA_DATE"
+  "date": "$BETA_DATE",
+  "apiToken": "$api_token"
 }
 EOF
 
-ui_port="$(choose_port)"
 INTENTOS_RUNTIME_DIR="$WORK_DIR" INTENTOS_APP_PORT="$ui_port" \
   scripts/product/start-ui.sh > "$LOG_DIR/beta-ui.log" 2>&1 &
 ui_pid="$!"
 ui_url="http://127.0.0.1:$ui_port/site/index.html?mode=beta"
 wait_for_url "$ui_url" "$ui_pid"
 
-python3 - "$service_url" "$ui_url" "$VALIDATION_JSON" "$DAILY_REVIEW_JSON" "$BETA_DATE" <<'PY'
+python3 - "$service_url" "$ui_url" "$VALIDATION_JSON" "$DAILY_REVIEW_JSON" "$BETA_DATE" "$api_token" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -162,17 +174,23 @@ from urllib.request import Request, urlopen
 from intentos.beta import permissions as beta_permissions
 from intentos.beta import store as beta_store
 
-service_url, ui_url, validation_path, review_path, date = sys.argv[1:]
+service_url, ui_url, validation_path, review_path, date, api_token = sys.argv[1:]
+
+def auth_headers(extra=None):
+    headers = {"X-IntentOS-Token": api_token}
+    if extra:
+        headers.update(extra)
+    return headers
 
 def get_json(url):
-    with urlopen(url, timeout=3) as response:
+    with urlopen(Request(url, headers=auth_headers()), timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
 def post_json(url, payload):
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     with urlopen(request, timeout=3) as response:
@@ -182,7 +200,7 @@ def post_json_status(url, payload):
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     try:
@@ -249,8 +267,28 @@ if corrected["items"][0]["label"] != "learning":
 sticky_loop_event = dict(raw_bridge_event)
 sticky_loop_event["timestamp"] = "2026-04-27T12:00:00Z"
 sticky_loop_event["duration_seconds"] = 7200
-sticky_loop_event["title"] = "Implement sticky IntentOS loop - ChatGPT"
+sticky_loop_event["url"] = "https://chat.openai.com/c/sticky-loop-validation"
+sticky_loop_event["title"] = segment["title"]
 sticky_loop_post = post_json(f"{service_url}/api/browser-event", sticky_loop_event)
+same_domain_unrelated_event = dict(raw_bridge_event)
+same_domain_unrelated_event["timestamp"] = "2026-04-27T12:30:00Z"
+same_domain_unrelated_event["duration_seconds"] = 900
+same_domain_unrelated_event["url"] = "https://chat.openai.com/c/unrelated-domain-scope"
+same_domain_unrelated_event["title"] = "Casual ChatGPT thread"
+same_domain_unrelated_post = post_json(f"{service_url}/api/browser-event", same_domain_unrelated_event)
+sticky_loop_review = get_json(f"{service_url}/api/daily-review?date={date}")
+sticky_loop_item = next(
+    item for item in sticky_loop_review["items"]
+    if (item.get("url") or "").endswith("/sticky-loop-validation")
+)
+if sticky_loop_item.get("label") != "learning" or sticky_loop_item.get("corrected_label") != "learning":
+    raise AssertionError("apply_to_future correction did not match a future segment key")
+same_domain_unrelated_item = next(
+    item for item in sticky_loop_review["items"]
+    if (item.get("url") or "").endswith("/unrelated-domain-scope")
+)
+if same_domain_unrelated_item.get("corrected_label") == "learning":
+    raise AssertionError("apply_to_future correction matched an unrelated same-domain segment")
 daily_intent = post_json(
     f"{service_url}/api/daily-intent",
     {
@@ -355,6 +393,9 @@ with urlopen(ui_url.replace("index.html", "app.js"), timeout=3) as response:
     app_js = response.read().decode("utf-8")
 with urlopen(ui_url.replace("index.html", "beta-config.json"), timeout=3) as response:
     config = json.loads(response.read().decode("utf-8"))
+config_for_artifact = dict(config)
+if config_for_artifact.get("apiToken"):
+    config_for_artifact["apiToken"] = "<redacted>"
 for token in [
     "data-correction-controls",
     "data-onboarding",
@@ -447,6 +488,11 @@ validation = {
     "extension_heartbeat": heartbeat,
     "extension_post": bridge_post,
     "sticky_loop_event": sticky_loop_post,
+    "sticky_loop_future_correction": sticky_loop_item,
+    "sticky_loop_same_domain_unrelated": {
+        "post": same_domain_unrelated_post,
+        "item": same_domain_unrelated_item,
+    },
     "permission_scenarios": permission_scenarios,
     "open_settings": opened,
     "correction": correction,
@@ -459,7 +505,7 @@ validation = {
     "review_checkin": review_checkin,
     "pause": pause,
     "delete": {"status": "deferred_until_after_render"},
-    "config": config,
+    "config": config_for_artifact,
 }
 Path(validation_path).write_text(json.dumps(validation, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(validation, indent=2))
@@ -826,7 +872,7 @@ from pathlib import Path
 path = Path(sys.argv[1])
 date = sys.argv[2]
 path.write_text(
-    json.dumps({"serviceUrl": "http://127.0.0.1:1", "date": date}, indent=2) + "\n",
+    json.dumps({"serviceUrl": "http://127.0.0.1:1", "date": date, "apiToken": "stale-token"}, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
@@ -859,23 +905,29 @@ else
   } > "$ARTIFACT_DIR/beta-ui-render-validation.txt"
 fi
 
-python3 - "$service_url" "$VALIDATION_JSON" <<'PY'
+python3 - "$service_url" "$VALIDATION_JSON" "$api_token" <<'PY'
 import json
 import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-service_url, validation_path = sys.argv[1:]
+service_url, validation_path, api_token = sys.argv[1:]
+
+def auth_headers(extra=None):
+    headers = {"X-IntentOS-Token": api_token}
+    if extra:
+        headers.update(extra)
+    return headers
 
 def get_json(url):
-    with urlopen(url, timeout=3) as response:
+    with urlopen(Request(url, headers=auth_headers()), timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
 def post_json(url, payload):
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     with urlopen(request, timeout=3) as response:
@@ -901,7 +953,7 @@ if [ -n "$browser" ]; then
   beta_empty_url="http://127.0.0.1:$ui_port/site-beta-empty/index.html?mode=beta"
   rm -rf "$beta_empty_site"
   cp -R "$SITE_DIR" "$beta_empty_site"
-  python3 - "$beta_empty_site/beta-config.json" "$service_url" "$BETA_DATE" <<'PY'
+  python3 - "$beta_empty_site/beta-config.json" "$service_url" "$BETA_DATE" "$api_token" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -909,8 +961,9 @@ from pathlib import Path
 path = Path(sys.argv[1])
 service_url = sys.argv[2]
 date = sys.argv[3]
+api_token = sys.argv[4]
 path.write_text(
-    json.dumps({"serviceUrl": service_url, "date": date}, indent=2) + "\n",
+    json.dumps({"serviceUrl": service_url, "date": date, "apiToken": api_token}, indent=2) + "\n",
     encoding="utf-8",
 )
 PY

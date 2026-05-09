@@ -76,8 +76,9 @@ artifacts.
 - `python3 -m intentos.capture_cli replay .harness/runtime/artifacts/capture-events.jsonl`
 - `python3 -m intentos.capture_cli capture-macos --duration-seconds 5 --output .harness/runtime/artifacts/live-capture-events.jsonl`
 - `python3 -m intentos.capture_cli capture-session --duration-seconds 30 --interval-seconds 5 --output .harness/runtime/artifacts/live-session-capture-events.jsonl`
-- `python3 -m intentos.beta_cli serve --db .harness/runtime/beta/intentos.sqlite --port 58917`
-- `python3 -m intentos.beta_cli fake-bridge --service-url http://127.0.0.1:58917/api/browser-event --once`
+- `TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"`
+- `python3 -m intentos.beta_cli serve --db .harness/runtime/beta/intentos.sqlite --port 58917 --api-token "$TOKEN" --allowed-origin http://127.0.0.1:58918`
+- `python3 -m intentos.beta_cli fake-bridge --service-url http://127.0.0.1:58917/api/browser-event --api-token "$TOKEN" --once`
 - `python3 -m intentos.beta_cli daily-review --db .harness/runtime/beta/intentos.sqlite --date 2026-04-27 --output .harness/runtime/artifacts/beta-daily-review.json`
 - `make observe-live`
 - `make observe-session`

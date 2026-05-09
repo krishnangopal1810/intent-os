@@ -25,6 +25,8 @@ def main() -> int:
     serve_parser.add_argument("--runtime-dir")
     serve_parser.add_argument("--permission-mode", choices=["real", "fake"], default="real")
     serve_parser.add_argument("--disable-system-open", action="store_true")
+    serve_parser.add_argument("--api-token", required=True)
+    serve_parser.add_argument("--allowed-origin", action="append", default=[])
 
     seed = subparsers.add_parser("seed-fixtures", help="Persist fake Chrome bridge events.")
     add_common(seed)
@@ -35,6 +37,7 @@ def main() -> int:
     bridge.add_argument("--input", default="data/beta/fake_chrome_events.json")
     bridge.add_argument("--interval-seconds", type=int, default=60)
     bridge.add_argument("--once", action="store_true")
+    bridge.add_argument("--api-token", required=True)
 
     live = subparsers.add_parser("live-recorder", help="Record native macOS metadata to SQLite.")
     add_common(live)
@@ -63,6 +66,8 @@ def main() -> int:
                 runtime_dir=Path(args.runtime_dir) if args.runtime_dir else None,
                 permission_mode=args.permission_mode,
                 allow_system_open=not args.disable_system_open,
+                api_token=args.api_token,
+                allowed_origins=tuple(args.allowed_origin),
             )
         )
         return 0
@@ -75,6 +80,7 @@ def main() -> int:
             args.service_url,
             Path(args.input),
             args.interval_seconds,
+            args.api_token,
             once=args.once,
         )
     if args.command == "live-recorder":
@@ -133,7 +139,11 @@ def seed_fixtures(
 
 
 def run_fake_bridge(
-    service_url: str, input_path: Path, interval_seconds: int, once: bool = False
+    service_url: str,
+    input_path: Path,
+    interval_seconds: int,
+    api_token: str,
+    once: bool = False,
 ) -> int:
     if interval_seconds <= 0:
         raise ValueError("interval_seconds must be positive")
@@ -147,7 +157,7 @@ def run_fake_bridge(
             request = Request(
                 service_url,
                 data=data,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "X-IntentOS-Token": api_token},
                 method="POST",
             )
             with urlopen(request, timeout=3) as response:

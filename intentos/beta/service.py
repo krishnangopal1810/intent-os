@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -20,10 +19,8 @@ from intentos.beta.service_helpers import (
     require_text,
     today,
 )
+from intentos.beta import service_security
 from intentos.capture.privacy import load_privacy_policy
-
-class ReusableThreadingHTTPServer(ThreadingHTTPServer):
-    allow_reuse_address = True
 
 
 @dataclass(frozen=True)
@@ -36,17 +33,24 @@ class ServiceConfig:
     runtime_dir: Path | None = None
     permission_mode: str = "real"
     allow_system_open: bool = True
+    api_token: str = ""
+    allowed_origins: tuple[str, ...] = ()
 
 def make_handler(config: ServiceConfig):
     class BetaHandler(BaseHTTPRequestHandler):
         server_version = "IntentOSBeta/1"
 
         def do_OPTIONS(self) -> None:
+            if not service_security.origin_allowed(self.headers, config.allowed_origins):
+                self.send_json({"error": "origin not allowed"}, status=403)
+                return
             self.send_json({"status": "ok"})
 
         def do_GET(self) -> None:
             try:
                 path, query = parsed_path(self.path)
+                if not self.authorize_request():
+                    return
                 if path == "/api/status":
                     self.send_json(self.with_conn(lambda conn: store.status(conn, str(config.db_path))))
                 elif path == "/api/onboarding":
@@ -94,6 +98,8 @@ def make_handler(config: ServiceConfig):
         def do_POST(self) -> None:
             try:
                 path, _ = parsed_path(self.path)
+                if not self.authorize_request():
+                    return
                 payload = self.read_json()
                 if path == "/api/browser-event":
                     self.handle_browser_event(payload)
@@ -262,12 +268,7 @@ def make_handler(config: ServiceConfig):
             )
 
         def read_json(self) -> dict[str, Any]:
-            length = int(self.headers.get("Content-Length") or "0")
-            raw = self.rfile.read(length).decode("utf-8") if length else "{}"
-            payload = json.loads(raw)
-            if not isinstance(payload, dict):
-                raise ValueError("request body must be a JSON object")
-            return payload
+            return service_security.read_json(self)
 
         def with_conn(self, fn):
             conn = store.connect(config.db_path)
@@ -278,15 +279,10 @@ def make_handler(config: ServiceConfig):
                 conn.close()
 
         def send_json(self, payload: object, status: int = 200) -> None:
-            data = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
-            self.end_headers()
-            self.wfile.write(data)
+            service_security.send_json(self, payload, config, status=status)
+
+        def authorize_request(self) -> bool:
+            return service_security.authorize_request(self, config)
 
         def log_message(self, fmt: str, *args: object) -> None:
             print(f"beta-service: {self.address_string()} {fmt % args}", flush=True)
@@ -294,6 +290,8 @@ def make_handler(config: ServiceConfig):
     return BetaHandler
 
 def serve(config: ServiceConfig) -> None:
+    if not config.api_token:
+        raise ValueError("IntentOS beta service requires a runtime API token")
     with store.connect(config.db_path) as conn:
         store.init_db(conn, config.retention_days)
         store.cleanup_old_events(conn)
@@ -305,7 +303,8 @@ def serve(config: ServiceConfig) -> None:
         store.set_status(conn, "capture_note", "")
         if config.service_log:
             store.set_status(conn, "service_log", str(config.service_log))
-    server = ReusableThreadingHTTPServer(
+    ThreadingHTTPServer.allow_reuse_address = True
+    server = ThreadingHTTPServer(
         ("127.0.0.1", config.port),
         make_handler(config),
     )

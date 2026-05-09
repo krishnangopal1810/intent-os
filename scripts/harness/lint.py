@@ -12,7 +12,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_PYTHON_LINES = 320
+PYTHON_DISCOVERY_ROOTS = ("intentos", "tests")
 EXPECTED_LAYERS = {
+    "intentos/__init__.py",
     "intentos/activity.py",
     "intentos/classifier.py",
     "intentos/classifier_context.py",
@@ -34,6 +36,9 @@ EXPECTED_LAYERS = {
     "intentos/beta/schema.py",
     "intentos/beta/service.py",
     "intentos/beta/service_helpers.py",
+    "intentos/beta/service_security.py",
+    "intentos/beta/setup_diagnostics.py",
+    "intentos/beta/setup_flow.py",
     "intentos/beta/state.py",
     "intentos/beta/store.py",
     "intentos/beta/weekly_patterns.py",
@@ -54,8 +59,10 @@ EXPECTED_LAYERS = {
     "intentos/cli.py",
     "intentos/evaluate.py",
     "tests/test_activity_classification.py",
+    "tests/test_beta_activation.py",
     "tests/test_beta_daily_loop.py",
     "tests/test_beta_extension.py",
+    "tests/test_beta_menu_app.py",
     "tests/test_beta_native_recorder.py",
     "tests/test_beta_permissions.py",
     "tests/test_beta_service.py",
@@ -73,6 +80,7 @@ EXPECTED_LAYERS = {
     "tests/test_youtube_mvp.py",
 }
 ALLOWED_IMPORTS = {
+    "intentos/__init__.py": set(),
     "intentos/cli.py": {"intentos.youtube"},
     "intentos/evaluate.py": {"intentos.youtube"},
     "intentos/classifier.py": {"intentos.activity", "intentos.classifier_context"},
@@ -125,6 +133,7 @@ ALLOWED_IMPORTS = {
     "intentos/beta/review.py": {
         "intentos.activity",
         "intentos.beta",
+        "intentos.beta.keys",
         "intentos.classifier",
         "intentos.reporting",
         "intentos.youtube",
@@ -137,6 +146,13 @@ ALLOWED_IMPORTS = {
         "intentos.capture.privacy",
     },
     "intentos/beta/service_helpers.py": set(),
+    "intentos/beta/service_security.py": set(),
+    "intentos/beta/setup_diagnostics.py": {
+        "intentos.beta",
+    },
+    "intentos/beta/setup_flow.py": {
+        "intentos.beta",
+    },
     "intentos/beta/state.py": {
         "intentos.beta",
     },
@@ -207,6 +223,9 @@ ALLOWED_IMPORTS = {
         "intentos.classifier",
         "intentos.reporting",
     },
+    "tests/test_beta_activation.py": {
+        "intentos.beta",
+    },
     "tests/test_beta_daily_loop.py": {
         "intentos.activity",
         "intentos.beta",
@@ -215,6 +234,7 @@ ALLOWED_IMPORTS = {
         "intentos.beta.extension",
         "intentos.capture.privacy",
     },
+    "tests/test_beta_menu_app.py": set(),
     "tests/test_beta_native_recorder.py": {
         "intentos.activity",
         "intentos.beta",
@@ -299,12 +319,28 @@ def main() -> int:
 
 
 def check_required_python_files(failures: list[str]) -> None:
+    discovered = discover_python_files()
+    for path in sorted(discovered - EXPECTED_LAYERS):
+        failures.append(
+            f"unregistered Python file {path}; add it to EXPECTED_LAYERS and "
+            "ALLOWED_IMPORTS so architecture and size checks apply"
+        )
     for path in sorted(EXPECTED_LAYERS):
         if not (ROOT / path).is_file():
             failures.append(
                 f"missing {path}; keep the MVP layer map in docs/ARCHITECTURE.md "
                 "and scripts/harness/lint.py aligned"
             )
+
+
+def discover_python_files() -> set[str]:
+    paths: set[str] = set()
+    for root_name in PYTHON_DISCOVERY_ROOTS:
+        for path in (ROOT / root_name).rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            paths.add(str(path.relative_to(ROOT)))
+    return paths
 
 
 def check_python_syntax_and_imports(failures: list[str]) -> None:
@@ -904,6 +940,8 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         "intentos/beta/native_recorder.py",
         "intentos/beta/recorder.py",
         "intentos/beta/review.py",
+        "intentos/beta/service_security.py",
+        "intentos/beta/setup_diagnostics.py",
         "intentos/beta_cli.py",
         "scripts/harness/beta-dev.sh",
         "scripts/harness/beta-status.sh",
@@ -918,6 +956,8 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         "data/beta/cohort_evidence_template.json",
         "scripts/product/dogfood-smoke.sh",
         "data/beta/fake_chrome_events.json",
+        "extension/chrome/background.js",
+        "extension/chrome/content.js",
         "extension/chrome/manifest.json",
         "macos/IntentOSBeta/IntentOSBeta.swift",
         ".github/workflows/trusted-beta-artifact.yml",
@@ -945,6 +985,21 @@ def check_beta_harness_contract(failures: list[str]) -> None:
                 failures.append(
                     f"scripts/product/validate-beta.sh must include beta UI UX probe {phrase!r}"
                 )
+        for phrase in [
+            "--api-token",
+            "--allowed-origin",
+            "X-IntentOS-Token",
+            '"apiToken": "$api_token"',
+            "sticky_loop_future_correction",
+            "apply_to_future correction did not match a future segment key",
+            "apply_to_future correction matched an unrelated same-domain segment",
+            'config_for_artifact["apiToken"] = "<redacted>"',
+        ]:
+            if phrase not in text:
+                failures.append(
+                    "scripts/product/validate-beta.sh must lock and verify the "
+                    f"authenticated beta API path with phrase {phrase!r}"
+                )
 
     package_check = ROOT / "scripts/harness/package-onboarding-check.py"
     if package_check.is_file():
@@ -971,6 +1026,7 @@ def check_beta_harness_contract(failures: list[str]) -> None:
             "make package-onboarding-check",
             "actions/upload-artifact@v4",
             ".harness/runtime/artifacts/IntentOS-trusted-beta.zip",
+            "github.event_name != 'pull_request'",
             "if-no-files-found: error",
             "retention-days:",
         ]:
@@ -979,12 +1035,187 @@ def check_beta_harness_contract(failures: list[str]) -> None:
                     ".github/workflows/trusted-beta-artifact.yml must publish "
                     f"trusted beta artifact phrase {phrase!r}"
                 )
+        if "pull_request" in text and "if: github.event_name != 'pull_request'" not in text:
+            failures.append(
+                ".github/workflows/trusted-beta-artifact.yml must not upload "
+                "tester-facing artifacts from pull_request builds"
+            )
+
+    service_security = ROOT / "intentos/beta/service_security.py"
+    if service_security.is_file():
+        text = service_security.read_text(encoding="utf-8")
+        for phrase in [
+            'API_TOKEN_HEADER = "X-IntentOS-Token"',
+            "MAX_JSON_BODY_BYTES",
+            "hmac.compare_digest",
+            "origin_allowed",
+            "cors_origin",
+        ]:
+            if phrase not in text:
+                failures.append(f"intentos/beta/service_security.py must enforce {phrase!r}")
+
+    service_py = ROOT / "intentos/beta/service.py"
+    if service_py.is_file():
+        text = service_py.read_text(encoding="utf-8")
+        for phrase in [
+            "if not self.authorize_request():",
+            "IntentOS beta service requires a runtime API token",
+            "service_security.send_json",
+        ]:
+            if phrase not in text:
+                failures.append(f"intentos/beta/service.py must enforce API auth phrase {phrase!r}")
+        if 'Access-Control-Allow-Origin", "*"' in text:
+            failures.append("intentos/beta/service.py must not use wildcard CORS")
+
+    beta_dev = ROOT / "scripts/harness/beta-dev.sh"
+    if beta_dev.is_file():
+        text = beta_dev.read_text(encoding="utf-8")
+        for phrase in [
+            "INTENTOS_BETA_API_TOKEN",
+            "--api-token",
+            "--allowed-origin",
+            '"apiToken": "$api_token"',
+            "X-IntentOS-Token",
+            "INTENTOS_BETA_API_TOKEN=<redacted>",
+        ]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/beta-dev.sh must preserve API token wiring {phrase!r}")
+
+    beta_status = ROOT / "scripts/harness/beta-status.sh"
+    if beta_status.is_file():
+        text = beta_status.read_text(encoding="utf-8")
+        for phrase in ["INTENTOS_BETA_API_TOKEN", "X-IntentOS-Token", "INTENTOS_BETA_API_TOKEN=<redacted>"]:
+            if phrase not in text:
+                failures.append(f"scripts/harness/beta-status.sh must preserve token-aware diagnostics {phrase!r}")
+
+    review_py = ROOT / "intentos/beta/review.py"
+    if review_py.is_file():
+        text = review_py.read_text(encoding="utf-8")
+        for phrase in [
+            "future_correction_for_event",
+            "future_correction_matches",
+            "apply_to_future = 1",
+            "CORRECTION_REASON",
+            "domain_only_future_match",
+        ]:
+            if phrase not in text:
+                failures.append(f"intentos/beta/review.py must preserve future correction matching {phrase!r}")
+        if 'if row["domain"] and row["domain"] == domain:' in text:
+            failures.append(
+                "intentos/beta/review.py must not apply future corrections by domain alone"
+            )
+
+    content_js = ROOT / "extension/chrome/content.js"
+    if content_js.is_file():
+        text = content_js.read_text(encoding="utf-8")
+        for phrase in [
+            "isIntentOSDashboard",
+            'candidate.pathname === "/site/index.html"',
+            'candidate.searchParams.get("mode") === "beta"',
+            "dashboardOrigin",
+        ]:
+            if phrase not in text:
+                failures.append(f"extension/chrome/content.js must restrict localhost bridge config {phrase!r}")
+
+    background_js = ROOT / "extension/chrome/background.js"
+    if background_js.is_file():
+        text = background_js.read_text(encoding="utf-8")
+        for phrase in [
+            "isTrustedDashboardSender",
+            'url.pathname === "/site/index.html"',
+            'url.searchParams.get("mode") === "beta"',
+            "message?.dashboardOrigin === url.origin",
+        ]:
+            if phrase not in text:
+                failures.append(f"extension/chrome/background.js must restrict localhost bridge config {phrase!r}")
+
+    manifest_json = ROOT / "extension/chrome/manifest.json"
+    if manifest_json.is_file():
+        manifest = json.loads(manifest_json.read_text(encoding="utf-8"))
+        matches = [
+            match
+            for script in manifest.get("content_scripts", [])
+            for match in script.get("matches", [])
+        ]
+        if "http://127.0.0.1:*/*" in matches:
+            failures.append(
+                "extension/chrome/manifest.json must not inject config code into every localhost page"
+            )
+        if "http://127.0.0.1:*/site/index.html*" not in matches:
+            failures.append(
+                "extension/chrome/manifest.json must restrict localhost injection to the beta dashboard"
+            )
+
+    extension_py = ROOT / "intentos/beta/extension.py"
+    if extension_py.is_file():
+        text = extension_py.read_text(encoding="utf-8")
+        for phrase in ["storage_safe_url", 'query=""', 'fragment=""']:
+            if phrase not in text:
+                failures.append(f"intentos/beta/extension.py must strip raw URL detail with {phrase!r}")
+
+    store_py = ROOT / "intentos/beta/store.py"
+    if store_py.is_file():
+        text = store_py.read_text(encoding="utf-8")
+        for phrase in [
+            "clear_private_runtime_state",
+            "PRIVATE_RUNTIME_STATUS_KEYS",
+            "PRIVATE_RUNTIME_STATUS_PREFIXES",
+            "PRIVATE_SETTING_KEYS",
+        ]:
+            if phrase not in text:
+                failures.append(f"intentos/beta/store.py must scrub delete-local-data metadata {phrase!r}")
+
+    service_helpers = ROOT / "intentos/beta/service_helpers.py"
+    if service_helpers.is_file():
+        text = service_helpers.read_text(encoding="utf-8")
+        for phrase in ['"beta-*.json"', '"beta-*.png"', '"beta-*.html"', '"beta-*.txt"']:
+            if phrase not in text:
+                failures.append(f"intentos/beta/service_helpers.py must clear beta artifacts {phrase!r}")
+
+    regression_tests = {
+        "tests/test_beta_service.py": [
+            "unauthorized_read",
+            "unauthorized_write",
+            "blocked_origin",
+            "future_raw",
+            "corrected_future",
+            "future_item",
+            "unrelated_future_raw",
+            "unrelated_item",
+            'deleted["capture_preview"]["state"]',
+            'deleted["permissions"]["accessibility"]["state"]',
+        ],
+        "tests/test_beta_extension.py": [
+            "test_browser_url_strips_query_and_fragment_before_persistence",
+            "?email=person@example.com#private",
+            "isIntentOSDashboard",
+            "isTrustedDashboardSender",
+            'candidate.pathname === "/site/index.html"',
+        ],
+        "tests/test_harness_completion.py": [
+            "test_harness_lint_guards_review_finding_regressions",
+            "must not use wildcard CORS",
+            "must scrub delete-local-data metadata",
+        ],
+    }
+    for relative_path, phrases in regression_tests.items():
+        path = ROOT / relative_path
+        if not path.is_file():
+            failures.append(f"missing beta regression test file {relative_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in phrases:
+            if phrase not in text:
+                failures.append(f"{relative_path} must keep beta regression coverage phrase {phrase!r}")
 
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
         text = app_js.read_text(encoding="utf-8")
         for phrase in [
             "beta-config.json",
+            "apiHeaders",
+            "X-IntentOS-Token",
+            "loadBetaJson",
             "/api/daily-review",
             "/api/daily-loop",
             "/api/daily-intent",
@@ -1001,6 +1232,8 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         ]:
             if phrase not in text:
                 failures.append(f"web/app.js must support beta service mode phrase {phrase!r}")
+        if "loadJson(apiUrl(betaConfig" in text:
+            failures.append("web/app.js beta service reads must use loadBetaJson with API token headers")
     styles = ROOT / "web/styles.css"
     if styles.is_file():
         text = styles.read_text(encoding="utf-8")
