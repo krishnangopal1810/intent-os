@@ -30,7 +30,8 @@ fi
 
 rm -rf "$APP_BUNDLE" "$LEGACY_APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources" "$MODULE_CACHE"
-swiftc macos/IntentOSBeta/IntentOSBeta.swift \
+swift_sources=(macos/IntentOSBeta/*.swift)
+swiftc "${swift_sources[@]}" \
   -o "$EXECUTABLE" \
   -parse-as-library \
   -module-cache-path "$MODULE_CACHE" \

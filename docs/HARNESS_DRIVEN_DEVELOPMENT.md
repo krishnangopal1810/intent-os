@@ -50,9 +50,9 @@ Use the smallest deterministic layer that catches the feedback:
   `scripts/product/render-ui-check.py`, UI fixtures, or screenshot evidence.
 - User-facing copy feedback: update `data/ui/visible_copy_policy.json` or a
   specific rendered text assertion.
-- Workflow feedback: add a service-backed beta scenario in
-  `scripts/product/validate-beta.sh` or a fixture workflow in
-  `scripts/product/validate-ui.sh`.
+- Workflow feedback: add a service-backed beta scenario through
+  `scripts/product/validate_beta.py` / `scripts/product/beta_validation/` or a
+  fixture workflow in `scripts/product/validate-ui.sh`.
 - Classifier feedback: promote examples into `data/activity/evaluation_set.json`
   or the relevant evaluation fixture before classifier work is complete.
 - Runtime or permission feedback: add deterministic service, CLI, fake

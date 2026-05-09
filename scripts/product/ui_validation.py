@@ -153,9 +153,23 @@ def validate_static_dom(html: str) -> dict[str, object]:
             f"missing nav link: {href}",
         )
 
-    scripts = [element for element in elements_with(root, tag="script") if has_attr(element, "src", "./app.js")]
+    expected_scripts = [
+        "./js/state.js",
+        "./js/api.js",
+        "./js/navigation.js",
+        "./js/format.js",
+        "./js/render-summary.js",
+        "./js/render-coach.js",
+        "./js/render-review.js",
+        "./js/render-daily-loop.js",
+        "./js/render-beta-queues.js",
+        "./js/render-onboarding.js",
+        "./js/boot.js",
+    ]
+    scripts = [element for element in elements_with(root, tag="script")]
     styles = [element for element in elements_with(root, tag="link") if has_attr(element, "href", "./styles.css")]
-    assert_true(scripts, "missing app.js script tag")
+    for script in expected_scripts:
+        assert_true(any(has_attr(element, "src", script) for element in scripts), f"missing script tag: {script}")
     assert_true(styles, "missing styles.css link tag")
     assert_true("youtube-title" not in html, "legacy YouTube section should not be visible in the UI")
     assert_true(len(elements_with(root, tag="article")) >= 3, "expected report panels and review cards")
@@ -256,7 +270,22 @@ def main() -> int:
     base = f"http://127.0.0.1:{args.port}"
 
     html = fetch(base, "/site/index.html")
-    app_js = fetch(base, "/site/app.js")
+    app_js = "\n".join(
+        fetch(base, path)
+        for path in [
+            "/site/js/state.js",
+            "/site/js/api.js",
+            "/site/js/navigation.js",
+            "/site/js/format.js",
+            "/site/js/render-summary.js",
+            "/site/js/render-coach.js",
+            "/site/js/render-review.js",
+            "/site/js/render-daily-loop.js",
+            "/site/js/render-beta-queues.js",
+            "/site/js/render-onboarding.js",
+            "/site/js/boot.js",
+        ]
+    )
     activity = json.loads(fetch(base, "/artifacts/activity-summary.json"))
     capture = json.loads(fetch(base, "/artifacts/capture-summary.json"))
     youtube = json.loads(fetch(base, "/artifacts/youtube-summary.json"))

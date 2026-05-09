@@ -87,7 +87,22 @@ def fetch(path: str) -> str:
     raise RuntimeError(f"failed to fetch {path}: {last_error}")
 
 html = fetch("/site/index.html")
-app_js = fetch("/site/app.js")
+app_js = "\n".join(
+    fetch(path)
+    for path in [
+        "/site/js/state.js",
+        "/site/js/api.js",
+        "/site/js/navigation.js",
+        "/site/js/format.js",
+        "/site/js/render-summary.js",
+        "/site/js/render-coach.js",
+        "/site/js/render-review.js",
+        "/site/js/render-daily-loop.js",
+        "/site/js/render-beta-queues.js",
+        "/site/js/render-onboarding.js",
+        "/site/js/boot.js",
+    ]
+)
 activity = json.loads(fetch("/artifacts/activity-summary.json"))
 capture = json.loads(fetch("/artifacts/capture-summary.json"))
 session_capture = json.loads(fetch("/artifacts/session-capture-summary.json"))

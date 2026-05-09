@@ -37,8 +37,10 @@ exists until the gap is closed.
   theme to map to a fixture, UI probe, validation scenario, quality note, or
   manual exception. When cohort results are present, the check enforces the
   current demand targets instead of treating demand evidence as advisory.
-- Architecture lints cover the current Python layer map but need expansion as
-  new layers appear.
+- Architecture lints cover the current Python layer map, unregistered
+  `intentos/` and `tests/` modules, split dashboard script sizes, and the beta
+  validation wrapper/module boundary; new runtime layers still need explicit
+  entries when they appear.
 - Browser screenshot evidence is checked in and guarded by a source manifest;
   rendered desktop/mobile DOM probes now cover decision cards, next move text,
   visible-copy policy, overflow, cut-off or clipped text, first-screen density
