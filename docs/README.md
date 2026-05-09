@@ -26,7 +26,8 @@ IntentOS has a local-first Python CLI foundation:
 - Checked-in UI screenshot evidence guarded by a source manifest.
 - Labeled fixture evaluation for both paths.
 - Harness linting and cleanup checks.
-- CI running `make verify`.
+- CI running `make verify` and a macOS trusted-beta artifact workflow that
+  builds, validates, and uploads `IntentOS-trusted-beta.zip`.
 - Specs for metadata-first macOS live capture and local on-device inference.
 
 Always-on public distribution, screenshot fallback, OCR, local model inference,

@@ -1,0 +1,40 @@
+name: Trusted Beta Artifact
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  package-trusted-beta:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build trusted beta package
+        run: make package-onboarding-beta
+
+      - name: Validate trusted beta package
+        run: make package-onboarding-check
+
+      - name: Upload trusted beta zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: IntentOS-trusted-beta-${{ github.sha }}
+          path: .harness/runtime/artifacts/IntentOS-trusted-beta.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload trusted beta package reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: IntentOS-trusted-beta-reports-${{ github.sha }}
+          path: |
+            .harness/runtime/artifacts/beta-package.json
+            .harness/runtime/artifacts/onboarding-beta-package.json
+            .harness/runtime/artifacts/package-onboarding-check.json
+          if-no-files-found: error
+          retention-days: 14

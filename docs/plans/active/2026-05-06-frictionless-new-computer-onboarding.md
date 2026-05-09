@@ -285,6 +285,9 @@ Reference onboarding patterns:
   activation milestones, capture preview, redacted setup report, stable
   trusted app identity, bundled tester artifact target, optional browser detail,
   and deterministic beta validation coverage.
+- 2026-05-09: Added macOS CI packaging for the trusted-tester zip. The workflow
+  builds, validates, and uploads `IntentOS-trusted-beta.zip` as a downloadable
+  artifact while keeping generated app binaries out of git.
 
 ## Handoff Notes
 
