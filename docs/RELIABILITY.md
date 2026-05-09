@@ -33,6 +33,10 @@ artifacts.
   file hygiene, plan hygiene, and evaluation set coverage.
 - `make verify` runs harness checks and detected product checks.
 - `.github/workflows/verify.yml` runs `make verify` in CI.
+- `.github/workflows/trusted-beta-artifact.yml` runs
+  `make package-onboarding-beta` and `make package-onboarding-check` on macOS
+  CI, then uploads the generated `IntentOS-trusted-beta.zip` and package
+  reports as workflow artifacts.
 - `make dev`, `make dev-live`, `make beta-dev`, `make beta-status`,
   `make beta-stop`, `make validate-beta`, `make package-beta`,
   `make app-status`, `make validate-ui`, `make observe`, and

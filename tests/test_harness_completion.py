@@ -265,6 +265,20 @@ class HarnessCompletionTests(unittest.TestCase):
         self.assertIn("median_setup_minutes above target", result.stderr)
         self.assertIn("first_live_state", result.stderr)
 
+    def test_ci_publishes_trusted_beta_artifact_without_tracking_binary(self):
+        workflow = Path(".github/workflows/trusted-beta-artifact.yml").read_text(
+            encoding="utf-8"
+        )
+        for phrase in [
+            "runs-on: macos-latest",
+            "make package-onboarding-beta",
+            "make package-onboarding-check",
+            "actions/upload-artifact@v4",
+            ".harness/runtime/artifacts/IntentOS-trusted-beta.zip",
+        ]:
+            self.assertIn(phrase, workflow)
+        self.assertIn(".harness/runtime/", Path(".gitignore").read_text(encoding="utf-8"))
+
     @staticmethod
     def cohort_tester(
         days_completed: int,

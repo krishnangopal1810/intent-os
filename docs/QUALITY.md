@@ -48,9 +48,9 @@ exists until the gap is closed.
   guidance, and capture events; richer end-to-end UI workflows are still
   pending.
 - Trusted beta packaging now emits a bundled `IntentOS-trusted-beta.zip` with
-  stable app identity, guided first run, and deterministic stale-dashboard menu
-  guards; notarization, auto-update, and public distribution are still out of
-  scope.
+  stable app identity, guided first run, deterministic stale-dashboard menu
+  guards, and a macOS CI artifact upload path; notarization, auto-update, and
+  public distribution are still out of scope.
 - Daily intent coach state is local and deterministic; richer habit mechanics
   such as notifications, calendar planning, blocking, and streaks remain out of
   scope.

@@ -121,6 +121,10 @@ make package-onboarding-beta
 This writes `.harness/runtime/artifacts/IntentOS-trusted-beta.zip`. The tester
 opens `IntentOS.app`; normal onboarding happens inside the app.
 
+CI also builds and validates this zip on macOS in the `Trusted Beta Artifact`
+workflow. Download the latest `IntentOS-trusted-beta-<commit>` workflow artifact
+for tester handoff; generated app binaries stay out of git.
+
 Common developer commands:
 
 | Goal | Command |
@@ -176,6 +180,8 @@ runnable, inspectable, fixture-backed, service-backed, and privacy-constrained.
   correction controls, and evening receipt.
 - The trusted-tester app artifact is the normal tester path, but this is not a
   notarized public installer, auto-updating app, or broad public beta.
+- CI produces the trusted-tester zip as a downloadable workflow artifact on
+  macOS; generated binaries are not tracked in the repository.
 - Verification is deterministic: `make verify` covers harness checks, unit
   tests, package contract checks, cohort evidence template validation, beta
   validation, UI render probes, screenshot freshness, and fixture evaluation.

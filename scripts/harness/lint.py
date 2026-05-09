@@ -920,6 +920,7 @@ def check_beta_harness_contract(failures: list[str]) -> None:
         "data/beta/fake_chrome_events.json",
         "extension/chrome/manifest.json",
         "macos/IntentOSBeta/IntentOSBeta.swift",
+        ".github/workflows/trusted-beta-artifact.yml",
     ]
     for path in required_paths:
         if not (ROOT / path).is_file():
@@ -959,6 +960,24 @@ def check_beta_harness_contract(failures: list[str]) -> None:
                 failures.append(
                     f"scripts/harness/package-onboarding-check.py must enforce "
                     f"stale dashboard guard phrase {phrase!r}"
+                )
+
+    artifact_workflow = ROOT / ".github/workflows/trusted-beta-artifact.yml"
+    if artifact_workflow.is_file():
+        text = artifact_workflow.read_text(encoding="utf-8")
+        for phrase in [
+            "runs-on: macos-latest",
+            "make package-onboarding-beta",
+            "make package-onboarding-check",
+            "actions/upload-artifact@v4",
+            ".harness/runtime/artifacts/IntentOS-trusted-beta.zip",
+            "if-no-files-found: error",
+            "retention-days:",
+        ]:
+            if phrase not in text:
+                failures.append(
+                    ".github/workflows/trusted-beta-artifact.yml must publish "
+                    f"trusted beta artifact phrase {phrase!r}"
                 )
 
     app_js = ROOT / "web/app.js"

@@ -27,6 +27,9 @@ slices.
   checkout or Terminal commands.
 - `make package-onboarding-check`: validate the trusted-tester package contract,
   stable app identity, bundled runtime metadata, and no-Terminal normal path.
+- `.github/workflows/trusted-beta-artifact.yml`: build the trusted-tester zip
+  on macOS CI, run the package contract check, and upload the zip and package
+  reports as downloadable workflow artifacts without tracking binaries in git.
 - `make cohort-evidence-check`: validate the trusted beta cohort evidence
   template and any optional cohort evidence artifact without raw personal data.
 - `make install-beta-app`: copy and open the local beta menu bar app on macOS.
@@ -205,7 +208,8 @@ Expected artifacts after product code exists:
 - `.harness/runtime/artifacts/IntentOS.app`: trusted tester app bundle using
   the stable `local.intentos.trusted` identity.
 - `.harness/runtime/artifacts/IntentOS-trusted-beta.zip`: bundled trusted
-  tester artifact produced by `make package-onboarding-beta`.
+  tester artifact produced by `make package-onboarding-beta` locally and by the
+  `Trusted Beta Artifact` macOS CI workflow for downloadable handoff.
 - `.harness/runtime/artifacts/onboarding-beta-package.json`: packaging
   manifest for the bundled trusted tester artifact.
 - `.harness/runtime/artifacts/package-onboarding-check.json`: deterministic

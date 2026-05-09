@@ -63,7 +63,9 @@ Normal trusted-tester path:
 4. Browser detail and the Chrome bridge are optional after app/window capture
    is healthy.
 
-Only maintainers build that artifact from the repo:
+Maintainers can download the latest `IntentOS-trusted-beta-<commit>` artifact
+from the GitHub Actions `Trusted Beta Artifact` workflow, or build that artifact
+from the repo:
 
 ```sh
 make package-onboarding-beta
