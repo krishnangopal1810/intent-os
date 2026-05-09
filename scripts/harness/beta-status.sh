@@ -18,7 +18,7 @@ if [ ! -f "$BETA_ENV" ]; then
 fi
 
 runtime_status="$(value_from_env INTENTOS_BETA_STATUS || true)"
-cat "$BETA_ENV"
+sed 's/^INTENTOS_BETA_API_TOKEN=.*/INTENTOS_BETA_API_TOKEN=<redacted>/' "$BETA_ENV"
 for key in INTENTOS_BETA_SERVICE_PID INTENTOS_BETA_NATIVE_RECORDER_PID INTENTOS_BETA_FAKE_BRIDGE_PID INTENTOS_BETA_UI_PID; do
   pid="$(value_from_env "$key" || true)"
   if [ -n "${pid:-}" ] && kill -0 "$pid" >/dev/null 2>&1; then
@@ -37,15 +37,17 @@ else
 fi
 
 url="$(value_from_env INTENTOS_BETA_SERVICE_URL || true)"
+api_token="$(value_from_env INTENTOS_BETA_API_TOKEN || true)"
 if [ "${runtime_status:-}" = "stopped" ]; then
   echo "service_health=stopped"
 elif [ -n "${url:-}" ]; then
-  python3 - "$url/api/status" <<'PY'
+  python3 - "$url/api/status" "$api_token" <<'PY'
 import sys
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 try:
-    with urlopen(sys.argv[1], timeout=1) as response:
+    request = Request(sys.argv[1], headers={"X-IntentOS-Token": sys.argv[2]} if sys.argv[2] else {})
+    with urlopen(request, timeout=1) as response:
         print(f"service_health=http_{response.status}")
 except Exception as exc:
     print(f"service_health=failed:{exc}")

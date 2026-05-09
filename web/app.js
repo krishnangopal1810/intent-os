@@ -29,8 +29,8 @@ const reviewLabels = ["unknown"];
 let currentSetupGuidance = null;
 let navScrollFrame = null;
 
-async function loadJson(path) {
-  const response = await fetch(path, { cache: "no-store" });
+async function loadJson(path, options = {}) {
+  const response = await fetch(path, { cache: "no-store", ...options });
   if (!response.ok) {
     throw new Error(`Failed to load ${path}: ${response.status}`);
   }
@@ -47,6 +47,14 @@ async function loadOptionalJson(path) {
 
 function apiUrl(config, path) {
   return `${config.serviceUrl}${path}`;
+}
+
+function apiHeaders(config) {
+  return config?.apiToken ? { "X-IntentOS-Token": config.apiToken } : {};
+}
+
+async function loadBetaJson(config, path) {
+  return loadJson(apiUrl(config, path), { headers: apiHeaders(config) });
 }
 
 function weekStartDate(dateString) {
@@ -1200,7 +1208,7 @@ async function postCorrection(betaConfig, item, correctedLabel, applyToFuture) {
 async function postJson(betaConfig, path, payload) {
   const response = await fetch(apiUrl(betaConfig, path), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...apiHeaders(betaConfig) },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -1784,10 +1792,10 @@ async function bootBeta(betaConfig) {
   const date = betaConfig.date || new Date().toISOString().slice(0, 10);
   const weekStart = weekStartDate(date);
   const [review, onboarding, dailyLoop, weekly] = await Promise.all([
-    loadJson(apiUrl(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`)),
-    loadJson(apiUrl(betaConfig, "/api/onboarding")),
-    loadJson(apiUrl(betaConfig, `/api/daily-loop?date=${encodeURIComponent(date)}`)),
-    loadJson(apiUrl(betaConfig, `/api/weekly-patterns?week_start=${encodeURIComponent(weekStart)}`)),
+    loadBetaJson(betaConfig, `/api/daily-review?date=${encodeURIComponent(date)}`),
+    loadBetaJson(betaConfig, "/api/onboarding"),
+    loadBetaJson(betaConfig, `/api/daily-loop?date=${encodeURIComponent(date)}`),
+    loadBetaJson(betaConfig, `/api/weekly-patterns?week_start=${encodeURIComponent(weekStart)}`),
   ]);
   hideServiceNotice();
   const status = review.status || {};
@@ -2116,7 +2124,7 @@ async function openSetting(betaConfig, target) {
 }
 
 async function copySetupReport(betaConfig) {
-  const report = await loadJson(apiUrl(betaConfig, "/api/setup-report"));
+  const report = await loadBetaJson(betaConfig, "/api/setup-report");
   const text = JSON.stringify(report.setup_report || report, null, 2);
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);

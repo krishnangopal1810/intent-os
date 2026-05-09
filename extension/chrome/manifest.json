@@ -14,7 +14,8 @@
         "https://www.youtube.com/*",
         "https://docs.google.com/*",
         "https://notion.so/*",
-        "https://*.notion.site/*"
+        "https://*.notion.site/*",
+        "http://127.0.0.1:*/site/index.html*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

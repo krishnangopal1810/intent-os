@@ -73,9 +73,12 @@ The current local-first slice keeps these concerns separate:
   helpers shared by beta persistence and review generation.
 - `intentos/beta/service_helpers.py`: small HTTP-service helpers for request
   parsing, validation, artifact cleanup, and event serialization.
+- `intentos/beta/service_security.py`: localhost API token validation, CORS
+  reflection, JSON body limits, and common JSON response writing.
+- `intentos/beta/setup_diagnostics.py`: setup report and preflight diagnostics
+  helpers kept out of the first-run step state module.
 - `intentos/beta/setup_flow.py`: first-run setup milestones, guided step
-  derivation, capture preview state, app identity, and redacted setup report
-  shaping.
+  derivation, capture preview state, and app identity wrappers.
 - `intentos/beta/native_recorder.py`: beta native macOS recorder that samples
   frontmost app/window metadata, uses the existing browser metadata fallback,
   applies privacy filtering through the capture stack, and writes SQLite rows.

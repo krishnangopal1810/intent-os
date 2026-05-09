@@ -25,7 +25,7 @@
     "intentos/reporting.py",
     "intentos/youtube.py"
   ],
-  "source_hash": "40c5bd7d460c8b71014bd8af63a47fc30cbb42136675124b5e4a1773a06e8ad5",
+  "source_hash": "6f7cf3cef2230b209d1de77a56b58f1758d9cd9c384d625e8bd13df006ad03f3",
   "path": "docs/assets/screenshots/intent-os-ui.png",
   "source_url": "/site/index.html",
   "viewport": "1440,1000",

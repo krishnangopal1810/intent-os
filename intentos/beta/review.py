@@ -7,6 +7,7 @@ from typing import Any
 
 from intentos.activity import ActivityEvent
 from intentos.beta import store
+from intentos.beta.keys import clean_key, domain_for_url, stable_url_pattern
 from intentos.classifier import ActivityClassification, BehaviorLabel, classify_event
 from intentos.reporting import (
     ClassifiedEvent,
@@ -16,6 +17,8 @@ from intentos.reporting import (
     sessionize_classified_events,
 )
 from intentos.youtube import format_duration, percentage
+
+CORRECTION_REASON = "Corrected by user."
 
 
 def daily_review(conn: sqlite3.Connection, date: str, db_path: str | None = None) -> dict[str, Any]:
@@ -73,7 +76,7 @@ def review_items(classified: list[ClassifiedEvent], corrected_keys: set[str]) ->
         item = session_to_dict(session)
         key = store.segment_key(session[0].event)
         item["segment_key"] = key
-        if key in corrected_keys:
+        if key in corrected_keys or any(row.classification.reason == CORRECTION_REASON for row in session):
             item["corrected_label"] = item["label"]
         items.append(item)
     return items
@@ -87,12 +90,60 @@ def correction_for_event(
         (store.segment_key(event),),
     ).fetchone()
     if not row:
+        row = future_correction_for_event(conn, event)
+    if not row:
         return None
     return ActivityClassification(
         label=BehaviorLabel(row["corrected_label"]),
         confidence=1.0,
-        reason="Corrected by user.",
+        reason=CORRECTION_REASON,
         scores=base.scores,
+    )
+
+
+def future_correction_for_event(conn: sqlite3.Connection, event: ActivityEvent) -> sqlite3.Row | None:
+    rows = conn.execute(
+        """
+        SELECT corrected_label, app, surface, domain, title_pattern, url_pattern
+        FROM corrections
+        WHERE apply_to_future = 1
+        ORDER BY id DESC
+        """
+    ).fetchall()
+    for row in rows:
+        if future_correction_matches(row, event):
+            return row
+    return None
+
+
+def future_correction_matches(row: sqlite3.Row, event: ActivityEvent) -> bool:
+    app = clean_key(event.source_app)
+    surface = clean_key(event.surface)
+    url_pattern = stable_url_pattern(event.url)
+    domain = domain_for_url(event.url)
+    title = clean_key(event.title)
+
+    if row["app"] and row["app"] != app:
+        return False
+    if row["surface"] and row["surface"] not in {surface, domain}:
+        return False
+    has_url_pattern = bool(row["url_pattern"])
+    has_title_pattern = bool(row["title_pattern"])
+    if has_url_pattern and row["url_pattern"] == url_pattern:
+        return True
+    if has_title_pattern and row["title_pattern"] == title:
+        return True
+    if has_url_pattern or has_title_pattern:
+        return False
+    return domain_only_future_match(row, domain)
+
+
+def domain_only_future_match(row: sqlite3.Row, domain: str) -> bool:
+    return bool(
+        row["domain"]
+        and row["domain"] == domain
+        and not row["url_pattern"]
+        and not row["title_pattern"]
     )
 
 

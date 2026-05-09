@@ -21,6 +21,7 @@ jobs:
         run: make package-onboarding-check
 
       - name: Upload trusted beta zip
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: IntentOS-trusted-beta-${{ github.sha }}
@@ -29,6 +30,7 @@ jobs:
           retention-days: 14
 
       - name: Upload trusted beta package reports
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: IntentOS-trusted-beta-reports-${{ github.sha }}

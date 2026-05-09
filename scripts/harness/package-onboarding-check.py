@@ -73,6 +73,8 @@ def check_menu_app_stale_dashboard_guard(swift: str, failures: list[str]) -> Non
         'envValue("INTENTOS_BETA_STATUS") == "running"',
         'recordedProcessIsAlive("INTENTOS_BETA_SERVICE_PID")',
         'recordedProcessIsAlive("INTENTOS_BETA_UI_PID")',
+        'envValue("INTENTOS_BETA_API_TOKEN")',
+        "X-IntentOS-Token",
         "private func recordedProcessIsAlive",
         "kill(pid, 0)",
         "return NSWorkspace.shared.open(dashboard)",

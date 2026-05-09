@@ -35,7 +35,14 @@ capture source.
   are built.
 - Dogfood beta data is stored locally in SQLite at
   `.harness/runtime/beta/intentos.sqlite` with a 30-day default retention
-  setting. Users can pause/resume capture and delete all local user data.
+  setting. Users can pause/resume capture and delete all local user data,
+  including activity-derived setup metadata, permission details, timestamps,
+  and generated beta reports.
+- The dogfood localhost API uses a generated per-run token from
+  `.harness/runtime/beta/app.env` and `.harness/runtime/beta/site/beta-config.json`.
+  Activity-data reads, all writes, and Chrome extension bridge posts must send
+  that token. CORS is limited to the generated dashboard origin and Chrome
+  extension origins.
 - The beta native recorder samples only frontmost app/window metadata and
   best-effort browser title/URL fallback through existing local capture
   adapters. It writes normalized, privacy-filtered `ActivityEvent` rows to the
@@ -45,10 +52,11 @@ capture source.
   permission health strings in SQLite settings/runtime status.
 - Redacted setup reports intentionally omit raw window titles, full URLs,
   SQLite rows, screenshots, page bodies, cookies, tokens, and keystrokes.
-- Chrome extension bridge events are limited to URL, title, domain, tab/window
-  IDs, active state, timestamp, source, and optional bounded page-kind metadata
-  for YouTube/document pages. The service rejects page bodies, cookies, tokens,
-  unsupported URLs, and privacy-excluded surfaces before persistence.
+- Chrome extension bridge events are limited to normalized URL without query or
+  fragment, title, domain, tab/window IDs, active state, timestamp, source, and
+  optional bounded page-kind metadata for YouTube/document pages. The service
+  rejects page bodies, cookies, tokens, unsupported URLs, and privacy-excluded
+  surfaces before persistence.
 - No secrets, tokens, accounts, personal browser history databases, retained
   screenshots, page bodies, transcripts, or clipboard contents are required for
   verification.

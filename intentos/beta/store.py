@@ -20,6 +20,30 @@ from intentos.reporting import event_sample_count
 
 SCHEMA_VERSION = "1"
 DEFAULT_RETENTION_DAYS = 30
+PRIVATE_RUNTIME_STATUS_KEYS = {
+    "accessibility_permission",
+    "accessibility_permission_detail",
+    "browser_automation_permission",
+    "browser_automation_permission_detail",
+    "capture_note",
+    "extension_last_seen_at",
+    "extension_state",
+    "extension_version",
+    "last_browser_event_at",
+    "native_recorder_events",
+    "native_recorder_last_error",
+    "native_recorder_last_event_at",
+    "native_recorder_samples",
+}
+PRIVATE_RUNTIME_STATUS_PREFIXES = ("activation_", "capture_preview_")
+PRIVATE_SETTING_KEYS = {
+    "browser_detail_state",
+    "last_readiness_check_at",
+    "onboarding_completed_at",
+    "onboarding_dismissed_until",
+    "paused_until",
+    "privacy_acknowledged_at",
+}
 
 
 class ClosingConnection(sqlite3.Connection):
@@ -163,9 +187,21 @@ def delete_all(conn: sqlite3.Connection) -> None:
         "focus_rescue_actions",
     ]:
         conn.execute(f"DELETE FROM {table}")
+    clear_private_runtime_state(conn)
     set_status(conn, "data_state", "deleted")
+    set_status(conn, "capture_state", "ready")
+    set_status(conn, "capture_note", "")
     conn.commit()
     checkpoint(conn, "TRUNCATE")
+
+
+def clear_private_runtime_state(conn: sqlite3.Connection) -> None:
+    for row in conn.execute("SELECT key FROM runtime_status").fetchall():
+        key = row["key"]
+        if key in PRIVATE_RUNTIME_STATUS_KEYS or key.startswith(PRIVATE_RUNTIME_STATUS_PREFIXES):
+            conn.execute("DELETE FROM runtime_status WHERE key = ?", (key,))
+    for key in PRIVATE_SETTING_KEYS:
+        conn.execute("DELETE FROM settings WHERE key = ?", (key,))
 
 
 def set_pause(conn: sqlite3.Connection, paused_until: str) -> None:

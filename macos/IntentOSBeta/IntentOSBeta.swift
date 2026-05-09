@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let dailyIntentEndpoint = "/api/daily-intent"
     private let reviewCheckinEndpoint = "/api/review-checkin"
     private let weeklyPatternsEndpoint = "/api/weekly-patterns"
+    private let apiTokenHeader = "X-IntentOS-Token"
 
     static func main() {
         let app = NSApplication.shared
@@ -343,6 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        authorize(&request)
         request.httpBody = body.data(using: .utf8)
         URLSession.shared.dataTask(with: request) { data, _, error in
             if error != nil && retryAfterStart {
@@ -383,7 +385,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retryGetAfterStart(path, completion: completion, retryAfterStart: retryAfterStart)
             return
         }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        var request = URLRequest(url: url)
+        authorize(&request)
+        URLSession.shared.dataTask(with: request) { data, _, error in
             if error != nil && retryAfterStart {
                 DispatchQueue.main.async {
                     self.retryGetAfterStart(path, completion: completion, retryAfterStart: retryAfterStart)
@@ -575,12 +579,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             updateMenuStatus("Stopped")
             return
         }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        var request = URLRequest(url: url)
+        authorize(&request)
+        URLSession.shared.dataTask(with: request) { data, _, error in
             let label = error == nil ? (self.statusLabel(from: data) ?? "Capture Issue") : "Capture Issue"
             DispatchQueue.main.async {
                 self.updateMenuStatus(label)
             }
         }.resume()
+    }
+
+    private func authorize(_ request: inout URLRequest) {
+        guard let token = envValue("INTENTOS_BETA_API_TOKEN"), !token.isEmpty else { return }
+        request.setValue(token, forHTTPHeaderField: apiTokenHeader)
     }
 
     private func updateMenuStatus(_ label: String) {

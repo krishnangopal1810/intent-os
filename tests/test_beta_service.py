@@ -10,6 +10,9 @@ from urllib.request import Request, urlopen
 from intentos.beta import daily_state, store
 from intentos.beta.service import ServiceConfig, make_handler
 
+API_TOKEN = "test-token"
+TRUSTED_ORIGIN = "http://127.0.0.1:4321"
+
 
 class BetaServiceTests(unittest.TestCase):
     def test_api_persistence_correction_pause_and_delete(self):
@@ -22,6 +25,8 @@ class BetaServiceTests(unittest.TestCase):
                 runtime_dir=Path(tmp),
                 permission_mode="fake",
                 allow_system_open=False,
+                api_token=API_TOKEN,
+                allowed_origins=(TRUSTED_ORIGIN,),
             )
             artifacts = Path(tmp) / "artifacts"
             artifacts.mkdir()
@@ -35,6 +40,17 @@ class BetaServiceTests(unittest.TestCase):
             base = f"http://127.0.0.1:{server.server_port}"
             try:
                 raw = json.loads(Path("data/beta/fake_chrome_events.json").read_text())[0]
+                unauthorized_read = get_json_status(f"{base}/api/status", token="wrong")
+                unauthorized_write = post_json_status(
+                    f"{base}/api/pause",
+                    {"minutes": 15},
+                    token="wrong",
+                )
+                blocked_origin = get_json_status(
+                    f"{base}/api/status",
+                    origin="https://evil.example",
+                )
+                trusted_headers = options_headers(f"{base}/api/status", TRUSTED_ORIGIN)
                 heartbeat = post_json(f"{base}/api/extension-heartbeat", {"version": "test"})
                 connected = get_json(f"{base}/api/status")
                 accepted = post_json(f"{base}/api/browser-event", raw)
@@ -55,6 +71,17 @@ class BetaServiceTests(unittest.TestCase):
                     },
                 )
                 corrected = get_json(f"{base}/api/daily-review?date=2026-04-27")
+                future_raw = dict(raw)
+                future_raw["timestamp"] = "2026-04-27T09:45:00Z"
+                future_raw["url"] = "https://chat.openai.com/c/future-intent-os-beta"
+                future_raw["title"] = segment["title"]
+                future_accepted = post_json(f"{base}/api/browser-event", future_raw)
+                unrelated_future_raw = dict(raw)
+                unrelated_future_raw["timestamp"] = "2026-04-27T09:50:00Z"
+                unrelated_future_raw["url"] = "https://chat.openai.com/c/unrelated-domain-scope"
+                unrelated_future_raw["title"] = "Casual ChatGPT thread"
+                unrelated_accepted = post_json(f"{base}/api/browser-event", unrelated_future_raw)
+                corrected_future = get_json(f"{base}/api/daily-review?date=2026-04-27")
                 intent = post_json(
                     f"{base}/api/daily-intent",
                     {
@@ -116,6 +143,10 @@ class BetaServiceTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+        self.assertEqual(unauthorized_read, 403)
+        self.assertEqual(unauthorized_write, 403)
+        self.assertEqual(blocked_origin, 403)
+        self.assertEqual(trusted_headers["Access-Control-Allow-Origin"], TRUSTED_ORIGIN)
         self.assertEqual(heartbeat["status"], "connected")
         self.assertEqual(connected["extension"]["state"], "connected")
         self.assertEqual(accepted["status"], "accepted")
@@ -133,9 +164,23 @@ class BetaServiceTests(unittest.TestCase):
         self.assertIn("preflight", setup_report["setup_report"])
         self.assertEqual(correction["status"], "corrected")
         self.assertEqual(corrected["items"][0]["label"], "learning")
+        self.assertEqual(future_accepted["status"], "accepted")
+        future_item = next(
+            item for item in corrected_future["items"]
+            if (item.get("url") or "").endswith("/future-intent-os-beta")
+        )
+        self.assertEqual(future_item["label"], "learning")
+        self.assertEqual(future_item["corrected_label"], "learning")
+        self.assertEqual(unrelated_accepted["status"], "accepted")
+        unrelated_item = next(
+            item for item in corrected_future["items"]
+            if (item.get("url") or "").endswith("/unrelated-domain-scope")
+        )
+        self.assertNotEqual(unrelated_item["label"], "learning")
+        self.assertNotEqual(unrelated_item.get("corrected_label"), "learning")
         self.assertEqual(intent["intent"]["focus_text"], "Ship beta loop")
         self.assertEqual(loop["intent"]["avoid_text"], "Feed drift")
-        self.assertEqual(loop["correction_count"], 1)
+        self.assertEqual(loop["correction_count"], 2)
         self.assertIn("intent_contract", loop)
         self.assertIn("next_block", loop)
         self.assertIn("correction_reward", loop)
@@ -164,6 +209,12 @@ class BetaServiceTests(unittest.TestCase):
         self.assertFalse(stale_report.exists())
         self.assertEqual(deleted["row_counts"]["activity_events"], 0)
         self.assertEqual(deleted["service"]["state"], "running")
+        self.assertFalse(deleted["pause"]["paused"])
+        self.assertIsNone(deleted["last_event_time"])
+        self.assertEqual(deleted["extension"]["state"], "never_connected")
+        self.assertEqual(deleted["capture_preview"]["state"], "unchecked")
+        self.assertIsNone(deleted["capture_preview"]["app_name"])
+        self.assertEqual(deleted["permissions"]["accessibility"]["state"], "unchecked")
         self.assertEqual(weekly_after_delete["best_focus_window"]["duration_seconds"], 0)
         with store.connect(db) as conn:
             store.init_db(conn)
@@ -172,27 +223,45 @@ class BetaServiceTests(unittest.TestCase):
             self.assertIsNone(daily_state.latest_focus_rescue_action(conn, "2026-04-27", rescue_key))
 
 
-def get_json(url):
-    with urlopen(url, timeout=3) as response:
+def get_json(url, token=API_TOKEN):
+    with urlopen(auth_request(url, token=token), timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def post_json(url, payload):
+def get_json_status(url, token=API_TOKEN, origin=None):
+    try:
+        with urlopen(auth_request(url, token=token, origin=origin), timeout=3) as response:
+            return response.status
+    except HTTPError as exc:
+        return exc.code
+
+
+def options_headers(url, origin):
+    request = Request(
+        url,
+        headers=auth_headers(origin=origin),
+        method="OPTIONS",
+    )
+    with urlopen(request, timeout=3) as response:
+        return response.headers
+
+
+def post_json(url, payload, token=API_TOKEN):
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers(token, {"Content-Type": "application/json"}),
         method="POST",
     )
     with urlopen(request, timeout=3) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def post_json_status(url, payload):
+def post_json_status(url, payload, token=API_TOKEN):
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers(token, {"Content-Type": "application/json"}),
         method="POST",
     )
     try:
@@ -200,6 +269,19 @@ def post_json_status(url, payload):
             return response.status
     except HTTPError as exc:
         return exc.code
+
+
+def auth_request(url, token=API_TOKEN, origin=None):
+    return Request(url, headers=auth_headers(token, origin=origin))
+
+
+def auth_headers(token=API_TOKEN, extra=None, origin=None):
+    headers = dict(extra or {})
+    if token:
+        headers["X-IntentOS-Token"] = token
+    if origin:
+        headers["Origin"] = origin
+    return headers
 
 
 if __name__ == "__main__":
