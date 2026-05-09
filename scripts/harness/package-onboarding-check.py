@@ -13,6 +13,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT = ROOT / ".harness/runtime/artifacts/onboarding-beta-package.json"
 MENU_APP = ROOT / "macos/IntentOSBeta/IntentOSBeta.swift"
+MENU_APP_DIR = ROOT / "macos/IntentOSBeta"
 
 
 def main() -> int:
@@ -30,7 +31,10 @@ def main() -> int:
         if phrase not in text:
             failures.append(f"package-onboarding-beta.sh must include {phrase!r}")
 
-    menu_text = MENU_APP.read_text(encoding="utf-8") if MENU_APP.is_file() else ""
+    menu_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(MENU_APP_DIR.glob("*.swift"))
+    ) if MENU_APP_DIR.is_dir() else ""
     check_menu_app_stale_dashboard_guard(menu_text, failures)
 
     payload = read_payload(ARTIFACT)
@@ -75,7 +79,7 @@ def check_menu_app_stale_dashboard_guard(swift: str, failures: list[str]) -> Non
         'recordedProcessIsAlive("INTENTOS_BETA_UI_PID")',
         'envValue("INTENTOS_BETA_API_TOKEN")',
         "X-IntentOS-Token",
-        "private func recordedProcessIsAlive",
+        "func recordedProcessIsAlive",
         "kill(pid, 0)",
         "return NSWorkspace.shared.open(dashboard)",
     ]

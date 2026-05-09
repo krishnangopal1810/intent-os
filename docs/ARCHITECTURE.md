@@ -75,6 +75,8 @@ The current local-first slice keeps these concerns separate:
   parsing, validation, artifact cleanup, and event serialization.
 - `intentos/beta/service_security.py`: localhost API token validation, CORS
   reflection, JSON body limits, and common JSON response writing.
+- `intentos/beta/http_client.py`: shared token-aware local beta HTTP client
+  used by tests and validation scripts.
 - `intentos/beta/setup_diagnostics.py`: setup report and preflight diagnostics
   helpers kept out of the first-run step state module.
 - `intentos/beta/setup_flow.py`: first-run setup milestones, guided step
@@ -152,8 +154,12 @@ The current local-first slice keeps these concerns separate:
 - `tests/test_youtube_mvp.py`: product behavior tests.
 - `scripts/product/verify.sh`: product verification entry point for
   `make verify`.
-- `scripts/product/validate-beta.sh`: deterministic beta API, persistence,
-  correction, privacy, delete-data, and UI smoke validation.
+- `scripts/product/validate-beta.sh`: thin compatibility wrapper for the
+  Python beta validation runner.
+- `scripts/product/validate_beta.py` and `scripts/product/beta_validation/`:
+  deterministic beta API, persistence, correction, privacy, delete-data, and
+  UI smoke validation split into runtime, scenario, render, and artifact
+  helpers.
 - `scripts/product/dogfood-smoke.sh`: real-machine beta smoke that requires
   native recorder row growth, treats Chrome bridge as optional enhancement,
   preserves dogfood data, and writes blocked/pass evidence.
@@ -188,10 +194,13 @@ The current local-first slice keeps these concerns separate:
 - `docs/product/imports.md`: fixture/parser contract for local records,
   browser history shapes, and ChatGPT exports; manual import is not the
   preferred user-facing product path.
-- `web/`: static local UI shell that reads generated JSON artifacts.
+- `web/`: static local UI shell that reads generated JSON artifacts. Dashboard
+  behavior is split under `web/js/` and loaded directly by `web/index.html`
+  without a bundler.
 - `extension/chrome/`: Chrome MV3 bridge shell for bounded tab metadata only.
-- `macos/IntentOSBeta/`: native menu bar wrapper source and Info.plist for the
-  local dogfood app bundle.
+- `macos/IntentOSBeta/`: native menu bar wrapper sources and Info.plist for the
+  local dogfood app bundle, split by menu actions, process control, API calls,
+  dialogs, status labels, and runtime paths.
 
 ## Dependency Rules
 

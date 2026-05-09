@@ -254,6 +254,17 @@ def check_ui_shell(failures: list[str]) -> None:
         "web/index.html",
         "web/styles.css",
         "web/app.js",
+        "web/js/state.js",
+        "web/js/api.js",
+        "web/js/navigation.js",
+        "web/js/format.js",
+        "web/js/render-summary.js",
+        "web/js/render-coach.js",
+        "web/js/render-review.js",
+        "web/js/render-daily-loop.js",
+        "web/js/render-beta-queues.js",
+        "web/js/render-onboarding.js",
+        "web/js/boot.js",
         "scripts/product/start-ui.sh",
         "scripts/product/validate-ui.sh",
         "scripts/product/render-ui-check.py",
@@ -284,9 +295,9 @@ def check_ui_shell(failures: list[str]) -> None:
             if phrase in text:
                 failures.append(f"web/index.html must not expose legacy YouTube UI token {phrase!r}")
 
-    app_js = ROOT / "web/app.js"
-    if app_js.is_file():
-        text = read(app_js)
+    js_paths = sorted((ROOT / "web/js").glob("*.js"))
+    if js_paths:
+        text = "\n".join(read(path) for path in js_paths)
         for phrase in [
             "activity-summary.json",
             "capture-summary.json",
@@ -295,10 +306,10 @@ def check_ui_shell(failures: list[str]) -> None:
             "live-capture-summary.json",
         ]:
             if phrase not in text:
-                failures.append(f"web/app.js must load {phrase}")
+                failures.append(f"web/js/*.js must load {phrase}")
         for phrase in ["youtube-summary.json", "data-youtube", "youtube-panel"]:
             if phrase in text:
-                failures.append(f"web/app.js must not load legacy YouTube UI token {phrase!r}")
+                failures.append(f"web/js/*.js must not load legacy YouTube UI token {phrase!r}")
 
     validate = ROOT / "scripts/product/validate-ui.sh"
     if validate.is_file():

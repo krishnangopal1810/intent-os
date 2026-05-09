@@ -243,7 +243,8 @@ The implementation must also provide one of these verification paths:
 
 IntentOS currently provides `scripts/product/dev.sh`,
 `scripts/product/start-ui.sh`, `scripts/product/validate-ui.sh`,
-`scripts/product/validate-beta.sh`, `scripts/product/package-beta.sh`,
+`scripts/product/validate-beta.sh`, `scripts/product/validate_beta.py`,
+`scripts/product/beta_validation/`, `scripts/product/package-beta.sh`,
 `scripts/product/install-beta-app.sh`, `scripts/product/package-extension.sh`,
 `scripts/product/verify.sh`, `scripts/harness/package-onboarding-check.py`,
 `scripts/harness/cohort-evidence-check.py`, `scripts/harness/beta-dev.sh`,
@@ -285,7 +286,8 @@ fixture, or report-output changes. CI requires browser rendering through
 `INTENTOS_UI_REQUIRE_BROWSER=1`; local runs may skip it with a clear message
 when Chrome/Chromium is unavailable.
 
-`make validate-beta` covers service-backed UI mode. It writes a temporary
+`make validate-beta` covers service-backed UI mode through the stable shell
+wrapper and split Python runner. It writes a temporary
 `beta-config.json`, confirms the dashboard shell loads while service APIs are
 available, checks that correction controls, setup guidance controls, daily
 intent controls, evening review controls, decision cards, and next move text are

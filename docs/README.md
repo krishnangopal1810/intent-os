@@ -25,7 +25,8 @@ IntentOS has a local-first Python CLI foundation:
 - Local UI shell for inspecting current behavior summaries.
 - Checked-in UI screenshot evidence guarded by a source manifest.
 - Labeled fixture evaluation for both paths.
-- Harness linting and cleanup checks.
+- Harness linting and cleanup checks, including split dashboard and beta
+  validation boundaries.
 - CI running `make verify` and a macOS trusted-beta artifact workflow that
   builds, validates, and uploads `IntentOS-trusted-beta.zip`.
 - Specs for metadata-first macOS live capture and local on-device inference.
@@ -167,7 +168,8 @@ UI builds cannot erase live beta configuration. `make beta-dev` starts
 `.harness/runtime/beta/intentos.sqlite`, a `127.0.0.1` beta service, a
 native recorder, and an optional fake Chrome bridge when explicitly enabled.
 `make beta-status` reads the beta DB and `.harness/runtime/beta/app.env`;
-`make validate-beta` writes
+`make validate-beta` is implemented by a Python runner behind the stable shell
+wrapper and writes
 `.harness/runtime/artifacts/beta-validation.json` and
 `.harness/runtime/artifacts/beta-daily-review.json`. Beta and live dashboards
 hide the legacy YouTube domain panel; YouTube is represented through the normal

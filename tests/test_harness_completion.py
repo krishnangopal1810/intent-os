@@ -279,7 +279,8 @@ class HarnessCompletionTests(unittest.TestCase):
         self.assertIn(".harness/runtime/", Path(".gitignore").read_text(encoding="utf-8"))
 
     def test_harness_lint_guards_review_finding_regressions(self):
-        lint = Path("scripts/harness/lint.py").read_text(encoding="utf-8")
+        lint_paths = [Path("scripts/harness/lint.py"), *sorted(Path("scripts/harness/lint_checks").glob("*.py"))]
+        lint = "\n".join(path.read_text(encoding="utf-8") for path in lint_paths)
         for phrase in (
             "unregistered Python file", "must not use wildcard CORS",
             "tester-facing artifacts from pull_request builds",

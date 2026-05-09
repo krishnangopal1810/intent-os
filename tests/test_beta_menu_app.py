@@ -3,14 +3,17 @@ import unittest
 from pathlib import Path
 
 
-SWIFT_PATH = Path("macos/IntentOSBeta/IntentOSBeta.swift")
+SWIFT_DIR = Path("macos/IntentOSBeta")
 BETA_STOP_PATH = Path("scripts/harness/beta-stop.sh")
 
 
 class BetaMenuAppTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.swift = SWIFT_PATH.read_text(encoding="utf-8")
+        cls.swift = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(SWIFT_DIR.glob("*.swift"))
+        )
         cls.beta_stop = BETA_STOP_PATH.read_text(encoding="utf-8")
 
     def test_menu_items_are_wired_to_expected_actions(self):
