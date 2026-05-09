@@ -945,6 +945,22 @@ def check_beta_harness_contract(failures: list[str]) -> None:
                     f"scripts/product/validate-beta.sh must include beta UI UX probe {phrase!r}"
                 )
 
+    package_check = ROOT / "scripts/harness/package-onboarding-check.py"
+    if package_check.is_file():
+        text = package_check.read_text(encoding="utf-8")
+        for phrase in [
+            "check_menu_app_stale_dashboard_guard",
+            'recordedProcessIsAlive("INTENTOS_BETA_SERVICE_PID")',
+            'recordedProcessIsAlive("INTENTOS_BETA_UI_PID")',
+            "kill(pid, 0)",
+            r"NSWorkspace\.shared\.open\(dashboard\)\s+return true",
+        ]:
+            if phrase not in text:
+                failures.append(
+                    f"scripts/harness/package-onboarding-check.py must enforce "
+                    f"stale dashboard guard phrase {phrase!r}"
+                )
+
     app_js = ROOT / "web/app.js"
     if app_js.is_file():
         text = app_js.read_text(encoding="utf-8")

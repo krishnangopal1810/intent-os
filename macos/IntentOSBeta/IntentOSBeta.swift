@@ -671,7 +671,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func isBetaRecordedRunning() -> Bool {
-        envValue("INTENTOS_BETA_STATUS") == "running"
+        guard envValue("INTENTOS_BETA_STATUS") == "running" else {
+            return false
+        }
+        return recordedProcessIsAlive("INTENTOS_BETA_SERVICE_PID") &&
+            recordedProcessIsAlive("INTENTOS_BETA_UI_PID")
     }
 
     private func openRecordedDashboard(anchor: String? = nil) -> Bool {
@@ -686,8 +690,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let dashboard = URL(string: url) else {
             return false
         }
-        NSWorkspace.shared.open(dashboard)
-        return true
+        return NSWorkspace.shared.open(dashboard)
+    }
+
+    private func recordedProcessIsAlive(_ key: String) -> Bool {
+        guard let value = envValue(key),
+              let pid = Int32(value.trimmingCharacters(in: .whitespacesAndNewlines)),
+              pid > 0
+        else {
+            return false
+        }
+        return kill(pid, 0) == 0
     }
 
     private func minutesUntilTomorrow(now: Date = Date()) -> Int {

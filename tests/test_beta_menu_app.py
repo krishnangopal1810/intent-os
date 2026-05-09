@@ -47,6 +47,9 @@ class BetaMenuAppTests(unittest.TestCase):
     def test_runtime_actions_have_stale_state_guards(self):
         self.assertIn("openRecordedDashboard()", self.swift)
         self.assertIn("isBetaRecordedRunning()", self.swift)
+        self.assertIn('recordedProcessIsAlive("INTENTOS_BETA_SERVICE_PID")', self.swift)
+        self.assertIn('recordedProcessIsAlive("INTENTOS_BETA_UI_PID")', self.swift)
+        self.assertIn("kill(pid, 0)", self.swift)
         self.assertIn('runtimeRoot().appendingPathComponent("beta/app.env")', self.swift)
         self.assertIn("retryPostAfterStart(", self.swift)
         self.assertIn("retryGetAfterStart(", self.swift)

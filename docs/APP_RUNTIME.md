@@ -291,7 +291,10 @@ inspection.
 Trusted beta stickiness harness support is split between deterministic checks
 and manual cohort evidence. `make package-onboarding-check` verifies the
 downloadable tester artifact contract even on machines that cannot build the
-Swift app. `make cohort-evidence-check` validates
+Swift app, including a menu-bar stale-dashboard guard: the trusted app must
+verify recorded service and UI PIDs before trusting a saved dashboard URL, and
+must restart the beta when the recorded runtime is stale. `make
+cohort-evidence-check` validates
 `data/beta/cohort_evidence_template.json` and, when present, the ignored
 `.harness/runtime/artifacts/cohort-evidence.json` file. Cohort evidence must
 record days completed, setup minutes, first captured app/window, first live
